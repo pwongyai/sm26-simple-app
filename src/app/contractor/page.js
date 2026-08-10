@@ -1,163 +1,102 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabaseClient";
-import Header from "@/components/Header";
+import { useState } from "react";
+import { useOrders } from "@/lib/useOrders";
+import { markSeen, completeOrder } from "@/lib/store";
+import { CONTRACTOR_ORG } from "@/lib/config";
+import StatusBadge from "@/components/StatusBadge";
 
-export default function ContractorPage() {
-  const router = useRouter();
-  const [profile, setProfile] = useState(null);
-  const [openRequests, setOpenRequests] = useState([]);
-  const [myJobs, setMyJobs] = useState([]);
-  const [farmerNames, setFarmerNames] = useState({});
-  const [loading, setLoading] = useState(true);
+export default function ContractorOrdersTab() {
+  const [orders, refresh] = useOrders();
+  const [openId, setOpenId] = useState(null);
+  const [completing, setCompleting] = useState(null);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    load();
-  }, []);
-
-  async function load() {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    if (!session) {
-      router.push("/login");
-      return;
+  async function handleOpen(order) {
+    if (order.unseen_by_contractor) {
+      await markSeen(order.id, "contractor");
+      refresh();
     }
-
-    const { data: profileData } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", session.user.id)
-      .single();
-
-    if (!profileData || profileData.role !== "contractor") {
-      router.push("/farmer");
-      return;
-    }
-
-    setProfile(profileData);
-
-    const { data: profiles } = await supabase.from("profiles").select("id, name");
-    const names = {};
-    (profiles || []).forEach((p) => {
-      names[p.id] = p.name;
-    });
-    setFarmerNames(names);
-
-    await loadRequests(profileData.id);
-    setLoading(false);
+    setOpenId(openId === order.id ? null : order.id);
   }
 
-  async function loadRequests(contractorId) {
-    const { data: open } = await supabase
-      .from("requests")
-      .select("*")
-      .eq("status", "open")
-      .order("created_at", { ascending: true });
-    setOpenRequests(open || []);
-
-    const { data: mine } = await supabase
-      .from("requests")
-      .select("*")
-      .eq("contractor_id", contractorId)
-      .order("created_at", { ascending: false });
-    setMyJobs(mine || []);
-  }
-
-  async function handleAccept(id) {
+  async function handleComplete(order) {
+    setCompleting(order.id);
     setError("");
-    const { error: updateError } = await supabase
-      .from("requests")
-      .update({ status: "accepted", contractor_id: profile.id })
-      .eq("id", id);
-    if (updateError) {
-      setError(updateError.message);
-      return;
+    try {
+      const res = await fetch(
+        `/api/agroapi/cropzones/${order.cropzone_id}/activities`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            activityTypeId: order.activity_type_id,
+            startDate: order.requested_date,
+            note: `Completed by ${CONTRACTOR_ORG.name} via SM26 Simple App`,
+            organizationId: order.farmer_org_id,
+          }),
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error?.errors?.join?.(", ") || "AgroAPI rejected this activity.");
+        return;
+      }
+      await completeOrder(order.id, data.id);
+      refresh();
+    } catch {
+      setError("Could not reach AgroAPI.");
+    } finally {
+      setCompleting(null);
     }
-    await loadRequests(profile.id);
-  }
-
-  async function handleMarkDone(id) {
-    setError("");
-    const { error: updateError } = await supabase
-      .from("requests")
-      .update({ status: "done" })
-      .eq("id", id);
-    if (updateError) {
-      setError(updateError.message);
-      return;
-    }
-    await loadRequests(profile.id);
-  }
-
-  if (loading) {
-    return <p className="p-6 text-sm text-black/60">Loading…</p>;
   }
 
   return (
     <>
-      <Header name={profile.name} role="contractor" />
-      <main className="mx-auto w-full max-w-lg flex-1 px-6 py-8">
-        {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
-
-        <h1 className="mb-3 text-lg font-semibold">Open requests</h1>
-        {openRequests.length === 0 && (
-          <p className="mb-8 text-sm text-black/50">Nothing waiting right now.</p>
-        )}
-        <ul className="mb-8 flex flex-col gap-3">
-          {openRequests.map((r) => (
-            <li
-              key={r.id}
-              className="flex items-start justify-between gap-3 rounded border border-black/10 p-3 text-sm"
+      <h1 className="mb-4 text-lg font-semibold">Work Order Requests</h1>
+      {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
+      {orders.length === 0 && (
+        <p className="text-sm text-black/50">No requests yet.</p>
+      )}
+      <ul className="flex flex-col gap-3">
+        {orders.map((o) => (
+          <li key={o.id} className="relative rounded border border-black/10 p-3 text-sm">
+            {o.unseen_by_contractor && (
+              <span className="absolute right-3 top-3 h-2.5 w-2.5 rounded-full bg-red-500" />
+            )}
+            <button
+              onClick={() => handleOpen(o)}
+              className="flex w-full flex-col items-start text-left pr-4"
             >
-              <div>
-                <p className="font-medium">{farmerNames[r.farmer_id] || "Unknown farmer"}</p>
-                <p>{r.message}</p>
-                <p className="mt-1 text-xs text-black/40">
-                  {new Date(r.created_at).toLocaleString()}
-                </p>
+              <div className="mb-1 flex w-full items-center justify-between">
+                <StatusBadge status={o.status} />
+                <span className="text-xs text-black/40">{o.requested_date}</span>
               </div>
-              <button
-                onClick={() => handleAccept(r.id)}
-                className="shrink-0 rounded bg-black px-3 py-1.5 text-xs text-white"
-              >
-                Accept
-              </button>
-            </li>
-          ))}
-        </ul>
+              <p className="font-medium">{o.field_name}</p>
+              <p className="text-black/60">{o.activity_type_name}</p>
+            </button>
 
-        <h2 className="mb-3 text-sm font-semibold text-black/70">My jobs</h2>
-        {myJobs.length === 0 && (
-          <p className="text-sm text-black/50">No accepted jobs yet.</p>
-        )}
-        <ul className="flex flex-col gap-3">
-          {myJobs.map((r) => (
-            <li
-              key={r.id}
-              className="flex items-start justify-between gap-3 rounded border border-black/10 p-3 text-sm"
-            >
-              <div>
-                <p className="font-medium">{farmerNames[r.farmer_id] || "Unknown farmer"}</p>
-                <p>{r.message}</p>
-                <p className="mt-1 text-xs text-black/40">{r.status}</p>
+            {openId === o.id && (
+              <div className="mt-3 border-t border-black/10 pt-3">
+                {o.status === "pending" ? (
+                  <button
+                    onClick={() => handleComplete(o)}
+                    disabled={completing === o.id}
+                    className="rounded bg-black px-3 py-1.5 text-xs text-white disabled:opacity-50"
+                  >
+                    {completing === o.id ? "Syncing to AgroAPI…" : "Mark Work Complete"}
+                  </button>
+                ) : (
+                  <p className="text-xs text-green-700">
+                    Completed {new Date(o.completed_at).toLocaleString()}
+                    {o.agroapi_activity_id && " · synced to AgroAPI"}
+                  </p>
+                )}
               </div>
-              {r.status === "accepted" && (
-                <button
-                  onClick={() => handleMarkDone(r.id)}
-                  className="shrink-0 rounded border border-black/20 px-3 py-1.5 text-xs"
-                >
-                  Mark done
-                </button>
-              )}
-            </li>
-          ))}
-        </ul>
-      </main>
+            )}
+          </li>
+        ))}
+      </ul>
     </>
   );
 }
