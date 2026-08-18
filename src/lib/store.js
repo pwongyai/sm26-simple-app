@@ -1,77 +1,46 @@
-// Role selection stays local (per-device, not shared data).
-// Work orders live in Supabase's `work_orders` table (work-orders-schema.sql)
-// so the farmer and contractor actually see each other's data across
-// separate devices — this is real shared state now, not a local mock.
-
-import { supabase } from "@/lib/supabaseClient";
-import { FARMER_ORG, CONTRACTOR_ORG } from "@/lib/config";
-
-const ROLE_KEY = "sm_role_v1";
-
-export function getRole() {
-  if (typeof window === "undefined") return null;
-  return window.localStorage.getItem(ROLE_KEY);
-}
-
-export function setRole(role) {
-  window.localStorage.setItem(ROLE_KEY, role);
-}
-
-export function clearRole() {
-  window.localStorage.removeItem(ROLE_KEY);
-}
+// Work orders, via our own server routes. The browser no longer talks to
+// Supabase directly — every read and write is scoped to the signed-in user's
+// organization and role server-side (src/app/api/orders/).
 
 export async function getOrders() {
-  const { data, error } = await supabase
-    .from("work_orders")
-    .select("*")
-    .order("created_at", { ascending: false });
-  if (error) {
-    console.error(error);
-    return [];
-  }
-  return data;
+  const res = await fetch("/api/orders");
+  if (!res.ok) return [];
+  return res.json();
 }
 
-export async function createOrder({
-  fieldId,
-  cropzoneId,
-  fieldName,
-  activityTypeId,
-  activityTypeName,
-  requestedDate,
-}) {
-  const { error } = await supabase.from("work_orders").insert({
-    farmer_org_id: FARMER_ORG.id,
-    contractor_org_id: CONTRACTOR_ORG.id,
-    field_id: fieldId,
-    cropzone_id: cropzoneId,
-    field_name: fieldName,
-    activity_type_id: activityTypeId,
-    activity_type_name: activityTypeName,
-    requested_date: requestedDate,
+export async function createOrder(payload) {
+  const res = await fetch("/api/orders", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
   });
-  if (error) console.error(error);
+  if (!res.ok) throw new Error("Could not create work order");
+  return res.json();
 }
 
-export async function markSeen(orderId, role) {
-  const column = role === "farmer" ? "unseen_by_farmer" : "unseen_by_contractor";
-  const { error } = await supabase
-    .from("work_orders")
-    .update({ [column]: false })
-    .eq("id", orderId);
-  if (error) console.error(error);
+export async function updateOrder(orderId, patch) {
+  const res = await fetch(`/api/orders/${orderId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(patch),
+  });
+  if (!res.ok) throw new Error("Could not update work order");
+  return res.json();
+}
+
+export async function deleteOrder(orderId) {
+  const res = await fetch(`/api/orders/${orderId}`, { method: "DELETE" });
+  if (!res.ok) throw new Error("Could not delete work order");
+}
+
+export async function markSeen(orderId) {
+  await updateOrder(orderId, { markSeen: true });
 }
 
 export async function completeOrder(orderId, agroApiActivityId) {
-  const { error } = await supabase
-    .from("work_orders")
-    .update({
-      status: "completed",
-      completed_at: new Date().toISOString(),
-      agroapi_activity_id: agroApiActivityId || null,
-      unseen_by_farmer: true,
-    })
-    .eq("id", orderId);
-  if (error) console.error(error);
+  await fetch(`/api/orders/${orderId}/complete`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ agroApiActivityId }),
+  });
 }

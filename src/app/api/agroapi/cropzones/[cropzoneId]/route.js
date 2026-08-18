@@ -1,17 +1,23 @@
+import { requireAccess } from "@/lib/ownership";
+import { agroFetch } from "@/lib/agroapi";
+import { cached, cacheHeaders, TTL } from "@/lib/cache";
+
 export async function GET(request, { params }) {
   const { cropzoneId } = await params;
+  const force = new URL(request.url).searchParams.get("refresh") === "1";
 
-  const res = await fetch(`${process.env.AGROAPI_BASE_URL}/cropzones/${cropzoneId}`, {
-    headers: { Authorization: `Bearer ${process.env.AGROAPI_TOKEN}` },
-  });
+  // Gate first: never reach AgroAPI on behalf of someone who doesn't own this.
+  const { response } = await requireAccess({ cropzoneId });
+  if (response) return response;
 
-  if (!res.ok) {
-    return Response.json(
-      { error: `AgroAPI returned ${res.status}` },
-      { status: res.status }
-    );
+  const { ok, status, body } = await cached(
+    `cropzone:${cropzoneId}`,
+    TTL.cropzone,
+    () => agroFetch(`/cropzones/${cropzoneId}`),
+    { force }
+  );
+  if (!ok) {
+    return Response.json({ error: `AgroAPI returned ${status}` }, { status });
   }
-
-  const data = await res.json();
-  return Response.json(data);
+  return Response.json(body, { headers: cacheHeaders(TTL.cropzone) });
 }

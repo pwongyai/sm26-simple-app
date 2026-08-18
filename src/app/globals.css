@@ -1,19 +1,628 @@
 @import "tailwindcss";
 
+/* ListenField palette, carried over from the version 3 prototype so this app
+   and the design work look like the same product. Values copied verbatim from
+   `version 3/transfer/digital-notebook-prototype.html`. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --green: oklch(0.74 0.19 128);
+  --green-dark: oklch(0.4 0.12 148);
+  --green-light: oklch(0.94 0.06 130);
+  --ink: #171717;
+  --neutral-bg: oklch(0.955 0.012 95);
+  --page-bg: oklch(0.93 0.008 95);
+  --text-sec: oklch(0.45 0.01 95);
+  --text-tert: oklch(0.62 0.01 95);
+  --rule: oklch(0.89 0.008 95);
+  --accent: oklch(0.55 0.11 75);
+  --accent-light: oklch(0.93 0.05 75);
+  --danger: oklch(0.55 0.16 25);
+  --danger-light: oklch(0.94 0.04 25);
+  --purple: oklch(0.5 0.19 300);
+  --purple-light: oklch(0.93 0.05 300);
+  --map-a: oklch(0.93 0.02 145);
+  --map-b: oklch(0.955 0.015 145);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-ink: var(--ink);
+  --color-green: var(--green);
+  --color-green-dark: var(--green-dark);
+  --color-green-light: var(--green-light);
+  --color-rule: var(--rule);
+  --color-page: var(--page-bg);
+  --color-surface: var(--neutral-bg);
+  --color-sec: var(--text-sec);
+  --color-tert: var(--text-tert);
+  --color-danger: var(--danger);
+  --color-danger-light: var(--danger-light);
+  --color-accent: var(--accent);
+  --color-accent-light: var(--accent-light);
 }
 
+/* The app always renders light. A device in dark mode previously flipped the
+   background while components kept light-theme classes, leaving it unreadable. */
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--neutral-bg);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+    Arial, sans-serif;
+}
+
+/* Shared component styles, matching version 3's prototype. */
+.card {
+  background: #fff;
+  border: 1px solid var(--rule);
+  border-radius: 14px;
+}
+.machine-thumb {
+  width: 52px;
+  height: 52px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  border: 1.5px solid var(--rule);
+  background: #fff;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.machine-thumb::before,
+.machine-thumb::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: -10px;
+  right: -10px;
+  height: 1.5px;
+  background: var(--rule);
+}
+.machine-thumb::before { transform: rotate(28deg); }
+.machine-thumb::after { transform: rotate(-28deg); }
+.machine-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  position: relative;
+  z-index: 1;
+}
+.photo-box {
+  height: 220px;
+  border-radius: 14px;
+  border: 1.5px dashed var(--rule);
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-tert);
+  font-size: 26px;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.photo-box.has-photo { border-style: solid; }
+.photo-box img { width: 100%; height: 100%; object-fit: cover; }
+/* Machine Details' spec grid — named "spec-*" rather than "detail-*" because
+   that name is already taken by a different, pre-existing label-left/
+   value-right pattern used across OrderDetail/SelectArea/etc. Reusing the
+   same class names there silently merged the two designs (this one lost:
+   `.detail-row` came out flex-row instead of stacked label-over-value). */
+.spec-card {
+  background: #fff;
+  border: 1px solid var(--rule);
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.spec-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.spec-row .lbl {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-tert);
+}
+.spec-row .val {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-top: 2px;
+}
+.card-late {
+  border-color: var(--danger);
+  background: color-mix(in oklab, var(--danger-light) 60%, white);
+}
+
+.badge {
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 99px;
+  white-space: nowrap;
+  height: fit-content;
+}
+.badge-system { background: var(--green-light); color: var(--green-dark); }
+.badge-neutral { background: var(--neutral-bg); color: var(--text-tert); }
+.badge-danger { background: var(--danger); color: #fff; }
+.badge-accent { background: var(--accent-light); color: var(--accent); }
+
+.btn {
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 13px;
+  padding: 11px 18px;
+  cursor: pointer;
+  border: none;
+}
+.btn-primary { background: var(--ink); color: #fff; }
+.btn-go { background: var(--green); color: var(--ink); }
+.btn-outline { background: #fff; border: 1px solid var(--rule); color: var(--ink); }
+.btn:disabled { opacity: 0.5; }
+
+.pill {
+  border-radius: 999px;
+  border: 1px solid var(--rule);
+  background: #fff;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-sec);
+  padding: 7px 14px;
+}
+.pill-active { background: var(--ink); color: #fff; border-color: var(--ink); }
+
+.field {
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  padding: 9px 12px;
+  font-size: 13px;
+  background: #fff;
+  width: 100%;
+  font-family: inherit;
+  color: var(--ink);
+}
+
+.label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-tert);
+  display: block;
+  margin-bottom: 4px;
+}
+
+/* ---------------------------------------------------------------------------
+   Version 3's component set, copied over so this app behaves the way the
+   prototype the team already reviewed behaves. Class names match v3's, so the
+   two can be compared side by side.
+   --------------------------------------------------------------------------- */
+
+/* Bottom tab bar. v3 put navigation at the bottom where a thumb reaches it;
+   there's no reason a web app can't do the same. */
+.tabbar {
+  display: flex;
+  background: var(--ink);
+  padding: 9px 6px calc(10px + env(safe-area-inset-bottom));
+  position: sticky;
+  bottom: 0;
+}
+.tabbar button, .tabbar a {
+  flex: 1;
+  background: none;
+  border: none;
+  padding: 7px 2px;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.tabbar .active { color: var(--green); }
+.tabbar svg { width: 19px; height: 19px; }
+
+/* Sub-tabs within a screen (List / Calendar / Today's Work). */
+.subtabs {
+  display: flex;
+  gap: 6px;
+  background: #fff;
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  padding: 4px;
+}
+.subtab-btn {
+  flex: 1;
+  border: none;
+  background: none;
+  padding: 9px 4px;
+  border-radius: 9px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-sec);
+  cursor: pointer;
+}
+.subtab-btn.active { background: var(--ink); color: #fff; }
+
+.pilltabs {
+  display: flex;
+  gap: 6px;
+  background: #fff;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  padding: 4px;
+}
+.pilltabs button {
+  flex: 1;
+  border: none;
+  background: none;
+  padding: 8px 4px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-sec);
+  cursor: pointer;
+}
+.pilltabs button.active { background: var(--ink); color: #fff; }
+
+/* Search pill — the contractor's own list search. */
+.search-pill {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1.5px solid var(--ink);
+  border-radius: 999px;
+  padding: 9px 13px;
+  background: #fff;
+}
+.search-pill input {
+  border: none;
+  outline: none;
+  background: none;
+  font-size: 13px;
+  width: 100%;
+  color: var(--ink);
+  font-family: inherit;
+}
+.add-btn {
+  flex-shrink: 0;
+  border: none;
+  background: var(--green);
+  color: var(--ink);
+  font-weight: 700;
+  font-size: 13px;
+  padding: 0 16px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+/* A tappable option — the shape v3 uses for every "pick one of these" choice. */
+.choice-card {
+  background: #fff;
+  border: 1.5px solid var(--rule);
+  border-radius: 14px;
+  padding: 13px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+}
+.choice-card.selected { border-color: var(--ink); }
+.choice-card .icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--green-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.choice-card .txt b { display: block; font-size: 13.5px; color: var(--ink); }
+.choice-card .txt span { font-size: 11px; color: var(--text-sec); }
+
+.existing-hit {
+  background: #fff;
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  padding: 9px 12px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  width: 100%;
+}
+.existing-hit b { font-weight: 700; }
+.existing-hit span { color: var(--text-sec); }
+
+.fieldset-note {
+  font-size: 11.5px;
+  color: var(--text-sec);
+  background: var(--neutral-bg);
+  border-radius: 10px;
+  padding: 9px 11px;
+}
+
+.field-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-tert);
+  margin-bottom: 5px;
+}
+
+/* Crosshatch placeholder for a field with no rendered boundary. */
+.field-thumb {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  border: 1.5px solid var(--rule);
+  position: relative;
+  overflow: hidden;
+  background: var(--map-b);
+}
+.field-thumb::before, .field-thumb::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: -6px;
+  right: -6px;
+  border-top: 1.5px solid var(--rule);
+}
+.field-thumb::before { transform: rotate(28deg); }
+.field-thumb::after { transform: rotate(-28deg); }
+
+.pin-map {
+  border-radius: 12px;
+  border: 1.5px solid var(--ink);
+  position: relative;
+  aspect-ratio: 16/9;
+  overflow: hidden;
+  cursor: crosshair;
+  background:
+    repeating-linear-gradient(45deg, var(--map-a) 0 10px, var(--map-b) 10px 20px);
+}
+.map-tag {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: var(--text-sec);
+  background: rgba(255, 255, 255, 0.85);
+  padding: 3px 7px;
+  border-radius: 99px;
+}
+.map-pin { position: absolute; transform: translate(-50%, -100%); }
+.map-pin .dot {
+  width: 20px;
+  height: 20px;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  background: var(--green-dark);
+  border: 2px solid #fff;
+}
+
+/* Full-screen overlay: header, scrolling body, pinned footer. Sits above
+   Leaflet's own z-index range (its controls go up to 1000). */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--neutral-bg);
+  display: flex;
+  flex-direction: column;
+  z-index: 1100;
+}
+.ov-header {
+  flex-shrink: 0;
+  padding: 16px 20px 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #fff;
+  border-bottom: 1px solid var(--rule);
+}
+.ov-back {
+  border: none;
+  background: var(--neutral-bg);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: 16px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.ov-title { font-size: 18px; font-weight: 800; color: var(--ink); }
+.ov-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 32rem;
+  width: 100%;
+  margin: 0 auto;
+}
+.ov-footer {
+  flex-shrink: 0;
+  padding: 12px 20px calc(22px + env(safe-area-inset-bottom));
+  background: #fff;
+  border-top: 1px solid var(--rule);
+  display: flex;
+  gap: 10px;
+}
+.ov-footer .btn { flex: 1; }
+
+.empty-msg {
+  font-size: 12.5px;
+  color: var(--text-sec);
+  text-align: center;
+  padding: 24px 10px;
+}
+
+.detail-card {
+  background: #fff;
+  border: 1px solid var(--rule);
+  border-radius: 14px;
+  padding: 4px 14px;
+}
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--rule);
+  font-size: 13px;
+}
+.detail-row:last-child { border-bottom: none; }
+.detail-row .lbl { color: var(--text-sec); }
+.detail-row .val { font-weight: 700; text-align: right; }
+
+/* Notification bell, copied from version 3. */
+.bell-wrap {
+  position: relative;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #fff;
+  border: 1px solid var(--rule);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  color: var(--ink);
+}
+.bell-wrap svg { width: 18px; height: 18px; }
+.bell-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  min-width: 17px;
+  height: 17px;
+  border-radius: 99px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  border: 2px solid var(--neutral-bg);
+}
+
+/* Satellite rasters are low-resolution by nature (Sentinel-2 is 10 m per
+   pixel). Draw them as crisp cells rather than letting the browser interpolate
+   detail that was never measured. */
+.ndvi-raster {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+/* ---------- Report tab (ledger), copied from version 3 ---------- */
+.report-filters { display: flex; gap: 8px; flex-shrink: 0; }
+.filter-pill {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1.5px solid var(--ink);
+  border-radius: 999px;
+  padding: 8px 12px;
+  min-width: 0;
+}
+.filter-pill span { flex-shrink: 0; font-size: 12px; }
+.filter-pill select {
+  border: none;
+  background: none;
+  padding: 0;
+  font-size: 12.5px;
+  color: var(--ink);
+  width: 100%;
+  font-family: inherit;
+}
+.pay-filter-row { display: flex; gap: 6px; flex-shrink: 0; }
+.pay-filter-row button { flex: 1; }
+.date-chip {
+  flex-shrink: 0;
+  border: 1.5px solid var(--rule);
+  background: #fff;
+  color: var(--text-sec);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 7px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.date-chip.active { background: var(--ink); border-color: var(--ink); color: #fff; }
+
+.report-card {
+  background: #fff;
+  border: 1px solid var(--rule);
+  border-radius: 14px;
+  padding: 10px 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  text-align: left;
+}
+.report-thumb {
+  width: 50px;
+  height: 50px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  border: 1.5px solid var(--rule);
+  position: relative;
+  overflow: hidden;
+  background-image: repeating-linear-gradient(45deg, var(--map-a), var(--map-a) 6px, var(--map-b) 6px, var(--map-b) 12px);
+}
+.report-thumb svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.report-card .txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.report-card .txt .name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.report-card .txt .sub { font-size: 11.5px; color: var(--text-sec); }
+.report-pay-badge {
+  width: 50px;
+  height: 50px;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  flex-shrink: 0;
+  cursor: pointer;
+  border: 1.5px solid transparent;
+}
+.report-pay-badge .ic { font-size: 17px; line-height: 1; }
+.report-pay-badge .lbl { font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; }
+.report-pay-badge.paid { background: var(--green-light); color: var(--green-dark); }
+.report-pay-badge.unpaid { background: var(--accent-light); color: var(--accent); }
+
+/* Leaflet gives its panes and controls z-index values up to 1000, and
+   `.leaflet-container` doesn't create a stacking context of its own — so those
+   panes compete globally and punch straight through a modal laid over them.
+   Pinning the container to its own stacking context keeps the map's internals
+   inside the map. */
+.leaflet-container {
+  position: relative;
+  z-index: 0;
 }

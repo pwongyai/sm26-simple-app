@@ -1,102 +1,237 @@
 "use client";
 
-import { useState } from "react";
-import { useOrders } from "@/lib/useOrders";
-import { markSeen, completeOrder } from "@/lib/store";
-import { CONTRACTOR_ORG } from "@/lib/config";
-import StatusBadge from "@/components/StatusBadge";
+import { useEffect, useMemo, useState } from "react";
+import { useContractorOrders } from "@/lib/ContractorOrdersContext";
+import OrderCard, { daysLate } from "@/components/OrderCard";
+import AddOrderForm from "@/components/AddOrderForm";
+import OrderCalendar from "@/components/OrderCalendar";
+import Map from "@/components/Map";
+import { haversineKm } from "@/lib/track";
 
-export default function ContractorOrdersTab() {
-  const [orders, refresh] = useOrders();
-  const [openId, setOpenId] = useState(null);
-  const [completing, setCompleting] = useState(null);
-  const [error, setError] = useState("");
+const VIEWS = [
+  { key: "list", label: "List" },
+  { key: "calendar", label: "Calendar" },
+  { key: "today", label: "Today's Work" },
+];
 
-  async function handleOpen(order) {
-    if (order.unseen_by_contractor) {
-      await markSeen(order.id, "contractor");
-      refresh();
-    }
-    setOpenId(openId === order.id ? null : order.id);
-  }
+function todayISO() {
+  return new Date().toLocaleDateString("en-CA");
+}
 
-  async function handleComplete(order) {
-    setCompleting(order.id);
-    setError("");
-    try {
-      const res = await fetch(
-        `/api/agroapi/cropzones/${order.cropzone_id}/activities`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            activityTypeId: order.activity_type_id,
-            startDate: order.requested_date,
-            note: `Completed by ${CONTRACTOR_ORG.name} via SM26 Simple App`,
-            organizationId: order.farmer_org_id,
-          }),
-        }
-      );
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error?.errors?.join?.(", ") || "AgroAPI rejected this activity.");
-        return;
+// Routes the mapped, on-time jobs by always stepping to whichever remaining
+// stop is closest to wherever the route currently is — starting from home.
+// Delayed jobs are handled separately (always first, per version 3) so they
+// never get folded into this straight-line ordering.
+function nearestNeighborOrder(home, jobs) {
+  const remaining = [...jobs];
+  const route = [];
+  let current = [home.lng, home.lat];
+  while (remaining.length) {
+    let bestIndex = 0;
+    let bestDistance = Infinity;
+    remaining.forEach((o, i) => {
+      const d = haversineKm(current, [o.location_lng, o.location_lat]);
+      if (d < bestDistance) {
+        bestDistance = d;
+        bestIndex = i;
       }
-      await completeOrder(order.id, data.id);
-      refresh();
-    } catch {
-      setError("Could not reach AgroAPI.");
-    } finally {
-      setCompleting(null);
-    }
+    });
+    const [next] = remaining.splice(bestIndex, 1);
+    route.push(next);
+    current = [next.location_lng, next.location_lat];
   }
+  return route;
+}
+
+export default function BookingTab() {
+  const { orders, refresh, services, openOrder } = useContractorOrders();
+  const [view, setView] = useState("list");
+  const [adding, setAdding] = useState(false);
+  const [day, setDay] = useState(null);
+  const [search, setSearch] = useState("");
+  const [homeBase, setHomeBase] = useState(null);
+
+  useEffect(() => {
+    fetch("/api/contractor-profile")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((p) => {
+        if (p?.homeLat != null && p?.homeLng != null) {
+          setHomeBase({ lat: p.homeLat, lng: p.homeLng });
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  // List keeps notebook order — most recently written down first — and is
+  // deliberately NOT re-sorted by urgency (version 2 §8.4). Late jobs still
+  // show their flag, they just stay where they were written.
+  const listOrders = useMemo(
+    () => orders.filter((o) => o.status !== "pending" && o.status !== "declined"),
+    [orders]
+  );
+
+  // Search filters by customer name only — that's how a contractor looks
+  // something up (version 2 §8.1).
+  const searched = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return listOrders;
+    return listOrders.filter((o) =>
+      (o.farmer?.name || "").toLowerCase().includes(q)
+    );
+  }, [listOrders, search]);
+
+  const dayOrders = useMemo(
+    () => (day ? listOrders.filter((o) => o.scheduled_date === day) : null),
+    [listOrders, day]
+  );
+
+  // Delayed jobs first (most-late-first), then the on-time mapped jobs
+  // routed nearest-neighbor from home base, then anything on-time but with
+  // no location to route by — version 3's "suggested order" for Today's Work.
+  const { delayedToday, routedToday, unmappedToday } = useMemo(() => {
+    const t = todayISO();
+    const openToday = listOrders.filter(
+      (o) => o.status === "booked" && o.scheduled_date && o.scheduled_date <= t
+    );
+    const delayed = openToday
+      .filter((o) => daysLate(o) > 0)
+      .sort((a, b) => daysLate(b) - daysLate(a));
+    const onTime = openToday.filter((o) => daysLate(o) === 0);
+    const mapped = onTime.filter((o) => o.location_lat != null && o.location_lng != null);
+    const unmapped = onTime.filter((o) => o.location_lat == null || o.location_lng == null);
+    const routed = homeBase && mapped.length ? nearestNeighborOrder(homeBase, mapped) : mapped;
+    return { delayedToday: delayed, routedToday: routed, unmappedToday: unmapped };
+  }, [listOrders, homeBase]);
+
+  const todayMarkers = useMemo(() => {
+    const stops = routedToday.map((o, i) => ({
+      lat: o.location_lat,
+      lng: o.location_lng,
+      label: i + 1,
+    }));
+    return homeBase ? [{ ...homeBase, home: true }, ...stops] : stops;
+  }, [routedToday, homeBase]);
 
   return (
     <>
-      <h1 className="mb-4 text-lg font-semibold">Work Order Requests</h1>
-      {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
-      {orders.length === 0 && (
-        <p className="text-sm text-black/50">No requests yet.</p>
-      )}
-      <ul className="flex flex-col gap-3">
-        {orders.map((o) => (
-          <li key={o.id} className="relative rounded border border-black/10 p-3 text-sm">
-            {o.unseen_by_contractor && (
-              <span className="absolute right-3 top-3 h-2.5 w-2.5 rounded-full bg-red-500" />
-            )}
-            <button
-              onClick={() => handleOpen(o)}
-              className="flex w-full flex-col items-start text-left pr-4"
-            >
-              <div className="mb-1 flex w-full items-center justify-between">
-                <StatusBadge status={o.status} />
-                <span className="text-xs text-black/40">{o.requested_date}</span>
-              </div>
-              <p className="font-medium">{o.field_name}</p>
-              <p className="text-black/60">{o.activity_type_name}</p>
-            </button>
-
-            {openId === o.id && (
-              <div className="mt-3 border-t border-black/10 pt-3">
-                {o.status === "pending" ? (
-                  <button
-                    onClick={() => handleComplete(o)}
-                    disabled={completing === o.id}
-                    className="rounded bg-black px-3 py-1.5 text-xs text-white disabled:opacity-50"
-                  >
-                    {completing === o.id ? "Syncing to AgroAPI…" : "Mark Work Complete"}
-                  </button>
-                ) : (
-                  <p className="text-xs text-green-700">
-                    Completed {new Date(o.completed_at).toLocaleString()}
-                    {o.agroapi_activity_id && " · synced to AgroAPI"}
-                  </p>
-                )}
-              </div>
-            )}
-          </li>
+      <div className="subtabs my-3">
+        {VIEWS.map((v) => (
+          <button
+            key={v.key}
+            className={`subtab-btn ${view === v.key ? "active" : ""}`}
+            onClick={() => {
+              setView(v.key);
+              setDay(null);
+            }}
+          >
+            {v.label}
+          </button>
         ))}
-      </ul>
+      </div>
+
+      {view === "list" && (
+        <>
+          <div className="mb-3 flex gap-2">
+            <div className="search-pill">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                className="h-3.5 w-3.5 shrink-0 text-[var(--text-sec)]"
+              >
+                <circle cx="11" cy="11" r="8" />
+                <path d="M21 21l-4.3-4.3" />
+              </svg>
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search customer name"
+              />
+            </div>
+            <button className="add-btn" onClick={() => setAdding(true)}>
+              + Add
+            </button>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            {searched.length === 0 && (
+              <p className="empty-msg">
+                {search
+                  ? "No customer by that name."
+                  : "Nothing written down yet. Tap + Add after a customer calls."}
+              </p>
+            )}
+            {searched.map((o) => (
+              <OrderCard key={o.id} order={o} onClick={() => openOrder(o)} />
+            ))}
+          </div>
+        </>
+      )}
+
+      {view === "calendar" && (
+        <>
+          <div className="mb-3 flex justify-end">
+            <button className="add-btn py-1.5" onClick={() => setAdding(true)}>
+              + Add
+            </button>
+          </div>
+          <OrderCalendar orders={listOrders} selected={day} onSelect={setDay} />
+          <div className="mt-4 flex flex-col gap-2">
+            {day && dayOrders?.length === 0 && (
+              <p className="empty-msg">Nothing scheduled that day.</p>
+            )}
+            {(dayOrders || []).map((o) => (
+              <OrderCard key={o.id} order={o} onClick={() => openOrder(o)} />
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* Today's Work has no + Add of its own — anything added elsewhere for
+          today shows up here, since it's the same data filtered. */}
+      {view === "today" && (
+        <div className="flex flex-col gap-2">
+          {delayedToday.length + routedToday.length + unmappedToday.length === 0 && (
+            <p className="empty-msg">Nothing due today.</p>
+          )}
+
+          {todayMarkers.length > 0 && (
+            <Map markers={todayMarkers} height={200} />
+          )}
+
+          {(delayedToday.length > 0 || routedToday.length > 0 || unmappedToday.length > 0) && (
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-[var(--text-tert)]">
+                Suggested order — delayed jobs first, then closest to home.
+              </p>
+              {unmappedToday.length > 0 && (
+                <span className="rounded bg-surface px-1.5 py-0.5 text-[11px] text-tert">
+                  {unmappedToday.length} unmapped
+                </span>
+              )}
+            </div>
+          )}
+
+          {delayedToday.map((o) => (
+            <OrderCard key={o.id} order={o} onClick={() => openOrder(o)} />
+          ))}
+          {routedToday.map((o, i) => (
+            <OrderCard key={o.id} order={o} index={i + 1} onClick={() => openOrder(o)} />
+          ))}
+          {unmappedToday.map((o) => (
+            <OrderCard key={o.id} order={o} onClick={() => openOrder(o)} />
+          ))}
+        </div>
+      )}
+
+      {adding && (
+        <AddOrderForm
+          services={services}
+          onClose={() => setAdding(false)}
+          onCreated={refresh}
+        />
+      )}
     </>
   );
 }
