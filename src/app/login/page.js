@@ -5,13 +5,12 @@ import { useRouter } from "next/navigation";
 
 // Phone number, no verification code. An existing number signs back into the
 // same account from any device — which is the point: a farmer's fields have to
-// survive a new phone, not just a page reload.
+// survive a new phone, not just a page reload. There's no self-signup here —
+// an unrecognized number is rejected, the same way a wrong password would be,
+// rather than quietly opening an account-creation form.
 export default function LoginPage() {
   const router = useRouter();
   const [phone, setPhone] = useState("");
-  const [name, setName] = useState("");
-  const [role, setRole] = useState("farmer");
-  const [needsSignup, setNeedsSignup] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -23,17 +22,11 @@ export default function LoginPage() {
     const res = await fetch("/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(
-        needsSignup ? { phone, name, role } : { phone }
-      ),
+      body: JSON.stringify({ phone }),
     });
     const data = await res.json();
     setBusy(false);
 
-    if (data.needsSignup) {
-      setNeedsSignup(true);
-      return;
-    }
     if (!res.ok) {
       setError(data.error || "Could not sign in");
       return;
@@ -49,9 +42,7 @@ export default function LoginPage() {
     <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-6">
       <h1 className="mb-1 text-xl font-semibold">Smart Machine</h1>
       <p className="mb-8 text-sm text-[var(--text-sec)]">
-        {needsSignup
-          ? "New number — tell us who you are."
-          : "Enter your mobile number to continue."}
+        Enter your mobile number to continue.
       </p>
 
       <form onSubmit={submit} className="flex flex-col gap-3">
@@ -62,45 +53,8 @@ export default function LoginPage() {
           onChange={(e) => setPhone(e.target.value)}
           placeholder="08x xxx xxxx"
           required
-          disabled={needsSignup}
-          className="field disabled:bg-black/5"
+          className="field"
         />
-
-        {needsSignup && (
-          <>
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Your name"
-              required
-              className="field"
-            />
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setRole("farmer")}
-                className={`flex-1 rounded border py-2.5 text-sm ${
-                  role === "farmer"
-                    ? "border-black bg-[var(--ink)] text-white"
-                    : "border-[var(--rule)]"
-                }`}
-              >
-                🌾 Farmer
-              </button>
-              <button
-                type="button"
-                onClick={() => setRole("contractor")}
-                className={`flex-1 rounded border py-2.5 text-sm ${
-                  role === "contractor"
-                    ? "border-black bg-[var(--ink)] text-white"
-                    : "border-[var(--rule)]"
-                }`}
-              >
-                🚜 Contractor
-              </button>
-            </div>
-          </>
-        )}
 
         {error && <p className="text-sm text-red-600">{error}</p>}
 
@@ -109,18 +63,8 @@ export default function LoginPage() {
           disabled={busy}
           className="btn btn-primary w-full"
         >
-          {busy ? "…" : needsSignup ? "Create account" : "Continue"}
+          {busy ? "…" : "Continue"}
         </button>
-
-        {needsSignup && (
-          <button
-            type="button"
-            onClick={() => setNeedsSignup(false)}
-            className="text-xs text-[var(--text-tert)] underline"
-          >
-            use a different number
-          </button>
-        )}
       </form>
     </main>
   );
