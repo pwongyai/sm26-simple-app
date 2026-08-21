@@ -39,9 +39,17 @@ export async function GET() {
       make: m.make,
       model: m.model,
       serialNumber: m.serial_number,
-      // GeoJSON Point [lng, lat, altitude] — where the machine was last seen.
+      // GeoJSON Point [lng, lat, altitude] — where the machine was last seen,
+      // genuinely sourced from its last real measurement (AgroAPI's own
+      // `measurements.order(:read_at).last`). `updated_at` used to be shown
+      // here too as a "last seen X ago" label, but that's the sensor
+      // *record's* own save timestamp, unrelated to actual telemetry — for
+      // one real machine it read "1 year ago" while its true last GPS
+      // activity (found via the Latest filter's search) was 4 days prior.
+      // Dropped rather than fixed cheaply: getting a trustworthy timestamp
+      // means the same backward search "Latest" does, per machine, which
+      // is too much to run just for a list view.
       lastLocation: m.location?.coordinates || null,
-      lastSeen: m.updated_at,
       fuel: m.metadata || null,
     }))
   );

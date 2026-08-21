@@ -70,15 +70,19 @@ export default function FieldDetailPage({ params }) {
   const [requesting, setRequesting] = useState(false);
   const [services, setServices] = useState([]);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (force = false) => {
     {
       try {
-        // `no-store` on the browser side only: the server still caches these
-        // for a minute, which is what protects AgroAPI. But crop, variety and
-        // planting info are edited by hand — in FarmAI or here — and someone
-        // who just made an edit must not be shown their browser's old copy.
+        // `no-store` on the browser side only bypasses the browser's own
+        // fetch cache — the server still holds this for up to a minute
+        // (`TTL.cropzone`). That's fine for ordinary navigation, but right
+        // after this same tab just wrote a name/boundary/crop/planting-date
+        // edit, the next `load()` must not replay that same stale minute
+        // back at the person who just made the edit — hence `force`, which
+        // asks the server route to skip its cache too (`?refresh=1`).
+        const refresh = force ? "?refresh=1" : "";
         const [cz, acts] = await Promise.all([
-          fetch(`/api/agroapi/cropzones/${cropzoneId}`, {
+          fetch(`/api/agroapi/cropzones/${cropzoneId}${refresh}`, {
             cache: "no-store",
           }).then((r) => r.json()),
           fetch(`/api/agroapi/cropzones/${cropzoneId}/activities`, {
@@ -478,7 +482,7 @@ export default function FieldDetailPage({ params }) {
             // overlay belongs to the old shape, so drop it too.
             setNdvi(null);
             setForecast(null);
-            load();
+            load(true);
           }}
         />
       )}

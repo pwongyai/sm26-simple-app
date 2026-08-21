@@ -16,6 +16,7 @@ const RANGES = [
   { key: "today", label: "Today" },
   { key: "2days", label: "2 days" },
   { key: "custom", label: "Custom" },
+  { key: "latest", label: "Latest" },
 ];
 
 const PANES = [
@@ -51,6 +52,10 @@ export default function MachineDetailPage({ params }) {
   const [range, setRange] = useState("today");
   const [customSince, setCustomSince] = useState(todayISO());
   const [customUntil, setCustomUntil] = useState(todayISO());
+  // "Latest" is a single found day, not a picked range — null until the
+  // backward search (see findLatestActivityDate) resolves one.
+  const [latestDate, setLatestDate] = useState(null);
+  const [findingLatest, setFindingLatest] = useState(false);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -74,6 +79,15 @@ export default function MachineDetailPage({ params }) {
       since = startOfDaysAgo(0).toISOString();
     } else if (range === "2days") {
       since = startOfDaysAgo(1).toISOString();
+    } else if (range === "latest") {
+      // Nothing to load yet — the "finding latest date" effect below is
+      // still searching, and will call load() again once it resolves.
+      if (!latestDate) {
+        setLoading(false);
+        return;
+      }
+      since = new Date(`${latestDate}T00:00:00+07:00`).toISOString();
+      until = new Date(`${latestDate}T23:59:59+07:00`).toISOString();
     } else {
       // The date inputs can be cleared by the user (backspace, the native ×
       // button) — guard against building an invalid Date from an empty or
@@ -115,7 +129,7 @@ export default function MachineDetailPage({ params }) {
     } finally {
       setLoading(false);
     }
-  }, [machineId, range, customSince, customUntil]);
+  }, [machineId, range, customSince, customUntil, latestDate]);
 
   // Deliberately not depending on `load` itself — `load` is recreated every
   // time customSince/customUntil change (it needs the current value in its
@@ -127,6 +141,39 @@ export default function MachineDetailPage({ params }) {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [machineId, range]);
+
+  // Switching to "Latest" kicks off the backward search; switching away
+  // clears it so re-selecting "Latest" later re-searches rather than
+  // silently reusing a stale date from a previous visit.
+  useEffect(() => {
+    if (range !== "latest") {
+      setLatestDate(null);
+      return;
+    }
+    let cancelled = false;
+    setFindingLatest(true);
+    fetch(`/api/machines/${machineId}/latest-track-date`)
+      .then((r) => (r.ok ? r.json() : { date: null }))
+      .then((d) => {
+        if (!cancelled) setLatestDate(d.date);
+      })
+      .catch(() => {
+        if (!cancelled) setLatestDate(null);
+      })
+      .finally(() => {
+        if (!cancelled) setFindingLatest(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [range, machineId]);
+
+  // Once the search resolves a date, actually load that day's trajectory —
+  // `load()` above only builds the query once `latestDate` is set.
+  useEffect(() => {
+    if (range === "latest" && latestDate) load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [latestDate]);
 
   // Richer metadata (make/model/serial) lives on the machine list's own
   // endpoint — reused here rather than duplicated.
@@ -199,6 +246,16 @@ export default function MachineDetailPage({ params }) {
               <button onClick={load} className="btn btn-primary shrink-0 px-3 py-1.5 text-xs">
                 Check
               </button>
+            </div>
+          )}
+
+          {range === "latest" && (
+            <div className="mb-3 text-xs text-[var(--text-sec)]">
+              {findingLatest
+                ? "Searching for this machine's most recent activity…"
+                : latestDate
+                  ? `Most recent activity: ${new Date(`${latestDate}T00:00:00`).toLocaleDateString([], { day: "numeric", month: "short", year: "numeric" })}`
+                  : "No GPS activity found for this machine in the past year."}
             </div>
           )}
 

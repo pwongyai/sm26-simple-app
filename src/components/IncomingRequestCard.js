@@ -5,9 +5,10 @@ import { updateOrder } from "@/lib/store";
 
 // The richer per-request card version 3 uses inside Incoming Requests — Accept/
 // Decline (with an inline date adjust) happen right here, no detour through
-// the full Work Order Details overlay required for the common case. "View
-// Details" is still offered for anyone who wants the field/notes context.
-export default function IncomingRequestCard({ order, onChanged, onViewDetails }) {
+// the full Work Order Details overlay required for the common case. Ordered
+// to match the real sequence: see the request, call the farmer to confirm
+// it, adjust the date if the call turned up a different one, then decide.
+export default function IncomingRequestCard({ order, onChanged }) {
   const [date, setDate] = useState(order.scheduled_date || "");
   const [busy, setBusy] = useState(false);
 
@@ -44,6 +45,15 @@ export default function IncomingRequestCard({ order, onChanged, onViewDetails })
           : "—"}
       </p>
 
+      {order.farmer?.phone && (
+        <a
+          href={`tel:${order.farmer.phone}`}
+          className="btn btn-outline mt-2 block w-full text-center"
+        >
+          📞 Call · {order.farmer.phone}
+        </a>
+      )}
+
       <div className="mt-2">
         <div className="field-label">Adjust scheduled date — before accepting</div>
         <input
@@ -53,20 +63,6 @@ export default function IncomingRequestCard({ order, onChanged, onViewDetails })
           onChange={(e) => setDate(e.target.value)}
         />
       </div>
-
-      {order.farmer?.phone && (
-        <a href={`tel:${order.farmer.phone}`} className="btn btn-outline mt-2 w-full">
-          📞 Call {order.farmer.name?.split(" ")[0] || "Farmer"} · {order.farmer.phone}
-        </a>
-      )}
-
-      <button
-        type="button"
-        className="mt-2 w-full text-center text-xs text-[var(--text-tert)] underline"
-        onClick={() => onViewDetails(order)}
-      >
-        View Details
-      </button>
 
       <div className="mt-2 flex gap-2">
         <button className="btn btn-outline flex-1" disabled={busy} onClick={decline}>

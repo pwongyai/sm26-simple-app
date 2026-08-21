@@ -38,12 +38,6 @@ export default function SelectArea({ machine, points, day, since, until, initial
   const [error, setError] = useState("");
   const [created, setCreated] = useState(null);
 
-  // The date this Select Area session is really about — whatever day the
-  // trajectory being viewed falls on. Used both for the eventual report
-  // hand-off and to check which nearby fields already have one today.
-  const targetDate =
-    day || points[points.length - 1]?.time?.slice(0, 10) || new Date().toLocaleDateString("en-CA");
-
   // Center of the map — the fields fetch is scoped to real distance from
   // this point (AgroAPI's own farms#index sort_by=distance, verified live)
   // rather than pulling all 100+ farms in the org and filtering
@@ -76,24 +70,20 @@ export default function SelectArea({ machine, points, day, since, until, initial
   }, []);
 
   // Version 3's green/purple field distinction — "no report yet" vs
-  // "already reported" — reusing the same real detection the Report flow
-  // itself uses (§suggestions), matched back to these fields by boundary
-  // since that route keys sessions by cropzone, not by AgroAPI field id.
+  // "already reported" — sourced directly from our own frozen `work_reports`
+  // rows (matched back to these fields by boundary, since a report is keyed
+  // by cropzone/machine, not by AgroAPI field id) rather than asking
+  // AgroAPI's `bookings/suggested` to separately re-detect today's work.
+  // Once reported, a field stays reported — there's no date to scope this
+  // to, unlike the old per-day suggestion check.
   useEffect(() => {
-    fetch(`/api/suggestions?date=${targetDate}&days=1`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (!data) return;
-        const reported = new Set(
-          (data.sessions || [])
-            .filter((s) => s.reportId)
-            .map((s) => JSON.stringify(s.boundary))
-        );
-        setReportedBoundaries(reported);
+    fetch("/api/reports/boundaries")
+      .then((r) => (r.ok ? r.json() : []))
+      .then((boundaries) => {
+        setReportedBoundaries(new Set((boundaries || []).map((b) => JSON.stringify(b))));
       })
       .catch(() => {});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [targetDate]);
+  }, []);
 
   useEffect(() => {
     if (mode !== "farmer") return;

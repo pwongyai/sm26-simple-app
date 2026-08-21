@@ -27,6 +27,7 @@ const VIEWS = {
   boundary: "Edit Boundary",
   crop: "Change Crop",
   variety: "Select Variety",
+  planting: "Planting Date",
 };
 
 export default function ManageField({
@@ -47,6 +48,9 @@ export default function ManageField({
   const [crops, setCrops] = useState(null);
   const [cropSearch, setCropSearch] = useState("");
   const [species, setSpecies] = useState(null);
+  const [plantingDate, setPlantingDate] = useState(
+    () => cropzone.planting_date?.slice(0, 10) || ""
+  );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [confirmRenew, setConfirmRenew] = useState(false);
@@ -146,6 +150,18 @@ export default function ManageField({
               <div className="txt">
                 <b>Crop &amp; variety</b>
                 <span>{cropLabel(cropzone.crop)}</span>
+              </div>
+            </button>
+
+            <button className="choice-card" onClick={() => setView("planting")}>
+              <div className="icon">📅</div>
+              <div className="txt">
+                <b>Planting date</b>
+                <span>
+                  {cropzone.planting_date
+                    ? new Date(cropzone.planting_date).toLocaleDateString()
+                    : "Not set"}
+                </span>
               </div>
             </button>
 
@@ -253,6 +269,23 @@ export default function ManageField({
           </>
         )}
 
+        {view === "planting" && (
+          <div>
+            <div className="field-label">Planting date</div>
+            <input
+              className="field"
+              type="date"
+              value={plantingDate}
+              onChange={(e) => setPlantingDate(e.target.value)}
+              autoFocus
+            />
+            <p className="mt-1 text-[11px] text-[var(--text-tert)]">
+              Optional — AgroAPI can only predict a maturity date once this is
+              set.
+            </p>
+          </div>
+        )}
+
         {view === "variety" && species && (
           <>
             <div className="fieldset-note">{species.species}</div>
@@ -301,6 +334,15 @@ export default function ManageField({
             onClick={() => patch({ boundary: [[...points, points[0]]] }, "boundary")}
           >
             {busy ? "Saving…" : "Save boundary"}
+          </button>
+        )}
+        {view === "planting" && (
+          <button
+            className="btn btn-primary"
+            disabled={busy}
+            onClick={() => patch({ plantingDate: plantingDate || null }, "planting date")}
+          >
+            {busy ? "Saving…" : "Save planting date"}
           </button>
         )}
       </div>

@@ -39,7 +39,6 @@ function ContractorChrome({ user, children }) {
     services,
     selected,
     setSelected,
-    openOrder,
     refresh,
     pending,
     showIncoming,
@@ -77,7 +76,7 @@ function ContractorChrome({ user, children }) {
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-lg flex-1 overflow-y-auto px-5 pb-6">
+      <main className="mx-auto w-full max-w-lg flex-1 overflow-y-auto px-5 pb-0">
         {children}
       </main>
 
@@ -108,10 +107,6 @@ function ContractorChrome({ user, children }) {
                 onChanged={() => {
                   refresh();
                   closeIncoming();
-                }}
-                onViewDetails={(order) => {
-                  closeIncoming();
-                  openOrder(order);
                 }}
               />
             ))}

@@ -3,6 +3,7 @@
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Map from "@/components/Map";
+import FrozenHeaderScroll from "@/components/FrozenHeaderScroll";
 
 function fmtMoney(amount, currency) {
   if (amount == null) return "—";
@@ -67,6 +68,34 @@ function polygonPoints(boundary) {
 
 const OVERVIEW_TAB = "overview";
 const MACHINE_TAB = "machine";
+
+// Re-derives the billed area for a different implement width, without a
+// server round-trip. Exact, not an approximation: `insideDistanceM` (how far
+// the machine actually travelled inside the field) never depended on width
+// in the first place — computeWork() only ever multiplies it by widthM at
+// the very last step (src/lib/engine.js) — so recomputing from the already-
+// known distance reproduces exactly what a fresh computeWork() call would
+// give for the same track and boundary, just with a corrected width.
+function withWidth(chosen, widthM) {
+  const work = chosen?.work;
+  if (!work) return chosen;
+  const workAreaM2 = Math.min(work.insideDistanceM * widthM, work.fieldAreaM2);
+  const percentWorked = work.fieldAreaM2
+    ? Math.min(100, Math.round((workAreaM2 / work.fieldAreaM2) * 100))
+    : 0;
+  const scale = work.fieldAreaM2 ? workAreaM2 / work.fieldAreaM2 : 0;
+  return {
+    ...chosen,
+    widthM,
+    workAreaUnits: Number((chosen.fieldAreaUnits * scale).toFixed(2)),
+    work: {
+      ...work,
+      workAreaM2: Math.round(workAreaM2),
+      percentWorked,
+      overlapped: workAreaM2 > work.fieldAreaM2,
+    },
+  };
+}
 
 function ReportThumb({ boundary }) {
   const points = polygonPoints(boundary);
@@ -140,7 +169,7 @@ function ReportsTabInner() {
     return true;
   });
 
-  return (
+  const header = (
     <>
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-lg font-semibold">Work Reports</h1>
@@ -190,48 +219,59 @@ function ReportsTabInner() {
           </button>
         </div>
       </div>
+    </>
+  );
 
-      {filtered.length === 0 && (
-        <p className="empty-msg">
-          {reports.length === 0
-            ? "No reports yet. Tap + Create, pick a machine, then tap a field on its map."
-            : "No work reports match these filters."}
-        </p>
-      )}
+  return (
+    <>
+      <FrozenHeaderScroll header={header}>
+        {filtered.length === 0 && (
+          <p className="empty-msg">
+            {reports.length === 0
+              ? "No reports yet. Tap + Create, pick a machine, then tap a field on its map."
+              : "No work reports match these filters."}
+          </p>
+        )}
 
-      <div className="flex flex-col gap-3">
-        {filtered.map((r) => (
-          <button key={r.id} className="report-card" onClick={() => setViewing(r)}>
-            <ReportThumb boundary={r.boundary} />
-            <div className="txt">
-              <div className="name">{r.farmer?.name || "Unassigned"}</div>
-              <div className="sub">
-                {r.work_type_name || r.service_name || "—"} · {fmtDate(r.started_at)}
+        <div className="flex flex-col gap-3">
+          {filtered.map((r) => (
+            <button key={r.id} className="report-card" onClick={() => setViewing(r)}>
+              <ReportThumb boundary={r.boundary} />
+              <div className="txt">
+                <div className="name">{r.farmer?.name || "Unassigned"}</div>
+                <div className="sub">
+                  {r.work_type_name || r.service_name || "—"} · {fmtDate(r.started_at)}
+                </div>
+                <div className="sub">
+                  {Number(r.field_area_units ?? 0).toFixed(2)} {r.unit_label} · {r.percent_worked ?? 0}% work area
+                  {r.machine_name ? ` · ${r.machine_name}` : ""}
+                </div>
               </div>
-              <div className="sub">
-                {Number(r.field_area_units ?? 0).toFixed(2)} {r.unit_label} · {r.percent_worked ?? 0}% work area
-                {r.machine_name ? ` · ${r.machine_name}` : ""}
+              <div
+                className={`report-pay-badge ${r.payment_status === "paid" ? "paid" : "unpaid"}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  togglePaid(r);
+                }}
+              >
+                <span className="ic">{r.payment_status === "paid" ? "✓" : "○"}</span>
+                <span className="lbl">{r.payment_status === "paid" ? "Paid" : "Unpaid"}</span>
               </div>
-            </div>
-            <div
-              className={`report-pay-badge ${r.payment_status === "paid" ? "paid" : "unpaid"}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                togglePaid(r);
-              }}
-            >
-              <span className="ic">{r.payment_status === "paid" ? "✓" : "○"}</span>
-              <span className="lbl">{r.payment_status === "paid" ? "Paid" : "Unpaid"}</span>
-            </div>
-          </button>
-        ))}
-      </div>
+            </button>
+          ))}
+        </div>
+      </FrozenHeaderScroll>
 
       {creating && (
         <CreateReport
           onClose={() => setCreating(false)}
           onCreated={() => {
             loadReports();
+          }}
+          onViewExisting={async (reportId) => {
+            setCreating(false);
+            const res = await fetch(`/api/reports/${reportId}`);
+            if (res.ok) setViewing(await res.json());
           }}
         />
       )}
@@ -356,7 +396,7 @@ function ViewReport({ report: r, onClose, onTogglePaid }) {
 // from that exact field + trajectory. This screen just displays them — it
 // never re-derives "which field" by matching against a separately-fetched
 // suggestion list.
-function CreateReport({ onClose, onCreated }) {
+function CreateReport({ onClose, onCreated, onViewExisting }) {
   const [status, setStatus] = useState("loading"); // loading | notfound | reviewing
   const [chosen, setChosen] = useState(null);
   const [unit, setUnit] = useState("rai");
@@ -366,6 +406,11 @@ function CreateReport({ onClose, onCreated }) {
   const [tab, setTab] = useState(OVERVIEW_TAB);
   const [paymentStatus, setPaymentStatus] = useState("unpaid");
   const [implement, setImplement] = useState(null);
+  const [implementCatalog, setImplementCatalog] = useState([]);
+  // Overrides the calculated charge — this is an assist tool, not a payment
+  // controller; the contractor can round up, give a discount, or add extra
+  // for a harder field without fighting the calculator. Null until touched.
+  const [chargeOverride, setChargeOverride] = useState(null);
   const [matchInfo, setMatchInfo] = useState(null); // {farmerId, farmerName, workOrderId}
   const [editing, setEditing] = useState(false);
   const [approving, setApproving] = useState(false);
@@ -386,8 +431,16 @@ function CreateReport({ onClose, onCreated }) {
     const pending = pendingRef.current;
     const preview = pending?.preview;
 
-    if (!preview || preview.reportId) {
+    if (!preview) {
       setStatus("notfound");
+      return;
+    }
+
+    // This exact field/machine/window has already been reported (no report
+    // is ever edited after approval — version 2 §15.5) — show the farmer's
+    // own frozen report rather than a dead-end "nothing to review" message.
+    if (preview.reportId) {
+      onViewExisting(preview.reportId);
       return;
     }
 
@@ -408,8 +461,25 @@ function CreateReport({ onClose, onCreated }) {
       .catch(() => {});
   }, [chosen?.machineId]);
 
+  useEffect(() => {
+    fetch("/api/implements")
+      .then((r) => (r.ok ? r.json() : []))
+      .then(setImplementCatalog)
+      .catch(() => {});
+  }, []);
+
   const service = services.find((s) => s.id === serviceId) || null;
-  const charge = service && chosen?.workAreaUnits != null ? Math.round(chosen.workAreaUnits * service.price) : null;
+  const calculatedCharge =
+    service && chosen?.workAreaUnits != null ? Math.round(chosen.workAreaUnits * service.price) : null;
+  const charge = chargeOverride ?? calculatedCharge;
+
+  // The implement actually used affects the area calculation directly — a
+  // one-off correction for this report (see withWidth's comment), not a
+  // change to the machine's stored Settings assignment.
+  function chooseImplement(impl) {
+    setImplement(impl);
+    setChosen((c) => withWidth(c, Number(impl.width_m)));
+  }
 
   async function approve() {
     setApproving(true);
@@ -578,6 +648,19 @@ function CreateReport({ onClose, onCreated }) {
               </div>
               <p className="mt-1 text-[11px] text-[var(--text-tert)]">
                 {chosen.workAreaUnits ?? "—"} {unit} × {fmtMoney(service?.price ?? 0, currency)}
+                {chargeOverride != null && chargeOverride !== calculatedCharge && (
+                  <>
+                    {" "}
+                    · adjusted from {fmtMoney(calculatedCharge, currency)}{" "}
+                    <button
+                      type="button"
+                      className="underline"
+                      onClick={() => setChargeOverride(null)}
+                    >
+                      undo
+                    </button>
+                  </>
+                )}
               </p>
             </div>
 
@@ -616,6 +699,12 @@ function CreateReport({ onClose, onCreated }) {
           onServiceChange={setServiceId}
           farmerName={matchInfo?.farmerName}
           onFarmerChosen={(farmer) => setMatchInfo((m) => ({ ...m, farmerId: farmer.id, farmerName: farmer.name }))}
+          implement={implement}
+          implementCatalog={implementCatalog}
+          onImplementChosen={chooseImplement}
+          charge={charge}
+          currency={currency}
+          onChargeChange={setChargeOverride}
           onClose={() => setEditing(false)}
         />
       )}
@@ -627,7 +716,20 @@ function CreateReport({ onClose, onCreated }) {
 // (redraw the polygon — not built yet, this rebuild's next real gap) and
 // Edit Details (farmer, work type, service charge). Only the latter exists
 // to edit here, so Edit opens straight into it rather than a one-item menu.
-function EditDetails({ services, serviceId, onServiceChange, farmerName, onFarmerChosen, onClose }) {
+function EditDetails({
+  services,
+  serviceId,
+  onServiceChange,
+  farmerName,
+  onFarmerChosen,
+  implement,
+  implementCatalog,
+  onImplementChosen,
+  charge,
+  currency,
+  onChargeChange,
+  onClose,
+}) {
   const [query, setQuery] = useState("");
   const [customers, setCustomers] = useState([]);
 
@@ -689,6 +791,50 @@ function EditDetails({ services, serviceId, onServiceChange, farmerName, onFarme
           </select>
           <p className="mt-1 text-[11px] text-[var(--text-tert)]">
             Changes the service charge; the measured area itself doesn&apos;t change.
+          </p>
+        </div>
+
+        <div>
+          <div className="field-label">Implement</div>
+          <select
+            value={implement?.id || ""}
+            onChange={(e) => {
+              const found = implementCatalog.find((i) => i.id === e.target.value);
+              if (found) onImplementChosen(found);
+            }}
+            className="field w-full"
+          >
+            {!implement && <option value="">No implement — telemetry width used</option>}
+            {implementCatalog.map((i) => (
+              <option key={i.id} value={i.id}>
+                {i.name} — {i.width_m} m
+              </option>
+            ))}
+          </select>
+          <p className="mt-1 text-[11px] text-[var(--text-tert)]">
+            Only for this report — correct this if the physical implement was
+            swapped without updating Settings. Recalculates the work area.
+          </p>
+        </div>
+
+        <div>
+          <div className="field-label">Service Charge</div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-[var(--text-sec)]">
+              {currency === "THB" ? "฿" : currency}
+            </span>
+            <input
+              type="number"
+              className="field flex-1"
+              value={charge ?? ""}
+              onChange={(e) =>
+                onChargeChange(e.target.value === "" ? null : Number(e.target.value))
+              }
+            />
+          </div>
+          <p className="mt-1 text-[11px] text-[var(--text-tert)]">
+            This is an assist tool, not a payment control — adjust up or down
+            for a discount, a harder field, or simply to round the number.
           </p>
         </div>
       </div>

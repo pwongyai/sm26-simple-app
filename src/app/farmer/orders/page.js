@@ -37,7 +37,14 @@ export default function FarmerOrdersTab() {
               <span className="absolute right-3 top-3 h-2.5 w-2.5 rounded-full bg-red-500" />
             )}
             <div className="mb-1 flex items-center justify-between pr-4">
-              <StatusBadge status={o.status} />
+              <div className="flex items-center gap-1.5">
+                <StatusBadge status={o.status} />
+                {o.has_report && (
+                  <span className="rounded px-2 py-0.5 text-xs font-medium bg-[var(--purple-light)] text-[var(--purple)]">
+                    Work Report
+                  </span>
+                )}
+              </div>
               <span className="text-xs text-[var(--text-tert)]">{o.scheduled_date}</span>
             </div>
             <p className="font-medium">{o.field_name}</p>

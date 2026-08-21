@@ -46,6 +46,12 @@ export async function GET(request) {
   const sinceParam = searchParams.get("since");
   const untilParam = searchParams.get("until");
   const serviceIdParam = searchParams.get("serviceId");
+  // Set only when the contractor corrects the implement on Edit Details —
+  // the physical implement was swapped in the field without ever updating
+  // Settings' assignment, so this report alone needs a different width than
+  // resolveWidthAndFuel() would otherwise pick. A one-off override, not a
+  // change to the machine's stored assignment.
+  const widthMOverrideParam = searchParams.get("widthM");
 
   if (!fieldId || !machineId || !sinceParam) {
     return Response.json({ error: "fieldId, machineId, since are required" }, { status: 400 });
@@ -119,11 +125,15 @@ export async function GET(request) {
     ? services.find((s) => s.id === serviceIdParam) || services[0] || null
     : services[0] || null;
 
-  const { widthM, widthSource, fuelLPerKm } = await resolveWidthAndFuel({
+  const resolved = await resolveWidthAndFuel({
     machineId,
     serviceId: service?.id || null,
     points: track.points,
   });
+  const widthMOverride = widthMOverrideParam ? Number(widthMOverrideParam) : null;
+  const widthM = widthMOverride ?? resolved.widthM;
+  const widthSource = widthMOverride != null ? "override" : resolved.widthSource;
+  const fuelLPerKm = resolved.fuelLPerKm;
 
   const work = computeWork({ points: track.points, boundary, widthM });
   const unitM2 = Number(user.organization.area_unit_m2);

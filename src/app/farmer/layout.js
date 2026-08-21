@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useSession } from "@/lib/useSession";
 import { useOrders } from "@/lib/useOrders";
 import Bell from "@/components/Bell";
@@ -18,6 +18,7 @@ const TABS = [
 
 export default function FarmerLayout({ children }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { user, loading } = useSession({ require: "farmer" });
   const [orders] = useOrders();
 
@@ -42,7 +43,12 @@ export default function FarmerLayout({ children }) {
             </p>
           </div>
         </div>
-        <Bell count={unseen} />
+        {/* The bell has nowhere else to open to yet — a farmer's only
+            "notifications" today are updates on their own work orders
+            (unseen_by_farmer), so it goes straight to the Requests tab that
+            already lists them, badges the unseen ones, and marks them seen
+            on open. */}
+        <Bell count={unseen} onClick={() => router.push("/farmer/orders")} />
       </header>
 
       <main className="mx-auto w-full max-w-lg flex-1 px-5 pb-6">{children}</main>

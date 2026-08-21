@@ -14,7 +14,7 @@ export async function PATCH(request, { params }) {
   const { user, response } = await requireAccess({ fieldId });
   if (response) return response;
 
-  const { name, boundary, cropId } = await request.json();
+  const { name, boundary, cropId, plantingDate } = await request.json();
 
   // The ownership row tells us which cropzone is the live one for this field.
   const { data: owned } = await supabaseAdmin
@@ -32,6 +32,7 @@ export async function PATCH(request, { params }) {
   // --- Field: name and boundary ---
   const fieldPatch = {};
   if (name?.trim()) fieldPatch.name = name.trim();
+  let boundaryGeo = null;
   if (boundary) {
     const ring = boundary[0];
     if (!Array.isArray(ring) || ring.length < 4) {
@@ -40,7 +41,8 @@ export async function PATCH(request, { params }) {
         { status: 400 }
       );
     }
-    fieldPatch.location = { type: "Polygon", coordinates: boundary };
+    boundaryGeo = { type: "Polygon", coordinates: boundary };
+    fieldPatch.location = boundaryGeo;
   }
 
   if (Object.keys(fieldPatch).length) {
@@ -52,14 +54,31 @@ export async function PATCH(request, { params }) {
     else failed.push({ part: "field", detail: res.body });
   }
 
-  // --- Cropzone: crop and variety ---
-  if (cropId && owned.agro_cropzone_id) {
+  // --- Cropzone: crop, planting date, and its own copy of the boundary ---
+  // A cropzone stores its own `boundary`, snapshotted from the field once at
+  // creation time (AgroAPI's `set_default_polygon`) — it never tracks the
+  // field's boundary afterwards. Every screen in this app renders the
+  // cropzone's boundary (not the field's), so a boundary edit has to patch
+  // both records or it silently never shows up.
+  const cropzonePatch = {};
+  if (cropId) cropzonePatch.crop_id = cropId;
+  if (plantingDate) cropzonePatch.planting_date = `${plantingDate}T00:00:00Z`;
+  if (boundaryGeo) cropzonePatch.location = boundaryGeo;
+
+  if (Object.keys(cropzonePatch).length && owned.agro_cropzone_id) {
     const res = await agroFetch(`/cropzones/${owned.agro_cropzone_id}`, {
       method: "PATCH",
-      body: JSON.stringify({ crop_id: cropId }),
+      body: JSON.stringify(cropzonePatch),
     });
-    if (res.ok) applied.push("crop");
-    else failed.push({ part: "crop", detail: res.body });
+    if (res.ok) {
+      applied.push(
+        ...Object.keys(cropzonePatch).map((k) =>
+          k === "crop_id" ? "crop" : k === "location" ? "cropzone boundary" : k
+        )
+      );
+    } else {
+      failed.push({ part: "cropzone", detail: res.body });
+    }
   }
 
   // Keep our own denormalised label in step with the real one.

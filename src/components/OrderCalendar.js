@@ -75,14 +75,14 @@ export default function OrderCalendar({ orders, selected, onSelect }) {
             <button
               key={key}
               onClick={() => onSelect(isSelected ? null : key)}
-              className={`flex aspect-square flex-col items-center justify-center gap-0.5 rounded text-xs ${
+              className={`flex aspect-[10/7] flex-col items-center justify-center gap-0.5 overflow-hidden rounded text-xs leading-none ${
                 isSelected ? "bg-[var(--ink)] text-white" : "text-[var(--ink)]"
               }`}
             >
-              <span>{day}</span>
+              <span className="leading-none">{day}</span>
               {list && (
                 <span
-                  className={`rounded-full px-1.5 text-[8.5px] font-bold leading-[1.4] ${badgeClass(
+                  className={`rounded-full px-1.5 text-[8.5px] font-bold leading-[1.2] ${badgeClass(
                     list,
                     isSelected
                   )}`}

@@ -48,6 +48,19 @@ body {
     Arial, sans-serif;
 }
 
+/* A native app doesn't show scrollbar chrome — every scroll area in this app
+   should look the same regardless of which browser previews it (Booking's
+   inner card-list scroll box is inset from the true screen edge by `main`'s
+   own padding, so its native scrollbar renders as a visible gray line/thumb
+   partway across the screen rather than flush against a real edge). */
+.overflow-y-auto {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.overflow-y-auto::-webkit-scrollbar {
+  display: none;
+}
+
 /* Shared component styles, matching version 3's prototype. */
 .card {
   background: #fff;

@@ -38,7 +38,23 @@ export async function GET() {
     console.error(error);
     return Response.json({ error: "Could not load work orders" }, { status: 500 });
   }
-  return Response.json(data);
+
+  // Not every "completed" order has a real report behind it — a simple
+  // "Mark work complete" or a Force Close writes no work_reports row at all
+  // (see /api/orders/[orderId]/report). The list needs to know which is
+  // which so it can badge only the ones a tap will actually open a report
+  // for, rather than promising one that isn't there.
+  const completedIds = data.filter((o) => o.status === "completed").map((o) => o.id);
+  let reportedIds = new Set();
+  if (completedIds.length) {
+    const { data: reports } = await supabaseAdmin
+      .from("work_reports")
+      .select("work_order_id")
+      .in("work_order_id", completedIds);
+    reportedIds = new Set((reports || []).map((r) => r.work_order_id));
+  }
+
+  return Response.json(data.map((o) => ({ ...o, has_report: reportedIds.has(o.id) })));
 }
 
 export async function POST(request) {

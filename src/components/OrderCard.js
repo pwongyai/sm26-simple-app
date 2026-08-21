@@ -65,21 +65,21 @@ export default function OrderCard({ order, onClick, index }) {
   return (
     <button
       onClick={onClick}
-      className={`flex w-full items-start justify-between gap-3 rounded border p-3 text-left ${
-        late > 0 ? "border-danger-light bg-danger-light/40" : "border-[var(--rule)]"
+      className={`card flex w-full items-start justify-between gap-3 px-3 py-1.5 text-left ${
+        late > 0 ? "card-late" : ""
       }`}
     >
-      <div className="min-w-0">
-        <p className="truncate font-medium">
+      <div className="min-w-0 flex flex-col gap-0.5">
+        <p className="truncate font-bold leading-tight">
           {index != null && (
             <span className="mr-1.5 text-[var(--text-tert)]">{index}.</span>
           )}
           {order.farmer?.name || "—"}
         </p>
-        <p className="truncate text-sm text-[var(--text-sec)]">
+        <p className="truncate text-sm leading-tight text-[var(--text-sec)]">
           {order.activity_type_name || "No work type"}
         </p>
-        <p className="text-xs text-[var(--text-tert)]">
+        <p className="text-xs leading-tight text-[var(--text-tert)]">
           {order.scheduled_date
             ? new Date(`${order.scheduled_date}T00:00:00`).toLocaleDateString([], {
                 day: "numeric",
@@ -92,7 +92,7 @@ export default function OrderCard({ order, onClick, index }) {
       <div className="flex shrink-0 flex-col items-end gap-1">
         <Badge order={order} />
         {order.crop_size_rai != null && (
-          <p className="whitespace-nowrap text-lg font-medium leading-none">
+          <p className="whitespace-nowrap text-2xl font-bold leading-none">
             {Number(order.crop_size_rai).toFixed(1)}
             <span className="ml-1 text-xs font-normal text-[var(--text-sec)]">rai</span>
           </p>

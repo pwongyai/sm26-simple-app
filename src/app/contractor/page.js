@@ -5,6 +5,7 @@ import { useContractorOrders } from "@/lib/ContractorOrdersContext";
 import OrderCard, { daysLate } from "@/components/OrderCard";
 import AddOrderForm from "@/components/AddOrderForm";
 import OrderCalendar from "@/components/OrderCalendar";
+import FrozenHeaderScroll from "@/components/FrozenHeaderScroll";
 import Map from "@/components/Map";
 import { haversineKm } from "@/lib/track";
 
@@ -112,7 +113,7 @@ export default function BookingTab() {
     return homeBase ? [{ ...homeBase, home: true }, ...stops] : stops;
   }, [routedToday, homeBase]);
 
-  return (
+  const header = (
     <>
       <div className="subtabs my-3">
         {VIEWS.map((v) => (
@@ -130,30 +131,72 @@ export default function BookingTab() {
       </div>
 
       {view === "list" && (
+        <div className="flex gap-2">
+          <div className="search-pill">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              className="h-3.5 w-3.5 shrink-0 text-[var(--text-sec)]"
+            >
+              <circle cx="11" cy="11" r="8" />
+              <path d="M21 21l-4.3-4.3" />
+            </svg>
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search customer name"
+            />
+          </div>
+          <button className="add-btn" onClick={() => setAdding(true)}>
+            + Add
+          </button>
+        </div>
+      )}
+
+      {view === "calendar" && (
         <>
-          <div className="mb-3 flex gap-2">
-            <div className="search-pill">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                className="h-3.5 w-3.5 shrink-0 text-[var(--text-sec)]"
-              >
-                <circle cx="11" cy="11" r="8" />
-                <path d="M21 21l-4.3-4.3" />
-              </svg>
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search customer name"
-              />
-            </div>
-            <button className="add-btn" onClick={() => setAdding(true)}>
+          <OrderCalendar orders={listOrders} selected={day} onSelect={setDay} />
+          <div className="mt-3 flex items-center justify-between">
+            <p className="text-sm font-semibold">
+              {day &&
+                new Date(`${day}T00:00:00`).toLocaleDateString([], {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                })}
+            </p>
+            <button className="add-btn py-1.5" onClick={() => setAdding(true)}>
               + Add
             </button>
           </div>
+        </>
+      )}
 
+      {view === "today" && todayMarkers.length > 0 && (
+        <Map markers={todayMarkers} height={200} />
+      )}
+      {view === "today" &&
+        (delayedToday.length > 0 || routedToday.length > 0 || unmappedToday.length > 0) && (
+          <div className="mt-3 flex items-center justify-between">
+            <p className="text-xs text-[var(--text-tert)]">
+              Suggested order — delayed jobs first, then closest to home.
+            </p>
+            {unmappedToday.length > 0 && (
+              <span className="rounded bg-surface px-1.5 py-0.5 text-[11px] text-tert">
+                {unmappedToday.length} unmapped
+              </span>
+            )}
+          </div>
+        )}
+    </>
+  );
+
+  return (
+    <>
+      <FrozenHeaderScroll header={header}>
+        {view === "list" && (
           <div className="flex flex-col gap-2">
             {searched.length === 0 && (
               <p className="empty-msg">
@@ -166,18 +209,10 @@ export default function BookingTab() {
               <OrderCard key={o.id} order={o} onClick={() => openOrder(o)} />
             ))}
           </div>
-        </>
-      )}
+        )}
 
-      {view === "calendar" && (
-        <>
-          <div className="mb-3 flex justify-end">
-            <button className="add-btn py-1.5" onClick={() => setAdding(true)}>
-              + Add
-            </button>
-          </div>
-          <OrderCalendar orders={listOrders} selected={day} onSelect={setDay} />
-          <div className="mt-4 flex flex-col gap-2">
+        {view === "calendar" && (
+          <div className="flex flex-col gap-2">
             {day && dayOrders?.length === 0 && (
               <p className="empty-msg">Nothing scheduled that day.</p>
             )}
@@ -185,45 +220,28 @@ export default function BookingTab() {
               <OrderCard key={o.id} order={o} onClick={() => openOrder(o)} />
             ))}
           </div>
-        </>
-      )}
+        )}
 
-      {/* Today's Work has no + Add of its own — anything added elsewhere for
-          today shows up here, since it's the same data filtered. */}
-      {view === "today" && (
-        <div className="flex flex-col gap-2">
-          {delayedToday.length + routedToday.length + unmappedToday.length === 0 && (
-            <p className="empty-msg">Nothing due today.</p>
-          )}
+        {/* Today's Work has no + Add of its own — anything added elsewhere
+            for today shows up here, since it's the same data filtered. */}
+        {view === "today" && (
+          <div className="flex flex-col gap-2">
+            {delayedToday.length + routedToday.length + unmappedToday.length === 0 && (
+              <p className="empty-msg">Nothing due today.</p>
+            )}
 
-          {todayMarkers.length > 0 && (
-            <Map markers={todayMarkers} height={200} />
-          )}
-
-          {(delayedToday.length > 0 || routedToday.length > 0 || unmappedToday.length > 0) && (
-            <div className="flex items-center justify-between">
-              <p className="text-xs text-[var(--text-tert)]">
-                Suggested order — delayed jobs first, then closest to home.
-              </p>
-              {unmappedToday.length > 0 && (
-                <span className="rounded bg-surface px-1.5 py-0.5 text-[11px] text-tert">
-                  {unmappedToday.length} unmapped
-                </span>
-              )}
-            </div>
-          )}
-
-          {delayedToday.map((o) => (
-            <OrderCard key={o.id} order={o} onClick={() => openOrder(o)} />
-          ))}
-          {routedToday.map((o, i) => (
-            <OrderCard key={o.id} order={o} index={i + 1} onClick={() => openOrder(o)} />
-          ))}
-          {unmappedToday.map((o) => (
-            <OrderCard key={o.id} order={o} onClick={() => openOrder(o)} />
-          ))}
-        </div>
-      )}
+            {delayedToday.map((o) => (
+              <OrderCard key={o.id} order={o} onClick={() => openOrder(o)} />
+            ))}
+            {routedToday.map((o, i) => (
+              <OrderCard key={o.id} order={o} index={i + 1} onClick={() => openOrder(o)} />
+            ))}
+            {unmappedToday.map((o) => (
+              <OrderCard key={o.id} order={o} onClick={() => openOrder(o)} />
+            ))}
+          </div>
+        )}
+      </FrozenHeaderScroll>
 
       {adding && (
         <AddOrderForm

@@ -108,6 +108,110 @@ export async function fetchMachineTrack(machineId, sinceMs, untilMs, force = fal
   return { points, truncated, failed: false };
 }
 
+// AgroAPI has no "when did this machine last report" shortcut — `locations`
+// only returns ascending rows for a range you give it (capped at 1000), and
+// the sensor's own `updated_at` is explicitly flagged unreliable in AgroAPI's
+// own source (`# Is it updated_at or last_measurement.created_at?`). So
+// finding the most recent day with real GPS data means actually searching —
+// backward-doubling instead of a day-by-day scan keeps the *count* bounded
+// (~9 windows to reach a year back), and the windows are anchored to the
+// start of today (not `Date.now()` at call time) so repeated searches on the
+// same day reuse the exact same cache keys — anchoring to the live clock
+// meant every call built slightly different millisecond boundaries and
+// never hit the cache at all, silently redoing the full search every time.
+const PROBE_MAX_DAYS = 365;
+
+function candidateWindows(anchorMs) {
+  const windows = [];
+  let end = anchorMs;
+  let spanDays = 1;
+  while (spanDays / 2 < PROBE_MAX_DAYS) {
+    const start = end - spanDays * 24 * 3600 * 1000;
+    windows.push([start, end]);
+    end = start;
+    spanDays *= 2;
+  }
+  return windows; // nearest-to-now window first
+}
+
+async function probeWindowHasPoints(machineId, sinceMs, untilMs) {
+  const cacheKey = `track-probe:${machineId}:${sinceMs}-${untilMs}`;
+  const { ok, body } = await cached(cacheKey, trackWindowTtl(untilMs), async () => {
+    const query = new URLSearchParams({
+      items: "1",
+      since: new Date(sinceMs).toISOString(),
+      until: new Date(untilMs).toISOString(),
+    });
+    const r = await agroFetchWithRetry(`/nouki/devices/${machineId}/locations?${query}`);
+    return r.ok ? r : { ...r, __noCache: true };
+  });
+  return ok && (body.features || []).length > 0;
+}
+
+// Once a coarse window (up to ~256 days wide) is known to contain the
+// answer, don't hand it to fetchMachineTrack — that fetch is built for
+// *complete, gap-free* trajectories (4-hour chunks, bisected on truncation),
+// exactly what real report billing needs but wildly disproportionate to
+// "find the single most recent point": over a 128-day coarse window that
+// meant hundreds of real sub-fetches and, in testing, 20+ seconds. Instead,
+// keep bisecting with the same cheap existence check, always checking the
+// *later* half first — the most recent point must be there if it has any
+// data at all — until the window is a single day, small enough that the
+// real, precise fetch is exactly as cheap as the existing "Today" filter.
+const NARROW_TO_MS = 24 * 3600 * 1000;
+
+async function narrowToLatestPointTime(machineId, sinceMs, untilMs) {
+  if (untilMs - sinceMs <= NARROW_TO_MS) {
+    const track = await fetchMachineTrack(machineId, sinceMs, untilMs);
+    const last = track.points[track.points.length - 1];
+    return last?.time || null;
+  }
+  const midMs = sinceMs + Math.floor((untilMs - sinceMs) / 2);
+  if (await probeWindowHasPoints(machineId, midMs, untilMs)) {
+    return narrowToLatestPointTime(machineId, midMs, untilMs);
+  }
+  return narrowToLatestPointTime(machineId, sinceMs, midMs);
+}
+
+// Probed in small parallel batches, nearest-to-now first — a machine used
+// today or yesterday resolves in one batch (as fast as a single round trip);
+// only a machine idle for months pays for a second or third. Fully
+// sequential made the rare worst case (this app's "8 months idle" test
+// machine) take minutes; firing all ~9 windows at once regardless would
+// waste calls on the common case. This is the middle ground.
+const BATCH_SIZE = 4;
+
+/**
+ * @returns {string|null} the machine's most recent activity date, as a plain
+ *   `YYYY-MM-DD` (the caller's own timezone convention — same as the
+ *   Custom-range date inputs), or null if nothing was found within a year.
+ */
+export async function findLatestActivityDate(machineId) {
+  const anchorMs = new Date(new Date().toISOString().slice(0, 10) + "T00:00:00.000Z").getTime();
+  const windows = candidateWindows(anchorMs);
+
+  for (let i = 0; i < windows.length; i += BATCH_SIZE) {
+    const batch = windows.slice(i, i + BATCH_SIZE);
+    const hits = await mapWithConcurrency(batch, ([s, u]) => probeWindowHasPoints(machineId, s, u));
+    const hitIndex = hits.findIndex(Boolean);
+    if (hitIndex === -1) continue;
+
+    // Found the nearest-to-now window with data — narrow to its actual last
+    // point rather than just returning "somewhere in this (possibly
+    // months-wide) window".
+    const [start, end] = batch[hitIndex];
+    const lastTime = await narrowToLatestPointTime(machineId, start, end);
+    if (!lastTime) return null;
+    // This org is Bangkok-only, no DST (same convention as the Custom
+    // range's own +07:00 date construction) — shift before taking the
+    // calendar date, or a ping after 5pm UTC reports as the wrong day.
+    return new Date(new Date(lastTime).getTime() + 7 * 3600 * 1000)
+      .toISOString()
+      .slice(0, 10);
+  }
+  return null;
+}
+
 // The machine's own most-frequently-reported width, if it reports one at all.
 export function modalWorkWidth(points) {
   const counts = new Map();
