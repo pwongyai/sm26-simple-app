@@ -67,6 +67,7 @@ export async function GET(request) {
 
   let cropzoneId = null;
   let boundary = null;
+  let fieldName = null;
 
   if (cropzoneIdParam) {
     const cz = await agroFetch(`/cropzones/${cropzoneIdParam}`);
@@ -75,6 +76,7 @@ export async function GET(request) {
     }
     cropzoneId = cropzoneIdParam;
     boundary = cz.body?.location?.boundary?.coordinates || null;
+    fieldName = cz.body?.name || null;
     if (!boundary) {
       return Response.json({ error: "This field has no boundary yet" }, { status: 404 });
     }
@@ -94,10 +96,12 @@ export async function GET(request) {
       existingCropzones.find((cz) => !cz.archived_at) || existingCropzones[0] || null;
     cropzoneId = existingCropzone?.id || null;
     boundary = existingCropzone?.location?.boundary?.coordinates || null;
+    fieldName = existingCropzone?.name || null;
 
     if (!cropzoneId) {
       const fieldRes = await agroFetch(`/fields/${fieldId}`);
       boundary = fieldRes.ok ? fieldRes.body?.location?.boundary?.coordinates : null;
+      fieldName = fieldRes.ok ? fieldRes.body?.name : null;
       if (!boundary) {
         return Response.json({ error: "This field has no boundary yet" }, { status: 404 });
       }
@@ -174,7 +178,7 @@ export async function GET(request) {
 
   return Response.json({
     cropzoneId,
-    fieldName: cropzoneRes.body?.name || null,
+    fieldName,
     boundary,
     machineId,
     machineName,
