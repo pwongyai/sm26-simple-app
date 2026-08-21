@@ -48,7 +48,14 @@ export default function SelectArea({ machine, points, day, since, until, initial
   // transits along a road between two field clusters averages to a point
   // on the road, near neither cluster. The map's own fitted center is
   // where the trajectory actually visually sits.
+  //
+  // Re-fetches every time "pick" mode is (re-)entered, not just once on
+  // mount — a field drawn moments ago (Draw Boundary's back arrow returns
+  // here, same mounted component) must show up immediately, not only after
+  // a full remount. The server itself is already always fresh; this was the
+  // one place still holding an unrefreshed snapshot from the first look.
   useEffect(() => {
+    if (mode !== "pick") return;
     if (!points.length && !initialView) {
       setLoading(false);
       return;
@@ -60,13 +67,14 @@ export default function SelectArea({ machine, points, day, since, until, initial
       lat = points.reduce((s, p) => s + p.coord[1], 0) / points.length;
       lng = points.reduce((s, p) => s + p.coord[0], 0) / points.length;
     }
-    fetch(`/api/agroapi/fields?lat=${lat}&lng=${lng}`)
+    setLoading(true);
+    fetch(`/api/agroapi/fields?lat=${lat}&lng=${lng}&refresh=1`)
       .then((r) => (r.ok ? r.json() : []))
       .then(setFields)
       .catch(() => {})
       .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [mode]);
 
   // Version 3's green/purple field distinction — "no report yet" vs
   // "already reported" — sourced directly from our own frozen `work_reports`
