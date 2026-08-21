@@ -1,49 +1,8 @@
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { requireAccess } from "@/lib/ownership";
+import { requireAccess, unassignedFarmerId } from "@/lib/ownership";
 import { agroFetch } from "@/lib/agroapi";
 import { contractorOrgId } from "@/lib/contractor";
 import { cropzoneInSite } from "@/lib/siteFarms";
-
-// Most of this org's real AgroAPI fields (687 of them, confirmed) predate
-// this app and were never assigned an owner here — reporting against one via
-// Select Area's "tap a known field" has no farmer to attach, so it fell
-// through to a silent NULL. That's a real gap the boss wants papered over
-// for now (real field survey + reassignment comes later), and a single
-// obvious placeholder customer is the honest way to do it: one auditable
-// bucket ("find everything still owned by this and go survey it") rather
-// than fabricating hundreds of individually fake-looking farmer identities
-// that would be indistinguishable from real ones later. Found-or-created
-// lazily, same pattern as the Farm-reuse-on-first-use logic elsewhere.
-const PLACEHOLDER_FARMER_NAME = "Unassigned";
-const PLACEHOLDER_FARMER_PHONE = "0000000000";
-
-async function getOrCreatePlaceholderFarmer(user) {
-  const orgId = contractorOrgId(user);
-  const { data: existing } = await supabaseAdmin
-    .from("farmers")
-    .select("id")
-    .eq("contractor_agro_org_id", orgId)
-    .eq("name", PLACEHOLDER_FARMER_NAME)
-    .maybeSingle();
-  if (existing) return existing.id;
-
-  const { data: created, error } = await supabaseAdmin
-    .from("farmers")
-    .insert({
-      organization_id: user.organization_id,
-      contractor_agro_org_id: orgId,
-      name: PLACEHOLDER_FARMER_NAME,
-      phone: PLACEHOLDER_FARMER_PHONE,
-      type: "manual",
-    })
-    .select("id")
-    .single();
-  if (error) {
-    console.error("Could not create placeholder farmer", error);
-    return null;
-  }
-  return created.id;
-}
 
 export async function GET() {
   const { user, response } = await requireAccess();
@@ -204,7 +163,7 @@ export async function POST(request) {
   // Backfilling a brand-new order for a pre-existing field with no owner on
   // record — fall back to the placeholder rather than leaving it NULL.
   if (!workOrderId && !farmerId) {
-    farmerId = await getOrCreatePlaceholderFarmer(user);
+    farmerId = await unassignedFarmerId(user);
   }
 
   if (workOrderId) {

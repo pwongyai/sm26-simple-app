@@ -62,7 +62,10 @@ create table if not exists app_users (
   created_at timestamptz not null default now()
 );
 
--- 3. The ownership mapping — "who owns what" in AgroAPI.
+-- 3. DEPRECATED — superseded by `farmer_fields` (see farmers-schema.sql),
+--    keyed by farmers.id so it covers manual farmers too, not just app
+--    logins. Existing rows were migrated across; no code reads or writes
+--    this table anymore. Left in place rather than dropped.
 --    One row per field a user owns. `agro_cropzone_id` is null until a planting
 --    exists (a registered field with no crop is a normal, expected state).
 create table if not exists user_fields (
@@ -149,6 +152,63 @@ create index if not exists farmers_app_user_idx on farmers (app_user_id);
 -- One customer per name per site. Also what makes the seed at the bottom of
 -- this file safe to re-run without piling up duplicate customers.
 create unique index if not exists farmers_org_name_idx on farmers (organization_id, name);
+
+-- DEPRECATED — Case C (contractor draws a field) used to put every
+-- locally-drawn field in the site under one shared Farm here. Superseded by
+-- `farmers.agro_farm_id` (one Farm per farmer, matching the 1-farm-1-field-
+-- 1-cropzone shape every real pre-existing farm in this org already has).
+-- No code writes this column anymore; left in place rather than dropped.
+alter table organizations add column if not exists shared_agro_farm_id text;
+
+-- This org's own field/farm/cropzone registry number, continued rather than
+-- reinvented — RK0001…RK0542 already exist as real, pre-app plots, all
+-- sharing one number across Farm/Field/Cropzone. A contractor drawing a new
+-- field (Case C) has no way to see how many fields a farmer already has, so
+-- letting them type a name risks two different fields both called "Field 1"
+-- — instead the next number is claimed atomically (claim_next_field_number
+-- below) and used as the name for all three records together, same as the
+-- existing real ones. Seeded to 543 for RK; a new site starts at 1, using
+-- its own `id` as the prefix ('HN0001', …) — nothing here is RK-specific.
+alter table organizations add column if not exists next_field_number integer not null default 1;
+update organizations set next_field_number = 543 where id = 'RK' and next_field_number = 1;
+
+create or replace function claim_next_field_number(org_id text)
+returns integer
+language plpgsql
+as $$
+declare
+  claimed integer;
+begin
+  update organizations
+  set next_field_number = next_field_number + 1
+  where id = org_id
+  returning next_field_number - 1 into claimed;
+  return claimed;
+end;
+$$;
+
+-- 1b. THE ownership mapping — every farmer's field(s), keyed by farmers.id
+--     so it covers smart farmers (who log in) and manual farmers (who never
+--     do) the same way. A smart farmer's `farmers` row is created on first
+--     use of any farmer_fields-backed route, mirroring their AgroAPI farm.
+--     Superseded user_fields (kept, deprecated, see below), which only
+--     worked for a farmer with an app_users row to key off of.
+create table if not exists farmer_fields (
+  id uuid primary key default gen_random_uuid(),
+  farmer_id uuid not null references farmers(id) on delete cascade,
+  organization_id text not null references organizations(id),
+  agro_field_id text not null,
+  agro_cropzone_id text,
+  name text,
+  created_at timestamptz not null default now(),
+  unique (farmer_id, agro_field_id)
+);
+
+create index if not exists farmer_fields_farmer_idx on farmer_fields (farmer_id);
+create index if not exists farmer_fields_field_idx on farmer_fields (agro_field_id);
+create index if not exists farmer_fields_cropzone_idx on farmer_fields (agro_cropzone_id);
+
+alter table farmer_fields enable row level security;
 
 -- 2. Relax work_orders so a notebook entry with almost nothing in it can exist.
 --    Everything below was NOT NULL from the original farmer-request-only build,

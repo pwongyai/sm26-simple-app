@@ -1,5 +1,5 @@
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { requireAccess } from "@/lib/ownership";
+import { requireAccess, resolveFarmerId } from "@/lib/ownership";
 import { contractorOrgId } from "@/lib/contractor";
 
 // Work orders, server-side. Previously the browser talked to Supabase directly
@@ -22,15 +22,8 @@ export async function GET() {
   if (user.role === "contractor") {
     query = query.eq("contractor_org_id", contractorOrgId(user));
   } else {
-    const { data: me } = await supabaseAdmin
-      .from("farmers")
-      .select("id")
-      .eq("app_user_id", user.id)
-      .maybeSingle();
-
-    // No customer record yet = no orders yet. Don't fall through to "all".
-    if (!me) return Response.json([]);
-    query = query.eq("farmer_id", me.id);
+    const farmerId = await resolveFarmerId(user);
+    query = query.eq("farmer_id", farmerId);
   }
 
   const { data, error } = await query;
@@ -70,33 +63,7 @@ export async function POST(request) {
   let farmerId = body.farmerId || null;
 
   if (isFarmer) {
-    // Find-or-create this app user's own customer record.
-    const { data: existing } = await supabaseAdmin
-      .from("farmers")
-      .select("id")
-      .eq("app_user_id", user.id)
-      .maybeSingle();
-
-    if (existing) {
-      farmerId = existing.id;
-    } else {
-      const { data: created, error } = await supabaseAdmin
-        .from("farmers")
-        .insert({
-          organization_id: user.organization_id,
-          name: user.name,
-          phone: user.phone,
-          type: "smart",
-          app_user_id: user.id,
-        })
-        .select("id")
-        .single();
-      if (error) {
-        console.error(error);
-        return Response.json({ error: "Could not create request" }, { status: 500 });
-      }
-      farmerId = created.id;
-    }
+    farmerId = await resolveFarmerId(user);
   }
 
   const { data, error } = await supabaseAdmin

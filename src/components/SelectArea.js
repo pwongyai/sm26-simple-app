@@ -20,7 +20,6 @@ export default function SelectArea({ machine, points, day, since, until, initial
   const [reportedBoundaries, setReportedBoundaries] = useState(new Set());
   const [mode, setMode] = useState("pick"); // pick | notfound | draw | farmer | match | done
   const [drawPoints, setDrawPoints] = useState([]);
-  const [fieldName, setFieldName] = useState("");
 
   const [matchField, setMatchField] = useState(null);
   const [matchOwner, setMatchOwner] = useState(null);
@@ -110,22 +109,21 @@ export default function SelectArea({ machine, points, day, since, until, initial
   // instead of closing the one the farmer actually booked. This is the fix:
   // ask, once, right here.
   //
-  // A tapped field is never actually ownerless from the report's point of
-  // view — but that owner is "Unassigned" (a real, deliberate
-  // placeholder, /api/reports' own fallback) until a real survey links the
-  // field to its real farmer. AgroAPI itself carries no per-field ownership
-  // to look up (all locally-drawn fields share one AgroAPI farm; who can
-  // access which field is tracked entirely in Supabase) — so a plain field
-  // tap has no local owner to resolve yet, full stop, and always proceeds to
-  // the placeholder. A field's real owner only becomes known once a report
-  // or order for it explicitly names one (Draw Boundary's farmer step, or
-  // future real survey work).
+  // AgroAPI itself carries no per-field ownership (all locally-drawn fields
+  // share one AgroAPI farm) — that's tracked in Supabase's `farmer_fields`
+  // (see /api/agroapi/fields, which annotates each nearby field with its
+  // owner from that table before it ever reaches this screen). A field with
+  // no `farmerId` genuinely has no owner recorded yet — either a real
+  // AgroAPI field never linked to a local farmer, or drawn before
+  // `farmer_fields` existed — and falls through to "Unassigned" (a real,
+  // deliberate placeholder, /api/reports' own fallback) same as before.
   async function checkMatch(field) {
-    await checkMatchForOwner(field, null);
+    const owner = field.farmerId ? { id: field.farmerId, name: field.farmerName } : null;
+    await checkMatchForOwner(field, owner);
   }
 
-  // Shared by "tap a known field" (no local owner to resolve — always null,
-  // see above) and "just drew a new boundary" (owner already known — it's
+  // Shared by "tap a known field" (owner resolved above, from farmer_fields)
+  // and "just drew a new boundary" (owner already known — it's
   // who Case C's farmer step just picked) — same question either way: does
   // this farmer have an open order this job should close out?
   async function checkMatchForOwner(field, owner) {
@@ -240,10 +238,7 @@ export default function SelectArea({ machine, points, day, since, until, initial
       const res = await fetch(`/api/farmers/${farmerId}/fields`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: fieldName.trim() || `${farmerName}'s Field`,
-          boundary: [ring],
-        }),
+        body: JSON.stringify({ boundary: [ring] }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Could not create this field.");
@@ -468,18 +463,6 @@ export default function SelectArea({ machine, points, day, since, until, initial
               </>
             )}
 
-            {farmerStep !== "search" && (
-              <div className="mt-2">
-                <div className="field-label">Field name</div>
-                <input
-                  className="field"
-                  value={fieldName}
-                  onChange={(e) => setFieldName(e.target.value)}
-                  placeholder={`${chosenFarmer?.name || newName || "Customer"}'s Field`}
-                />
-              </div>
-            )}
-
             {error && <p className="text-sm text-[var(--danger)]">{error}</p>}
           </>
         )}
@@ -528,7 +511,7 @@ export default function SelectArea({ machine, points, day, since, until, initial
             <div className="detail-card">
               <div className="detail-row">
                 <div className="lbl">Field</div>
-                <div className="val">Created in AgroAPI</div>
+                <div className="val">{created?.name || "Created in AgroAPI"}</div>
               </div>
               {created?.cropzoneId && (
                 <div className="detail-row">

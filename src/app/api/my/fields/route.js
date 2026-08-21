@@ -1,22 +1,26 @@
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { requireAccess } from "@/lib/ownership";
+import { requireAccess, resolveFarmerId } from "@/lib/ownership";
 import { agroFetch } from "@/lib/agroapi";
 
-// The farmer's own fields. Replaces the hardcoded FARMER_CROPZONE_IDS list —
-// which fields you see is now a property of who you are, read from the mapping
-// table, then hydrated with live AgroAPI data.
+// The farmer's own fields. Which fields you see is a property of who you
+// are — resolved to your `farmers` identity, then read from `farmer_fields`
+// (the master farmer↔field mapping, shared with manual farmers who have no
+// app login at all), then hydrated with live AgroAPI data.
 export async function GET() {
   const { user, response } = await requireAccess();
   if (response) return response;
 
   let query = supabaseAdmin
-    .from("user_fields")
+    .from("farmer_fields")
     .select("*")
     .eq("organization_id", user.organization_id)
     .order("created_at");
 
   // A contractor sees every registered field in their site; a farmer only their own.
-  if (user.role !== "contractor") query = query.eq("app_user_id", user.id);
+  if (user.role !== "contractor") {
+    const farmerId = await resolveFarmerId(user);
+    query = query.eq("farmer_id", farmerId);
+  }
 
   const { data: rows, error } = await query;
   if (error) {
@@ -34,11 +38,22 @@ export async function GET() {
 
       // No cropzone yet = a registered field with nothing planted. That's a
       // normal state, not an error — fall back to the field record.
-      const { ok, body } = row.agro_cropzone_id
+      const { ok, status, body } = row.agro_cropzone_id
         ? await agroFetch(`/cropzones/${row.agro_cropzone_id}`)
         : await agroFetch(`/fields/${row.agro_field_id}`);
 
-      if (!ok) return { ...base, areaM2: null, crop: null, unavailable: true };
+      if (!ok) {
+        // A confirmed 404 means the field/cropzone was deleted directly in
+        // AgroAPI — this mapping row is now pointing at nothing, so drop it
+        // rather than leave a stale row in the table that misreads as a real
+        // mapping to anyone looking at the data directly. A transient failure
+        // (rate limit, AgroAPI hiccup) is not the same signal — only a
+        // confirmed 404 justifies deleting real data.
+        if (status === 404) {
+          await supabaseAdmin.from("farmer_fields").delete().eq("id", row.id);
+        }
+        return { ...base, areaM2: null, crop: null, unavailable: true };
+      }
 
       // Is something growing in this field right now?
       //

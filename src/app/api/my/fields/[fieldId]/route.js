@@ -1,5 +1,5 @@
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { requireAccess } from "@/lib/ownership";
+import { requireAccess, resolveFarmerId } from "@/lib/ownership";
 import { agroFetch } from "@/lib/agroapi";
 
 // Editing a field the farmer owns: its name, its boundary, and what's growing.
@@ -17,11 +17,12 @@ export async function PATCH(request, { params }) {
   const { name, boundary, cropId, plantingDate } = await request.json();
 
   // The ownership row tells us which cropzone is the live one for this field.
+  const farmerId = await resolveFarmerId(user);
   const { data: owned } = await supabaseAdmin
-    .from("user_fields")
+    .from("farmer_fields")
     .select("id, agro_field_id, agro_cropzone_id")
     .eq("agro_field_id", fieldId)
-    .eq("app_user_id", user.id)
+    .eq("farmer_id", farmerId)
     .maybeSingle();
 
   if (!owned) return Response.json({ error: "Not found" }, { status: 404 });
@@ -84,7 +85,7 @@ export async function PATCH(request, { params }) {
   // Keep our own denormalised label in step with the real one.
   if (fieldPatch.name) {
     await supabaseAdmin
-      .from("user_fields")
+      .from("farmer_fields")
       .update({ name: fieldPatch.name })
       .eq("id", owned.id);
   }

@@ -69,32 +69,29 @@ function polygonPoints(boundary) {
 const OVERVIEW_TAB = "overview";
 const MACHINE_TAB = "machine";
 
-// Re-derives the billed area for a different implement width, without a
-// server round-trip. Exact, not an approximation: `insideDistanceM` (how far
-// the machine actually travelled inside the field) never depended on width
-// in the first place — computeWork() only ever multiplies it by widthM at
-// the very last step (src/lib/engine.js) — so recomputing from the already-
-// known distance reproduces exactly what a fresh computeWork() call would
-// give for the same track and boundary, just with a corrected width.
-function withWidth(chosen, widthM) {
-  const work = chosen?.work;
-  if (!work) return chosen;
-  const workAreaM2 = Math.min(work.insideDistanceM * widthM, work.fieldAreaM2);
-  const percentWorked = work.fieldAreaM2
-    ? Math.min(100, Math.round((workAreaM2 / work.fieldAreaM2) * 100))
-    : 0;
-  const scale = work.fieldAreaM2 ? workAreaM2 / work.fieldAreaM2 : 0;
-  return {
-    ...chosen,
-    widthM,
-    workAreaUnits: Number((chosen.fieldAreaUnits * scale).toFixed(2)),
-    work: {
-      ...work,
-      workAreaM2: Math.round(workAreaM2),
-      percentWorked,
-      overlapped: workAreaM2 > work.fieldAreaM2,
-    },
-  };
+// Re-derives the billed area for a different implement width. This used to
+// be a pure local recompute (a plain `insideDistanceM * widthM`), which was
+// exact for that formula but not for the real one: the engine now buffers
+// and unions the actual track geometry (src/lib/engine.js), which doesn't
+// scale linearly with width, so getting the real number back means asking
+// the server to recompute for real — /api/reports/preview already supports
+// this via `cropzoneId` (skipping field resolution, since it's already
+// known) and a `widthM` override.
+async function withWidth(chosen, widthM, serviceId) {
+  if (!chosen?.cropzoneId || !chosen?.machineId || !chosen?.startedAt) return chosen;
+  const query = new URLSearchParams({
+    cropzoneId: chosen.cropzoneId,
+    machineId: chosen.machineId,
+    machineName: chosen.machineName || "",
+    since: chosen.startedAt,
+    until: chosen.endedAt || new Date().toISOString(),
+    widthM: String(widthM),
+    ...(serviceId ? { serviceId } : {}),
+  });
+  const res = await fetch(`/api/reports/preview?${query}`);
+  const preview = await res.json();
+  if (!res.ok) throw new Error(preview.error || "Could not recompute this report.");
+  return preview;
 }
 
 function ReportThumb({ boundary }) {
@@ -407,6 +404,7 @@ function CreateReport({ onClose, onCreated, onViewExisting }) {
   const [paymentStatus, setPaymentStatus] = useState("unpaid");
   const [implement, setImplement] = useState(null);
   const [implementCatalog, setImplementCatalog] = useState([]);
+  const [implementBusy, setImplementBusy] = useState(false);
   // Overrides the calculated charge — this is an assist tool, not a payment
   // controller; the contractor can round up, give a discount, or add extra
   // for a harder field without fighting the calculator. Null until touched.
@@ -476,9 +474,18 @@ function CreateReport({ onClose, onCreated, onViewExisting }) {
   // The implement actually used affects the area calculation directly — a
   // one-off correction for this report (see withWidth's comment), not a
   // change to the machine's stored Settings assignment.
-  function chooseImplement(impl) {
+  async function chooseImplement(impl) {
     setImplement(impl);
-    setChosen((c) => withWidth(c, Number(impl.width_m)));
+    setImplementBusy(true);
+    setError("");
+    try {
+      const recomputed = await withWidth(chosen, Number(impl.width_m), serviceId);
+      setChosen(recomputed);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setImplementBusy(false);
+    }
   }
 
   async function approve() {
@@ -706,6 +713,7 @@ function CreateReport({ onClose, onCreated, onViewExisting }) {
           onFarmerChosen={(farmer) => setMatchInfo((m) => ({ ...m, farmerId: farmer.id, farmerName: farmer.name }))}
           implement={implement}
           implementCatalog={implementCatalog}
+          implementBusy={implementBusy}
           onImplementChosen={chooseImplement}
           charge={charge}
           currency={currency}
@@ -729,6 +737,7 @@ function EditDetails({
   onFarmerChosen,
   implement,
   implementCatalog,
+  implementBusy,
   onImplementChosen,
   charge,
   currency,
@@ -803,11 +812,12 @@ function EditDetails({
           <div className="field-label">Implement</div>
           <select
             value={implement?.id || ""}
+            disabled={implementBusy}
             onChange={(e) => {
               const found = implementCatalog.find((i) => i.id === e.target.value);
               if (found) onImplementChosen(found);
             }}
-            className="field w-full"
+            className="field w-full disabled:opacity-60"
           >
             {!implement && <option value="">No implement — telemetry width used</option>}
             {implementCatalog.map((i) => (
@@ -816,6 +826,9 @@ function EditDetails({
               </option>
             ))}
           </select>
+          {implementBusy && (
+            <p className="mt-1 text-[11px] text-[var(--text-tert)]">Recalculating…</p>
+          )}
           <p className="mt-1 text-[11px] text-[var(--text-tert)]">
             Only for this report — correct this if the physical implement was
             swapped without updating Settings. Recalculates the work area.

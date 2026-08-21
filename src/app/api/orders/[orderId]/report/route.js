@@ -1,5 +1,5 @@
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { requireAccess } from "@/lib/ownership";
+import { requireAccess, resolveFarmerId } from "@/lib/ownership";
 import { contractorOrgId } from "@/lib/contractor";
 
 // The frozen work_reports row behind one work order, if the job has been
@@ -25,12 +25,8 @@ export async function GET(request, { params }) {
       return Response.json({ error: "Not found" }, { status: 404 });
     }
   } else {
-    const { data: me } = await supabaseAdmin
-      .from("farmers")
-      .select("id")
-      .eq("app_user_id", user.id)
-      .maybeSingle();
-    if (!me || order.farmer_id !== me.id) {
+    const farmerId = await resolveFarmerId(user);
+    if (order.farmer_id !== farmerId) {
       return Response.json({ error: "Not found" }, { status: 404 });
     }
   }

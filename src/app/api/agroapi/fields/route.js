@@ -1,7 +1,8 @@
-import { requireAccess } from "@/lib/ownership";
+import { requireAccess, unassignedFarmerId } from "@/lib/ownership";
 import { agroFetch } from "@/lib/agroapi";
 import { cached, TTL } from "@/lib/cache";
 import { agroFetchWithRetry, mapWithConcurrency } from "@/lib/agroConcurrency";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 const DEFAULT_RADIUS_M = 250;
 const MAX_RADIUS_M = 5000;
@@ -104,6 +105,32 @@ export async function GET(request) {
 
     if (failedFarms) {
       console.error(`/api/agroapi/fields: ${failedFarms}/${nearbyFarms.length} nearby farms' field-lists failed`);
+    }
+
+    // Fields under this community's one shared Farm (every locally-drawn
+    // field, smart or manual) all carry that Farm's generic name from
+    // AgroAPI — the real owner is an app-layer concept, tracked here. A real
+    // pre-existing AgroAPI field with no farmer_fields row at all (most of
+    // this org's fields predate the app) is still never truly ownerless —
+    // it reads as "Unassigned" from the moment it's seen here, the same
+    // placeholder /api/reports falls back to when a report against one is
+    // actually saved, so Select Area doesn't show a blank owner only to have
+    // one appear retroactively after the report is approved.
+    if (fields.length) {
+      const { data: owned } = await supabaseAdmin
+        .from("farmer_fields")
+        .select("agro_field_id, farmer_id, farmers(name)")
+        .in("agro_field_id", fields.map((f) => f.id));
+      const ownerByField = new Map(
+        (owned || []).map((row) => [row.agro_field_id, { farmerId: row.farmer_id, farmerName: row.farmers?.name }])
+      );
+      const unclaimed = fields.some((f) => !ownerByField.has(f.id));
+      const unassignedId = unclaimed ? await unassignedFarmerId(user) : null;
+      for (const f of fields) {
+        const owner = ownerByField.get(f.id);
+        f.farmerId = owner ? owner.farmerId : unassignedId;
+        f.farmerName = owner ? owner.farmerName : "Unassigned";
+      }
     }
 
     return { ok: true, status: 200, body: fields };

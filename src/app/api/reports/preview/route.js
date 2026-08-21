@@ -41,6 +41,11 @@ export async function GET(request) {
 
   const { searchParams } = new URL(request.url);
   const fieldId = searchParams.get("fieldId");
+  // An alternative entry point to the same cropzone — used when re-running
+  // this same preview for a corrected implement width (Edit Details), where
+  // the field was already resolved once and re-resolving it from scratch
+  // would be redundant. Skips step 1 entirely below.
+  const cropzoneIdParam = searchParams.get("cropzoneId");
   const machineId = searchParams.get("machineId");
   const machineName = searchParams.get("machineName") || null;
   const sinceParam = searchParams.get("since");
@@ -53,42 +58,60 @@ export async function GET(request) {
   // change to the machine's stored assignment.
   const widthMOverrideParam = searchParams.get("widthM");
 
-  if (!fieldId || !machineId || !sinceParam) {
-    return Response.json({ error: "fieldId, machineId, since are required" }, { status: 400 });
+  if (!(fieldId || cropzoneIdParam) || !machineId || !sinceParam) {
+    return Response.json(
+      { error: "fieldId (or cropzoneId), machineId, since are required" },
+      { status: 400 }
+    );
   }
 
-  // 1. This field's cropzone — where activities actually get recorded.
-  // Some real fields in this org were drawn but never got a cropzone (no
-  // crop ever assigned) — same gap Draw Boundary already fixes for a
-  // brand-new field, via AgroAPI's own "unspecified" crop placeholder. Do
-  // the same thing here rather than dead-ending on a field the contractor
-  // can plainly see and tapped on purpose.
-  // GET /fields/:id/cropzones is AgroAPI's index action — it returns an
-  // array (possibly holding an archived cropzone from a prior renewal
-  // alongside the live one), never a single object.
-  let cropzoneRes = await agroFetch(`/fields/${fieldId}/cropzones`);
-  const existingCropzones = cropzoneRes.ok && Array.isArray(cropzoneRes.body) ? cropzoneRes.body : [];
-  const existingCropzone =
-    existingCropzones.find((cz) => !cz.archived_at) || existingCropzones[0] || null;
-  let cropzoneId = existingCropzone?.id || null;
-  let boundary = existingCropzone?.location?.boundary?.coordinates || null;
+  let cropzoneId = null;
+  let boundary = null;
 
-  if (!cropzoneId) {
-    const fieldRes = await agroFetch(`/fields/${fieldId}`);
-    boundary = fieldRes.ok ? fieldRes.body?.location?.boundary?.coordinates : null;
+  if (cropzoneIdParam) {
+    const cz = await agroFetch(`/cropzones/${cropzoneIdParam}`);
+    if (!cz.ok) {
+      return Response.json({ error: "This cropzone no longer exists" }, { status: 404 });
+    }
+    cropzoneId = cropzoneIdParam;
+    boundary = cz.body?.location?.boundary?.coordinates || null;
     if (!boundary) {
       return Response.json({ error: "This field has no boundary yet" }, { status: 404 });
     }
-    const cropId = await unspecifiedCropId();
-    if (cropId) {
-      const created = await agroFetch(`/fields/${fieldId}/cropzones`, {
-        method: "POST",
-        body: JSON.stringify({ field_id: fieldId, crop_id: cropId, name: fieldRes.body?.name || "Field" }),
-      });
-      if (created.ok) cropzoneId = created.body?.id;
-    }
+  } else {
+    // 1. This field's cropzone — where activities actually get recorded.
+    // Some real fields in this org were drawn but never got a cropzone (no
+    // crop ever assigned) — same gap Draw Boundary already fixes for a
+    // brand-new field, via AgroAPI's own "unspecified" crop placeholder. Do
+    // the same thing here rather than dead-ending on a field the contractor
+    // can plainly see and tapped on purpose.
+    // GET /fields/:id/cropzones is AgroAPI's index action — it returns an
+    // array (possibly holding an archived cropzone from a prior renewal
+    // alongside the live one), never a single object.
+    let cropzoneRes = await agroFetch(`/fields/${fieldId}/cropzones`);
+    const existingCropzones = cropzoneRes.ok && Array.isArray(cropzoneRes.body) ? cropzoneRes.body : [];
+    const existingCropzone =
+      existingCropzones.find((cz) => !cz.archived_at) || existingCropzones[0] || null;
+    cropzoneId = existingCropzone?.id || null;
+    boundary = existingCropzone?.location?.boundary?.coordinates || null;
+
     if (!cropzoneId) {
-      return Response.json({ error: "Could not create a cropzone for this field" }, { status: 502 });
+      const fieldRes = await agroFetch(`/fields/${fieldId}`);
+      boundary = fieldRes.ok ? fieldRes.body?.location?.boundary?.coordinates : null;
+      if (!boundary) {
+        return Response.json({ error: "This field has no boundary yet" }, { status: 404 });
+      }
+      const cropId = await unspecifiedCropId();
+      if (cropId) {
+        const created = await agroFetch(`/fields/${fieldId}/cropzones`, {
+          method: "POST",
+          body: JSON.stringify({ field_id: fieldId, crop_id: cropId, name: fieldRes.body?.name || "Field" }),
+        });
+        if (created.ok) cropzoneId = created.body?.id;
+      }
+      if (!cropzoneId) {
+        return Response.json({ error: "Could not create a cropzone for this field" }, { status: 502 });
+      }
     }
   }
 

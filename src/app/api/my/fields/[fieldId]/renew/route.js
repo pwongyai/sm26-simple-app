@@ -1,5 +1,5 @@
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { requireAccess } from "@/lib/ownership";
+import { requireAccess, resolveFarmerId } from "@/lib/ownership";
 import { agroFetch } from "@/lib/agroapi";
 
 // Start a new season on a field.
@@ -20,11 +20,12 @@ export async function POST(request, { params }) {
   const { user, response } = await requireAccess({ fieldId });
   if (response) return response;
 
+  const farmerId = await resolveFarmerId(user);
   const { data: owned } = await supabaseAdmin
-    .from("user_fields")
+    .from("farmer_fields")
     .select("id, agro_cropzone_id")
     .eq("agro_field_id", fieldId)
-    .eq("app_user_id", user.id)
+    .eq("farmer_id", farmerId)
     .maybeSingle();
 
   if (!owned?.agro_cropzone_id) {
@@ -62,7 +63,7 @@ export async function POST(request, { params }) {
   }
 
   const { error } = await supabaseAdmin
-    .from("user_fields")
+    .from("farmer_fields")
     .update({ agro_cropzone_id: newCropzoneId })
     .eq("id", owned.id);
 

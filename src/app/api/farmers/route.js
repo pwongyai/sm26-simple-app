@@ -17,12 +17,15 @@ export async function GET() {
 
   // Your own customers, plus any smart farmer in this community — they joined
   // the site and can request work from you, so they must be reachable. Another
-  // contractor's hand-written customer list is not yours to see.
+  // contractor's hand-written customer list is not yours to see. "Unassigned"
+  // is excluded — it's the default owner an unclaimed field shows on the map
+  // (see /api/agroapi/fields), not a real customer to search for or pick here.
   const { data, error } = await supabaseAdmin
     .from("farmers")
     .select("id, name, phone, type")
     .eq("organization_id", user.organization_id)
     .or(`contractor_agro_org_id.eq.${contractorOrgId(user)},type.eq.smart`)
+    .neq("name", "Unassigned")
     .order("name");
 
   if (error) {

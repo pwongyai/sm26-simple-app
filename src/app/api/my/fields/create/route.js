@@ -1,5 +1,5 @@
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { requireAccess } from "@/lib/ownership";
+import { requireAccess, resolveFarmerId } from "@/lib/ownership";
 import { agroFetch } from "@/lib/agroapi";
 
 // Create a field the farmer just drew.
@@ -8,8 +8,9 @@ import { agroFetch } from "@/lib/agroapi";
 // the system of record for land. What AgroAPI cannot express is *who owns it*:
 // every farmer in this community shares one organization and one token, so
 // AgroAPI sees a single account. Ownership is therefore ours to remember, in
-// `user_fields`, and it's the only thing keeping one farmer out of another's
-// data. Both halves have to succeed for the field to be usable.
+// `farmer_fields` (keyed by the farmer's real identity, not their app login),
+// and it's the only thing keeping one farmer out of another's data. Both
+// halves have to succeed for the field to be usable.
 //
 // A Farm is created per farmer on first use: it's a thin container, it keeps
 // the org's field list navigable, and it means a manual farmer who later gets
@@ -91,8 +92,9 @@ export async function POST(request) {
 
   // 4. Ours: who owns it. Without this row the field is invisible to everyone,
   //    including the farmer who just drew it.
-  const { error } = await supabaseAdmin.from("user_fields").insert({
-    app_user_id: user.id,
+  const farmerId = await resolveFarmerId(user);
+  const { error } = await supabaseAdmin.from("farmer_fields").insert({
+    farmer_id: farmerId,
     organization_id: user.organization_id,
     agro_field_id: field.body.id,
     agro_cropzone_id: cropzoneId,
