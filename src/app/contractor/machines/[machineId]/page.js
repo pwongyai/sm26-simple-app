@@ -74,11 +74,22 @@ export default function MachineDetailPage({ params }) {
     setLoading(true);
     setError("");
 
+    // `until` is pinned to a single value, once, right here — client-side —
+    // rather than left for the server to resolve its own `Date.now()` at
+    // request time. Select Area later re-requests this exact same window
+    // (to compute a report over "the trajectory already on screen"), and
+    // the track cache is keyed by exact millisecond boundaries — two
+    // independently-computed "now"s always differ by at least the first
+    // fetch's round-trip time, which silently defeated the cache on every
+    // single report tap (the whole fetch, not just the tail, for any
+    // range under 4 hours). One value, used everywhere downstream, fixes it.
     let since, until;
     if (range === "today") {
       since = startOfDaysAgo(0).toISOString();
+      until = new Date().toISOString();
     } else if (range === "2days") {
       since = startOfDaysAgo(1).toISOString();
+      until = new Date().toISOString();
     } else if (range === "latest") {
       // Nothing to load yet — the "finding latest date" effect below is
       // still searching, and will call load() again once it resolves.
@@ -123,7 +134,9 @@ export default function MachineDetailPage({ params }) {
       const res = await fetch(`/api/machines/${machineId}/track?${query}`);
       if (!res.ok) throw new Error();
       setData(await res.json());
-      setLoadedRange({ since, until: until || new Date().toISOString() });
+      // `until` is always set above now — reusing that exact value (not a
+      // fresh `new Date()`) is the whole point of the fix.
+      setLoadedRange({ since, until });
     } catch {
       setError("Could not load this machine's track.");
     } finally {

@@ -33,6 +33,9 @@ export const TTL = {
   // Field boundaries change rarely; longer than `machines` on purpose so
   // that expensive fetch isn't repeated every couple of minutes.
   siteFields: 5 * 60,
+  // Which farms belong to this org's community — same shape of cost as
+  // siteFields (a full paginated walk of the org's farms), same reasoning.
+  siteFarmIds: 5 * 60,
   // AgroAPI's vocabularies are effectively static.
   catalog: 24 * 60 * 60,
   // Work detection for a day that has already finished can never change, so it

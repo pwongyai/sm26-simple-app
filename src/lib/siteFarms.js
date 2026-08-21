@@ -1,4 +1,5 @@
 import { agroFetch } from "@/lib/agroapi";
+import { cached, TTL } from "@/lib/cache";
 
 // Which farms belong to this site's organization?
 //
@@ -13,30 +14,30 @@ import { agroFetch } from "@/lib/agroapi";
 const PAGE_SIZE = 50;
 const MAX_PAGES = 40; // 2,000 farms — far beyond any real community
 
-// Cached for the lifetime of the server process. Farms are added rarely, and a
-// stale entry only means a newly-created field isn't reportable for a few
-// minutes; a wrong-org field never becomes reportable, which is the direction
-// that matters.
-const cache = new Map();
-const TTL_MS = 5 * 60 * 1000;
-
+// Backed by the shared Supabase `api_cache` table (via `cached()`), not a
+// bare in-memory Map — this used to be process-memory-only, which is fine
+// under `next dev`'s one long-lived process but silently never warms up in
+// production: Vercel's serverless functions don't reliably share memory
+// between invocations, so every single report tap could pay for a full,
+// unpaginated walk of every farm in the org (up to 40 sequential AgroAPI
+// calls) before ever reaching the actual trajectory computation. Farms are
+// added rarely, and a stale entry only means a newly-created field isn't
+// reportable for a few minutes — a wrong-org field never becomes
+// reportable, which is the direction that actually matters.
 export async function siteFarmIds(agroOrgId) {
-  const hit = cache.get(agroOrgId);
-  if (hit && Date.now() - hit.at < TTL_MS) return hit.ids;
-
-  const ids = new Set();
-
-  for (let page = 1; page <= MAX_PAGES; page++) {
-    const { ok, body } = await agroFetch(
-      `/organizations/${agroOrgId}/farms?page=${page}`
-    );
-    if (!ok || !Array.isArray(body) || body.length === 0) break;
-    for (const farm of body) ids.add(farm.id);
-    if (body.length < PAGE_SIZE) break;
-  }
-
-  cache.set(agroOrgId, { ids, at: Date.now() });
-  return ids;
+  const ids = await cached(`site-farm-ids:${agroOrgId}`, TTL.siteFarmIds, async () => {
+    const found = [];
+    for (let page = 1; page <= MAX_PAGES; page++) {
+      const { ok, body } = await agroFetch(
+        `/organizations/${agroOrgId}/farms?page=${page}`
+      );
+      if (!ok || !Array.isArray(body) || body.length === 0) break;
+      for (const farm of body) found.push(farm.id);
+      if (body.length < PAGE_SIZE) break;
+    }
+    return found;
+  });
+  return new Set(ids || []);
 }
 
 // Does this cropzone belong to the site? Used before writing anything against
