@@ -142,7 +142,17 @@ create table if not exists farmers (
   phone text,
   type text not null default 'manual' check (type in ('manual', 'smart')),
   app_user_id uuid references app_users(id) on delete set null,
-  agro_farm_id text,                      -- their Farm inside the org; created on demand (case C)
+  -- DEPRECATED — was meant to be "their one Farm inside the org," reused
+  -- across every field a farmer gets. Never actually used for that: AgroAPI
+  -- only sets a Farm's own location once, from whatever field existed in it
+  -- at creation, and never updates it as more fields are added — so reusing
+  -- one Farm across a farmer's fields makes every field after the first
+  -- invisible to location-based search once it's drawn somewhere else. Case
+  -- C creates a brand-new Farm per field instead (see
+  -- src/app/api/farmers/[farmerId]/fields/route.js); this column is
+  -- write-once-then-dead, kept only because a couple of early test fields
+  -- already reference it.
+  agro_farm_id text,
   created_at timestamptz not null default now()
 );
 
@@ -154,10 +164,12 @@ create index if not exists farmers_app_user_idx on farmers (app_user_id);
 create unique index if not exists farmers_org_name_idx on farmers (organization_id, name);
 
 -- DEPRECATED — Case C (contractor draws a field) used to put every
--- locally-drawn field in the site under one shared Farm here. Superseded by
--- `farmers.agro_farm_id` (one Farm per farmer, matching the 1-farm-1-field-
--- 1-cropzone shape every real pre-existing farm in this org already has).
--- No code writes this column anymore; left in place rather than dropped.
+-- locally-drawn field in the site under one shared Farm here, then briefly
+-- under one Farm per farmer (`farmers.agro_farm_id`, also deprecated — see
+-- its own comment above for why). Case C now creates a brand-new Farm per
+-- field, matching the 1-farm-1-field-1-cropzone shape every real
+-- pre-existing plot in this org already has. No code writes this column
+-- anymore; left in place rather than dropped.
 alter table organizations add column if not exists shared_agro_farm_id text;
 
 -- This org's own field/farm/cropzone registry number, continued rather than

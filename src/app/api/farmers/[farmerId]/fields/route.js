@@ -4,11 +4,18 @@ import { agroFetch } from "@/lib/agroapi";
 
 // Create a field the contractor just drew for one of their own customers
 // (Machine tab's Draw Field Boundary — v3's "Case C"). The real record goes
-// into AgroAPI — Farm → Field → Cropzone, one Farm per farmer (found-or-
-// created on `farmers.agro_farm_id`, same as a smart farmer's own self-
-// service Add Field flow) — matching the 1-farm-1-field-1-cropzone shape
-// every real pre-existing farm in this org already has, rather than
-// introducing a second structure (one shared Farm for everyone) alongside it.
+// into AgroAPI — Farm → Field → Cropzone, one brand-new Farm every time, for
+// this one field alone — matching the 1-farm-1-field-1-cropzone shape every
+// real pre-existing plot in this org already has. Reusing one Farm across a
+// farmer's fields (an earlier version of this route did that, via
+// farmers.agro_farm_id) breaks silently the moment that farmer's fields
+// aren't all in the same place: AgroAPI only ever sets a Farm's own
+// `location` once, from whatever field existed in it at the time, and never
+// updates it as more fields are added — so a farmer's second field, drawn
+// somewhere else entirely, becomes invisible to every location-based search
+// near it, no matter how many times it's searched for. One Farm per field
+// makes that class of bug structurally impossible: a Farm's location always
+// matches its one field's real position.
 //
 // The name is never typed by the contractor — a contractor has no way to see
 // how many fields a farmer already owns, so asking them to name one risks
@@ -29,7 +36,7 @@ export async function POST(request, { params }) {
 
   const { data: farmer } = await supabaseAdmin
     .from("farmers")
-    .select("id, name, agro_farm_id")
+    .select("id, name")
     .eq("id", farmerId)
     .eq("organization_id", user.organization_id)
     .maybeSingle();
@@ -58,25 +65,19 @@ export async function POST(request, { params }) {
   }
   const name = `${user.organization_id}${String(claimedNumber).padStart(4, "0")}`;
 
-  // 1. This farmer's own Farm, found-or-created once.
-  let farmId = farmer.agro_farm_id;
-  if (!farmId) {
-    const created = await agroFetch(`/organizations/${orgId}/farms`, {
-      method: "POST",
-      body: JSON.stringify({ name }),
-    });
-    if (!created.ok) {
-      return Response.json(
-        { error: "Could not create this farmer's Farm in AgroAPI", detail: created.body },
-        { status: 502 }
-      );
-    }
-    farmId = created.body.id;
-    await supabaseAdmin
-      .from("farmers")
-      .update({ agro_farm_id: farmId })
-      .eq("id", farmer.id);
+  // 1. A brand-new Farm for this one field alone — see the note above on
+  //    why this is never reused across a farmer's other fields.
+  const createdFarm = await agroFetch(`/organizations/${orgId}/farms`, {
+    method: "POST",
+    body: JSON.stringify({ name }),
+  });
+  if (!createdFarm.ok) {
+    return Response.json(
+      { error: "Could not create this field's Farm in AgroAPI", detail: createdFarm.body },
+      { status: 502 }
+    );
   }
+  const farmId = createdFarm.body.id;
 
   // 2. The field itself, with the drawn boundary.
   const field = await agroFetch(`/farms/${farmId}/fields`, {
