@@ -565,7 +565,12 @@ function CreateReport({ onClose, onCreated, onViewExisting }) {
       </div>
 
       <div className="ov-body">
-        {status === "loading" && <p className="text-sm text-[var(--text-sec)]">Loading…</p>}
+        {status === "loading" && (
+          <div className="flex flex-col items-center justify-center gap-3 py-14 text-sm text-[var(--text-sec)]">
+            <span className="spinner" />
+            Loading…
+          </div>
+        )}
 
         {status === "notfound" && (
           <div className="card flex flex-col items-center gap-2 p-6 text-center">

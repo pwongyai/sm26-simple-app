@@ -308,9 +308,15 @@ export default function SelectArea({ machine, points, day, since, until, initial
             )}
             {error && <p className="text-sm text-[var(--danger)]">{error}</p>}
             {(loading || matching) ? (
-              <p className="text-sm text-[var(--text-sec)]">
-                {matching ? "Checking for an open order…" : "Loading fields…"}
-              </p>
+              <div className="flex flex-col items-center justify-center gap-3 py-14 text-sm text-[var(--text-sec)]">
+                <span className="spinner" />
+                {/* `matching` spans the whole tap-to-report computation
+                    (order check, then /api/reports/preview — several
+                    sequential AgroAPI calls) — "Checking for an open
+                    order" undersold how much was actually happening and
+                    read as stuck well before it was. */}
+                {matching ? "Generating report…" : "Loading fields…"}
+              </div>
             ) : (
               <Map
                 track={points}
@@ -348,6 +354,7 @@ export default function SelectArea({ machine, points, day, since, until, initial
               drawPoints={drawPoints}
               onMapClick={(p) => setDrawPoints((pts) => [...pts, p])}
               height={FULL_PAGE_MAP_HEIGHT}
+              initialView={initialView}
             />
             <div className="flex items-center justify-between text-sm">
               <button

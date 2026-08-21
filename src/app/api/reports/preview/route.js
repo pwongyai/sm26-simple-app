@@ -63,9 +63,15 @@ export async function GET(request) {
   // brand-new field, via AgroAPI's own "unspecified" crop placeholder. Do
   // the same thing here rather than dead-ending on a field the contractor
   // can plainly see and tapped on purpose.
+  // GET /fields/:id/cropzones is AgroAPI's index action — it returns an
+  // array (possibly holding an archived cropzone from a prior renewal
+  // alongside the live one), never a single object.
   let cropzoneRes = await agroFetch(`/fields/${fieldId}/cropzones`);
-  let cropzoneId = cropzoneRes.ok ? cropzoneRes.body?.id : null;
-  let boundary = cropzoneRes.ok ? cropzoneRes.body?.location?.boundary?.coordinates : null;
+  const existingCropzones = cropzoneRes.ok && Array.isArray(cropzoneRes.body) ? cropzoneRes.body : [];
+  const existingCropzone =
+    existingCropzones.find((cz) => !cz.archived_at) || existingCropzones[0] || null;
+  let cropzoneId = existingCropzone?.id || null;
+  let boundary = existingCropzone?.location?.boundary?.coordinates || null;
 
   if (!cropzoneId) {
     const fieldRes = await agroFetch(`/fields/${fieldId}`);

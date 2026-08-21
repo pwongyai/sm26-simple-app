@@ -234,10 +234,10 @@ export default function MachineDetailPage({ params }) {
           </div>
 
           {range === "custom" && (
-            <div className="mb-3 flex items-center gap-2">
+            <div className="mb-3 flex items-center gap-1">
               <input
                 type="date"
-                className="field"
+                className="field min-w-0 flex-1 pr-1.5"
                 value={customSince}
                 max={todayISO()}
                 onChange={(e) => {
@@ -247,16 +247,20 @@ export default function MachineDetailPage({ params }) {
                   }
                 }}
               />
-              <span className="text-xs text-[var(--text-tert)]">to</span>
+              <span className="shrink-0 text-[11px] text-[var(--text-tert)]">to</span>
               <input
                 type="date"
-                className="field"
+                className="field min-w-0 flex-1 pr-1.5"
                 value={customUntil}
                 min={customSince}
                 max={maxUntil(customSince)}
                 onChange={(e) => setCustomUntil(e.target.value)}
               />
-              <button onClick={load} className="btn btn-primary shrink-0 px-3 py-1.5 text-xs">
+              <button
+                onClick={load}
+                className="btn btn-primary shrink-0 text-[11px]"
+                style={{ padding: "6px 9px" }}
+              >
                 Check
               </button>
             </div>

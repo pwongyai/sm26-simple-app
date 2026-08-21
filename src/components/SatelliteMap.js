@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import {
   MapContainer,
   TileLayer,
@@ -96,9 +96,18 @@ function FitBounds({ shapes, initialView, onViewChange }) {
     .flat()
     .map(([lat, lng]) => `${lat.toFixed(6)},${lng.toFixed(6)}`)
     .join("|");
+  // `key` changes on every draw tap (each new point joins `shapes`), which
+  // re-runs this effect — without this guard, `initialView` got re-applied
+  // on every single tap, snapping the map back to the same fixed view each
+  // time and undoing whatever the user had just panned/zoomed to reach the
+  // next corner. It must only ever land the map once; after that, the view
+  // is the user's to drive.
+  const appliedInitialView = useRef(false);
 
   useEffect(() => {
     if (initialView) {
+      if (appliedInitialView.current) return;
+      appliedInitialView.current = true;
       map.setView(initialView.center, initialView.zoom);
       return;
     }
