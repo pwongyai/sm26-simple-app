@@ -125,19 +125,30 @@ export async function GET(request) {
     return Response.json({ error: "That field is not in your organization" }, { status: 403 });
   }
 
-  // Already reported? Show it as done rather than recomputing — version 2's
-  // green/purple distinction, checked directly instead of through a
-  // separately-fetched suggestion list.
-  const { data: existingReport } = await supabaseAdmin
-    .from("work_reports")
-    .select("id")
-    .eq("agro_cropzone_id", cropzoneId)
-    .eq("agro_machine_id", machineId)
-    .maybeSingle();
-
   const orgId = contractorOrgId(user);
   const sinceMs = new Date(sinceParam).getTime();
   const untilMs = untilParam ? new Date(untilParam).getTime() : Date.now();
+
+  // Already reported *for this window*? Show it as done rather than
+  // recomputing — version 2's green/purple distinction, checked directly
+  // instead of through a separately-fetched suggestion list. Scoped to
+  // whether an existing report's own [started_at, ended_at] actually
+  // overlaps the window being viewed right now, not merely whether this
+  // cropzone/machine pair has ever been reported at all — land prep
+  // reported yesterday must not block planting being reported today. Not
+  // .maybeSingle(): the same cropzone/machine legitimately has more than one
+  // report over time once each is scoped to its own window.
+  const { data: candidateReports } = await supabaseAdmin
+    .from("work_reports")
+    .select("id, started_at, ended_at")
+    .eq("agro_cropzone_id", cropzoneId)
+    .eq("agro_machine_id", machineId);
+  const existingReport = (candidateReports || []).find((r) => {
+    if (!r.started_at || !r.ended_at) return false;
+    const startMs = new Date(r.started_at).getTime();
+    const endMs = new Date(r.ended_at).getTime();
+    return startMs <= untilMs && endMs >= sinceMs;
+  });
 
   const [track, servicesRes] = await Promise.all([
     fetchMachineTrack(machineId, sinceMs, untilMs),

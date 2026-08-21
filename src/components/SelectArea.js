@@ -77,20 +77,27 @@ export default function SelectArea({ machine, points, day, since, until, initial
   }, [mode]);
 
   // Version 3's green/purple field distinction — "no report yet" vs
-  // "already reported" — sourced directly from our own frozen `work_reports`
-  // rows (matched back to these fields by boundary, since a report is keyed
-  // by cropzone/machine, not by AgroAPI field id) rather than asking
-  // AgroAPI's `bookings/suggested` to separately re-detect today's work.
-  // Once reported, a field stays reported — there's no date to scope this
-  // to, unlike the old per-day suggestion check.
+  // "already reported for this window" — sourced directly from our own
+  // frozen `work_reports` rows (matched back to these fields by boundary,
+  // since a report is keyed by cropzone/machine, not by AgroAPI field id)
+  // rather than asking AgroAPI's `bookings/suggested` to separately
+  // re-detect today's work. Scoped to the window actually being viewed: land
+  // prep reported yesterday must not tint a field purple while looking at
+  // today, where planting is a real, separate, still-unreported job.
   useEffect(() => {
-    fetch("/api/reports/boundaries")
+    if (mode !== "pick") return;
+    const query = new URLSearchParams({
+      since: since || points[0]?.time || new Date().toISOString(),
+      until: until || new Date().toISOString(),
+    });
+    fetch(`/api/reports/boundaries?${query}`)
       .then((r) => (r.ok ? r.json() : []))
       .then((boundaries) => {
         setReportedBoundaries(new Set((boundaries || []).map((b) => JSON.stringify(b))));
       })
       .catch(() => {});
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode]);
 
   useEffect(() => {
     if (mode !== "farmer") return;
