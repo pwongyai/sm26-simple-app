@@ -65,11 +65,45 @@ export async function GET(request) {
     );
   }
 
+  const sinceMs = new Date(sinceParam).getTime();
+  const untilMs = untilParam ? new Date(untilParam).getTime() : Date.now();
+
+  // Already reported *for this window*? Checked as early as possible and
+  // re-checked once cropzoneId is fully resolved below — a tap on an
+  // already-reported field only ever needs this id to redirect to the real,
+  // frozen report (see SelectArea's onViewExisting), so it must never pay
+  // for a real machine-track fetch or a real buffer/union/intersect
+  // geometry computation whose result is about to be thrown away. Scoped to
+  // whether an existing report's own [started_at, ended_at] actually
+  // overlaps the window being viewed right now, not merely whether this
+  // cropzone/machine pair has ever been reported at all — land prep
+  // reported yesterday must not block planting being reported today.
+  async function findExistingReport(czId) {
+    const { data } = await supabaseAdmin
+      .from("work_reports")
+      .select("id, started_at, ended_at")
+      .eq("agro_cropzone_id", czId)
+      .eq("agro_machine_id", machineId);
+    // Not .maybeSingle(): the same cropzone/machine legitimately has more
+    // than one report over time once each is scoped to its own window.
+    return (data || []).find((r) => {
+      if (!r.started_at || !r.ended_at) return false;
+      const startMs = new Date(r.started_at).getTime();
+      const endMs = new Date(r.ended_at).getTime();
+      return startMs <= untilMs && endMs >= sinceMs;
+    });
+  }
+
   let cropzoneId = null;
   let boundary = null;
   let fieldName = null;
 
   if (cropzoneIdParam) {
+    // The id is already known — no AgroAPI call needed to find out whether
+    // this is already reported.
+    const existing = await findExistingReport(cropzoneIdParam);
+    if (existing) return Response.json({ reportId: existing.id });
+
     const cz = await agroFetch(`/cropzones/${cropzoneIdParam}`);
     if (!cz.ok) {
       return Response.json({ error: "This cropzone no longer exists" }, { status: 404 });
@@ -81,6 +115,23 @@ export async function GET(request) {
       return Response.json({ error: "This field has no boundary yet" }, { status: 404 });
     }
   } else {
+    // A field created through this app already has its cropzone id cached
+    // locally (farmer_fields) — check for an existing report using that,
+    // entirely skipping AgroAPI, before falling back to the slow real
+    // resolution below (needed regardless for a real pre-existing field
+    // this app never wrote a mapping row for, or for boundary once we know
+    // this genuinely isn't already reported).
+    const { data: cached } = await supabaseAdmin
+      .from("farmer_fields")
+      .select("agro_cropzone_id")
+      .eq("agro_field_id", fieldId)
+      .eq("organization_id", user.organization_id)
+      .maybeSingle();
+    if (cached?.agro_cropzone_id) {
+      const existing = await findExistingReport(cached.agro_cropzone_id);
+      if (existing) return Response.json({ reportId: existing.id });
+    }
+
     // 1. This field's cropzone — where activities actually get recorded.
     // Some real fields in this org were drawn but never got a cropzone (no
     // crop ever assigned) — same gap Draw Boundary already fixes for a
@@ -126,29 +177,15 @@ export async function GET(request) {
   }
 
   const orgId = contractorOrgId(user);
-  const sinceMs = new Date(sinceParam).getTime();
-  const untilMs = untilParam ? new Date(untilParam).getTime() : Date.now();
 
-  // Already reported *for this window*? Show it as done rather than
-  // recomputing — version 2's green/purple distinction, checked directly
-  // instead of through a separately-fetched suggestion list. Scoped to
-  // whether an existing report's own [started_at, ended_at] actually
-  // overlaps the window being viewed right now, not merely whether this
-  // cropzone/machine pair has ever been reported at all — land prep
-  // reported yesterday must not block planting being reported today. Not
-  // .maybeSingle(): the same cropzone/machine legitimately has more than one
-  // report over time once each is scoped to its own window.
-  const { data: candidateReports } = await supabaseAdmin
-    .from("work_reports")
-    .select("id, started_at, ended_at")
-    .eq("agro_cropzone_id", cropzoneId)
-    .eq("agro_machine_id", machineId);
-  const existingReport = (candidateReports || []).find((r) => {
-    if (!r.started_at || !r.ended_at) return false;
-    const startMs = new Date(r.started_at).getTime();
-    const endMs = new Date(r.ended_at).getTime();
-    return startMs <= untilMs && endMs >= sinceMs;
-  });
+  // Re-checked with the now-fully-resolved cropzoneId: covers a real
+  // pre-existing field with no farmer_fields row (the fast check above
+  // never ran for it), or a farmer_fields row whose cached id turned out
+  // stale.
+  const existingReport = await findExistingReport(cropzoneId);
+  if (existingReport) {
+    return Response.json({ reportId: existingReport.id });
+  }
 
   const [track, servicesRes] = await Promise.all([
     fetchMachineTrack(machineId, sinceMs, untilMs),
@@ -216,6 +253,7 @@ export async function GET(request) {
     workAreaUnits: work ? toUnits(work.workAreaM2, unitM2) : null,
     fieldAreaUnits: work ? toUnits(work.fieldAreaM2, unitM2) : null,
     estimatedCharge: work ? serviceCharge({ workAreaM2: work.workAreaM2, unitM2, pricePerUnit: price }) : null,
-    reportId: existingReport?.id || null,
+    // Always null here — the existingReport branch above already returned.
+    reportId: null,
   });
 }
