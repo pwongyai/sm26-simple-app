@@ -49,10 +49,7 @@ export default function SettingsTab() {
 
   return (
     <>
-      <h1 className="mb-1 text-lg font-semibold">Settings</h1>
-      <p className="mb-5 text-xs text-[var(--text-tert)]">
-        {settings.organization} · {settings.currency} per {settings.areaUnit}
-      </p>
+      <h1 className="mb-5 text-lg font-semibold">Settings</h1>
 
       {saved && (
         <p className="mb-3 rounded bg-emerald-50 p-2 text-xs text-emerald-800">{saved}</p>
