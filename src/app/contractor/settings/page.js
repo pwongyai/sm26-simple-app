@@ -252,11 +252,9 @@ function HomeBase({ profile, onChanged }) {
 }
 
 function ServiceList({ services, unit, currency, onChanged }) {
-  const [adding, setAdding] = useState(false);
-  const [name, setName] = useState("");
-  const [price, setPrice] = useState("");
   const [editing, setEditing] = useState(false);
   const [drafts, setDrafts] = useState({});
+  const [newDrafts, setNewDrafts] = useState([]);
   const [busy, setBusy] = useState(false);
 
   function startEdit() {
@@ -265,11 +263,24 @@ function ServiceList({ services, unit, currency, onChanged }) {
       d[s.id] = { price: String(Number(s.price_per_unit)), active: s.active };
     });
     setDrafts(d);
+    setNewDrafts([]);
     setEditing(true);
   }
 
   function setDraft(id, patch) {
     setDrafts((d) => ({ ...d, [id]: { ...d[id], ...patch } }));
+  }
+
+  function addDraftRow() {
+    setNewDrafts((rows) => [...rows, { clientId: `new-${rows.length}`, name: "", price: "" }]);
+  }
+
+  function setNewDraft(clientId, patch) {
+    setNewDrafts((rows) => rows.map((r) => (r.clientId === clientId ? { ...r, ...patch } : r)));
+  }
+
+  function removeNewDraft(clientId) {
+    setNewDrafts((rows) => rows.filter((r) => r.clientId !== clientId));
   }
 
   async function save() {
@@ -291,21 +302,24 @@ function ServiceList({ services, unit, currency, onChanged }) {
         });
       })
     );
+    await Promise.all(
+      newDrafts
+        .filter((r) => r.name.trim())
+        .map((r) =>
+          fetch("/api/services", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name: r.name.trim(),
+              pricePerUnit: r.price || 0,
+              activityCanonical: "other",
+            }),
+          })
+        )
+    );
     setBusy(false);
     setEditing(false);
-    onChanged();
-  }
-
-  async function add(e) {
-    e.preventDefault();
-    await fetch("/api/services", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, pricePerUnit: price, activityCanonical: "other" }),
-    });
-    setName("");
-    setPrice("");
-    setAdding(false);
+    setNewDrafts([]);
     onChanged();
   }
 
@@ -313,40 +327,12 @@ function ServiceList({ services, unit, currency, onChanged }) {
     <section className="mb-6">
       <div className="mb-2 flex items-center justify-between">
         <h2 className="text-sm font-semibold">Services &amp; pricing</h2>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setAdding(!adding)}
-            className="text-xs text-[var(--text-sec)] underline"
-          >
-            {adding ? "cancel" : "+ add"}
+        {!editing && (
+          <button onClick={startEdit} className="text-xs text-[var(--text-sec)] underline">
+            Edit
           </button>
-          {!editing && (
-            <button onClick={startEdit} className="text-xs text-[var(--text-sec)] underline">
-              Edit
-            </button>
-          )}
-        </div>
+        )}
       </div>
-
-      {adding && (
-        <form onSubmit={add} className="mb-3 flex gap-2">
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Service name"
-            required
-            className="flex-1 rounded field"
-          />
-          <input
-            type="number"
-            value={price}
-            onChange={(e) => setPrice(e.target.value)}
-            placeholder="0"
-            className="w-24 rounded field"
-          />
-          <button className="rounded bg-black px-3 text-sm text-white">Add</button>
-        </form>
-      )}
 
       <div className="flex flex-col gap-2">
         {services.map((s) => {
@@ -384,9 +370,55 @@ function ServiceList({ services, unit, currency, onChanged }) {
             </div>
           );
         })}
+
+        {editing &&
+          newDrafts.map((r) => (
+            <div key={r.clientId} className="flex items-center gap-2 card p-2">
+              <input
+                value={r.name}
+                onChange={(e) => setNewDraft(r.clientId, { name: e.target.value })}
+                placeholder="New service name"
+                className="flex-1 rounded border border-[var(--rule)] px-2 py-1 text-sm"
+              />
+              <input
+                type="number"
+                value={r.price}
+                onChange={(e) => setNewDraft(r.clientId, { price: e.target.value })}
+                placeholder="0"
+                className="w-24 rounded border border-[var(--rule)] px-2 py-1 text-right text-sm"
+              />
+              <span className="w-16 text-xs text-[var(--text-tert)]">
+                {currency}/{unit}
+              </span>
+              <button
+                onClick={() => removeNewDraft(r.clientId)}
+                className="rounded px-2 py-1 text-[11px] text-[var(--text-tert)] underline"
+              >
+                Remove
+              </button>
+            </div>
+          ))}
       </div>
 
-      {editing && <EditActions busy={busy} onCancel={() => setEditing(false)} onSave={save} />}
+      {editing && (
+        <button
+          onClick={addDraftRow}
+          className="mt-2 text-xs text-[var(--text-sec)] underline"
+        >
+          + Add a service
+        </button>
+      )}
+
+      {editing && (
+        <EditActions
+          busy={busy}
+          onCancel={() => {
+            setEditing(false);
+            setNewDrafts([]);
+          }}
+          onSave={save}
+        />
+      )}
 
       <p className="mt-2 text-[11px] text-[var(--text-tert)]">
         A service priced 0 will bill nothing — set it before you report
