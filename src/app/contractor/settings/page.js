@@ -85,7 +85,9 @@ export default function SettingsTab() {
         }}
       />
 
-      <Account profile={profile} onChanged={() => { load(); flash("Language saved"); }} />
+      <Language profile={profile} onChanged={() => { load(); flash("Language saved"); }} />
+
+      <LogOut />
     </>
   );
 }
@@ -398,10 +400,8 @@ function ServiceList({ services, unit, currency, onChanged }) {
   );
 }
 
-function Account({ profile, onChanged }) {
-  const router = useRouter();
+function Language({ profile, onChanged }) {
   const [busy, setBusy] = useState(false);
-  const [confirming, setConfirming] = useState(false);
 
   async function setLanguage(language) {
     setBusy(true);
@@ -415,31 +415,44 @@ function Account({ profile, onChanged }) {
   }
 
   return (
-    <section className="mb-10">
-      <h2 className="mb-2 text-sm font-semibold">Account</h2>
-      <div className="mb-3">
-        <div className="field-label">Language</div>
-        <div className="flex gap-2">
-          <button
-            disabled={busy}
-            onClick={() => setLanguage("th")}
-            className={`btn flex-1 ${profile.language === "th" ? "btn-primary" : "btn-outline"}`}
-          >
-            ไทย
-          </button>
-          <button
-            disabled={busy}
-            onClick={() => setLanguage("en")}
-            className={`btn flex-1 ${profile.language === "en" ? "btn-primary" : "btn-outline"}`}
-          >
-            English
-          </button>
-        </div>
-        <p className="mt-1 text-[11px] text-[var(--text-tert)]">
-          Sets your preference — the rest of the app stays in English for now.
-        </p>
+    <section className="mb-6">
+      <h2 className="mb-2 text-sm font-semibold">Language</h2>
+      <div className="flex gap-2">
+        <button
+          disabled={busy}
+          onClick={() => setLanguage("th")}
+          className={`btn flex-1 ${profile.language === "th" ? "btn-primary" : "btn-outline"}`}
+        >
+          ไทย
+        </button>
+        <button
+          disabled={busy}
+          onClick={() => setLanguage("en")}
+          className={`btn flex-1 ${profile.language === "en" ? "btn-primary" : "btn-outline"}`}
+        >
+          English
+        </button>
+        <button
+          disabled={busy}
+          onClick={() => setLanguage("vn")}
+          className={`btn flex-1 ${profile.language === "vn" ? "btn-primary" : "btn-outline"}`}
+        >
+          Tiếng Việt
+        </button>
       </div>
+      <p className="mt-1 text-[11px] text-[var(--text-tert)]">
+        Sets your preference — the rest of the app stays in English for now.
+      </p>
+    </section>
+  );
+}
 
+function LogOut() {
+  const router = useRouter();
+  const [confirming, setConfirming] = useState(false);
+
+  return (
+    <section className="mb-10">
       {confirming ? (
         <button
           className="btn w-full"
