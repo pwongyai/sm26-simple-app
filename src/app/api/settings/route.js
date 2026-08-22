@@ -1,9 +1,17 @@
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireAccess } from "@/lib/ownership";
 
-// Site-level settings the contractor can tune. Currently just the emissions
-// factor — kg of CO2 per litre of fuel burned. 2.68 is the standard figure for
-// diesel and is what version 2 used throughout.
+// Read-only site context for the contractor's own UI: which org they're in,
+// and the currency/area unit every price and area on screen is expressed in.
+//
+// This used to also GET/PATCH an org-wide emissions factor
+// (organizations.emission_kg_per_l, 2.68). That is gone: emissions now
+// resolve per machine from its real fuel type (src/lib/emissions.js, Japan
+// MOE factors — diesel 2.619, gasoline 2.322), so a single org-wide number
+// was both unsourced and wrong for a gasoline machine. The PATCH had no
+// caller left after the Settings page's Emissions section was removed, so
+// it went with it rather than sitting here as a way to write a value
+// nothing reads. The column itself stays for historical frozen reports —
+// see DATABASE_ERD.md.
 export async function GET() {
   const { user, response } = await requireAccess();
   if (response) return response;
@@ -12,31 +20,5 @@ export async function GET() {
     organization: user.organization.name,
     currency: user.organization.currency,
     areaUnit: user.organization.area_unit,
-    emissionKgPerL: Number(user.organization.emission_kg_per_l ?? 2.68),
   });
-}
-
-export async function PATCH(request) {
-  const { user, response } = await requireAccess();
-  if (response) return response;
-  if (user.role !== "contractor") {
-    return Response.json({ error: "Contractors only" }, { status: 403 });
-  }
-
-  const { emissionKgPerL } = await request.json();
-  const value = Number(emissionKgPerL);
-  if (!Number.isFinite(value) || value < 0) {
-    return Response.json({ error: "Invalid emissions factor" }, { status: 400 });
-  }
-
-  const { error } = await supabaseAdmin
-    .from("organizations")
-    .update({ emission_kg_per_l: value })
-    .eq("id", user.organization_id);
-
-  if (error) {
-    console.error(error);
-    return Response.json({ error: "Could not save" }, { status: 500 });
-  }
-  return Response.json({ emissionKgPerL: value });
 }

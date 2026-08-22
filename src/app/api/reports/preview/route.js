@@ -238,7 +238,7 @@ export async function GET(request) {
     : defaultService || (machineDoesFieldwork ? services[0] : null) || null;
 
   const [widthResolved, fuelResolved] = await Promise.all([
-    resolveWidth({ machineId, serviceId: service?.id || null, points: track.points }),
+    resolveWidth({ machineId, points: track.points }),
     resolveFuel({ machineId, serviceId: service?.id || null }),
   ]);
   const widthMOverride = widthMOverrideParam ? Number(widthMOverrideParam) : null;

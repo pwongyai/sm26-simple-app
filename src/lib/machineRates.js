@@ -13,29 +13,26 @@ import { modalWorkWidth } from "@/lib/trajectory";
 //   1. The implement currently assigned to this machine (Machine Details →
 //      Implement) — the most explicit "what's actually attached right now"
 //      signal, and the one a contractor expects to control directly.
-//   2. machine_rates' per-service width (Settings' older width/fuel editor).
-//   3. The machine's own reported width (NoukiOpenAPI telemetry) — last
+//   2. The machine's own reported width (NoukiOpenAPI telemetry) — last
 //      resort only, since a swapped implement in the field doesn't
 //      necessarily show up in what the machine reports.
-export async function resolveWidth({ machineId, serviceId, points }) {
-  const [{ data: assignment }, { data: rateRows }] = await Promise.all([
-    supabaseAdmin
-      .from("machine_implements")
-      .select("implement:implements(width_m)")
-      .eq("agro_machine_id", machineId)
-      .maybeSingle(),
-    supabaseAdmin.from("machine_rates").select("service_id, width_m").eq("agro_machine_id", machineId),
-  ]);
-
-  const perService = (rateRows || []).find((r) => r.service_id === serviceId);
+//
+// There used to be a step between those two: machine_rates' per-service
+// width_m, from an older Settings width/fuel editor. That editor is gone
+// (redundant with Machine Details), so nothing could write width_m any
+// more, and its one remaining row was already unreachable — that machine
+// has an assigned implement, which wins at step 1. Removed rather than
+// left as a branch that can never fire. The column itself is retained for
+// history; see DATABASE_ERD.md.
+export async function resolveWidth({ machineId, points }) {
+  const { data: assignment } = await supabaseAdmin
+    .from("machine_implements")
+    .select("implement:implements(width_m)")
+    .eq("agro_machine_id", machineId)
+    .maybeSingle();
 
   let widthM = assignment?.implement?.width_m != null ? Number(assignment.implement.width_m) : null;
   let widthSource = widthM != null ? "implement" : null;
-
-  if (widthM == null && perService?.width_m != null) {
-    widthM = Number(perService.width_m);
-    widthSource = "settings";
-  }
 
   if (widthM == null) {
     const reported = modalWorkWidth(points);
