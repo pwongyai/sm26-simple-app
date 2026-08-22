@@ -420,13 +420,15 @@ function MachineDetailsPane({ meta }) {
   );
 }
 
-// Diesel is the only fuel type this fleet actually runs on — a real fixed
-// label, not a placeholder for a feature that isn't built. A Default rate
-// always applies; a specific job only needs its own row when it genuinely
-// burns differently (wet ground, a heavier implement) — that's the whole
-// reason this isn't just one number per machine.
+// Fuel type is per machine (machine_fuel_types, defaults to diesel — this
+// fleet's overwhelming norm — until set otherwise). The L/km rate is a
+// separate concern: a Default rate always applies, and a specific job only
+// needs its own row when it genuinely burns differently (wet ground, a
+// heavier implement) — that's the whole reason this isn't just one number
+// per machine.
 function FuelSection({ machineId }) {
   const [data, setData] = useState(null);
+  const [fuelType, setFuelType] = useState("diesel");
   const [adding, setAdding] = useState(false);
   const [newServiceId, setNewServiceId] = useState("");
   const [saved, setSaved] = useState("");
@@ -442,9 +444,26 @@ function FuelSection({ machineId }) {
     load();
   }, [load]);
 
+  useEffect(() => {
+    fetch(`/api/machines/${machineId}/fuel-type`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => d && setFuelType(d.fuelType))
+      .catch(() => {});
+  }, [machineId]);
+
   function flashSaved() {
     setSaved("Saved");
     setTimeout(() => setSaved(""), 1200);
+  }
+
+  async function saveFuelType(value) {
+    setFuelType(value);
+    await fetch(`/api/machines/${machineId}/fuel-type`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fuelType: value }),
+    });
+    flashSaved();
   }
 
   async function saveDefault(value) {
@@ -498,7 +517,21 @@ function FuelSection({ machineId }) {
       <div className="spec-card">
         <div className="spec-row">
           <div className="lbl">Type</div>
-          <div className="val">Diesel</div>
+          <div className="flex gap-1.5">
+            {["diesel", "gasoline"].map((ft) => (
+              <button
+                key={ft}
+                onClick={() => saveFuelType(ft)}
+                className={`rounded px-2 py-1 text-[11px] capitalize ${
+                  fuelType === ft
+                    ? "bg-[var(--ink)] text-white"
+                    : "bg-surface text-tert"
+                }`}
+              >
+                {ft}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="flex flex-col gap-1">

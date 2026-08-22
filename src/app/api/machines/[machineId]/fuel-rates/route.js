@@ -14,6 +14,23 @@ const DEFAULT_L_PER_KM = {
   utility_vehicle: 0.3,
 };
 
+// AgroAPI's own machine.metadata.fuel_consumption is a *distance-per-litre*
+// (fuel economy) figure, not litres-per-distance — confirmed against real
+// Kubota DC-70G/M-series specs (published fuel burn for machinery this size
+// lands at several L/km; AgroAPI's raw value read directly as L/km would
+// mean a multi-ton harvester burns less fuel per km than a moped). Its own
+// `fuel_consumption_unit` hint ("m/L") is itself inconsistent — present on
+// some machine records and missing on others carrying the identical value —
+// so it's not trustworthy as a real per-record signal, just corroboration
+// that the quantity is "distance per litre." Converting to the L/km this
+// app actually needs means inverting, not scaling directly.
+function suggestedDefaultLPerKm(machine) {
+  const raw = machine?.metadata?.fuel_consumption;
+  if (!raw) return DEFAULT_L_PER_KM[machine?.kind] ?? 1.0;
+  const kmPerL = raw * 1000;
+  return Number((1 / kmPerL).toFixed(2));
+}
+
 export async function GET(request, { params }) {
   const { machineId } = await params;
   const { user, response } = await requireAccess();
@@ -37,9 +54,7 @@ export async function GET(request, { params }) {
   ]);
 
   const machine = (machines.ok ? machines.body : []).find((m) => m.id === machineId);
-  const suggestedDefault = machine?.metadata?.fuel_consumption
-    ? Number((machine.metadata.fuel_consumption * 1000).toFixed(2))
-    : (DEFAULT_L_PER_KM[machine?.kind] ?? 1.0);
+  const suggestedDefault = suggestedDefaultLPerKm(machine);
 
   const rows = rates.data || [];
   const defaultRow = rows.find((r) => r.service_id === null);
