@@ -11,6 +11,12 @@ import Map from "@/components/Map";
 // the machine list itself moved fully to Machine Details
 // (src/app/contractor/machines/[machineId]/page.js) — removed here as
 // redundant, not because the functionality went away.
+//
+// Every data-entry section below follows the same shape: a read-only view
+// with an explicit Edit action, a draft copy of the values while editing,
+// and Cancel/Save — nothing writes to the DB until Save is actually
+// pressed. Language and Log Out stay immediate-apply (a single tap picking
+// one of two states, not free-text data worth a review step).
 export default function SettingsTab() {
   const [settings, setSettings] = useState(null);
   const [profile, setProfile] = useState(null);
@@ -84,11 +90,54 @@ export default function SettingsTab() {
   );
 }
 
+function SectionHeader({ title, onEdit }) {
+  return (
+    <div className="mb-2 flex items-center justify-between">
+      <h2 className="text-sm font-semibold">{title}</h2>
+      {onEdit && (
+        <button onClick={onEdit} className="text-xs text-[var(--text-sec)] underline">
+          Edit
+        </button>
+      )}
+    </div>
+  );
+}
+
+function ViewRow({ label, value }) {
+  return (
+    <div className="flex items-center justify-between text-sm">
+      <span className="text-[var(--text-sec)]">{label}</span>
+      <span>{value || "—"}</span>
+    </div>
+  );
+}
+
+function EditActions({ busy, onCancel, onSave, saveDisabled }) {
+  return (
+    <div className="mt-2 flex gap-2">
+      <button onClick={onCancel} disabled={busy} className="btn btn-outline flex-1">
+        Cancel
+      </button>
+      <button onClick={onSave} disabled={busy || saveDisabled} className="btn btn-primary flex-1">
+        {busy ? "Saving…" : "Save"}
+      </button>
+    </div>
+  );
+}
+
 function ContractorProfile({ profile, organization, onChanged }) {
+  const [editing, setEditing] = useState(false);
   const [businessName, setBusinessName] = useState(profile.businessName || "");
   const [ownerName, setOwnerName] = useState(profile.ownerName || "");
   const [phone, setPhone] = useState(profile.phone || "");
   const [busy, setBusy] = useState(false);
+
+  function startEdit() {
+    setBusinessName(profile.businessName || "");
+    setOwnerName(profile.ownerName || "");
+    setPhone(profile.phone || "");
+    setEditing(true);
+  }
 
   async function save() {
     setBusy(true);
@@ -98,7 +147,22 @@ function ContractorProfile({ profile, organization, onChanged }) {
       body: JSON.stringify({ businessName, ownerName, phone }),
     });
     setBusy(false);
+    setEditing(false);
     onChanged();
+  }
+
+  if (!editing) {
+    return (
+      <section className="mb-6">
+        <SectionHeader title="Contractor Profile" onEdit={startEdit} />
+        <div className="flex flex-col gap-1.5">
+          <ViewRow label="Business Name" value={profile.businessName} />
+          <ViewRow label="Owner Name" value={profile.ownerName} />
+          <ViewRow label="Mobile Number" value={profile.phone} />
+          <p className="mt-1 text-[11px] text-[var(--text-tert)]">Organization: {organization}</p>
+        </div>
+      </section>
+    );
   }
 
   return (
@@ -125,13 +189,7 @@ function ContractorProfile({ profile, organization, onChanged }) {
           <div className="field-label">Mobile Number</div>
           <input className="field" value={phone} onChange={(e) => setPhone(e.target.value)} />
         </div>
-        <button
-          onClick={save}
-          disabled={busy}
-          className="btn btn-primary mt-1"
-        >
-          {busy ? "Saving…" : "Save"}
-        </button>
+        <EditActions busy={busy} onCancel={() => setEditing(false)} onSave={save} />
         <p className="text-[11px] text-[var(--text-tert)]">Organization: {organization}</p>
       </div>
     </section>
@@ -139,40 +197,57 @@ function ContractorProfile({ profile, organization, onChanged }) {
 }
 
 function HomeBase({ profile, onChanged }) {
-  const [pin, setPin] = useState(
+  const currentPin =
     profile.homeLat != null && profile.homeLng != null
       ? { lat: profile.homeLat, lng: profile.homeLng }
-      : null
-  );
+      : null;
+  const [editing, setEditing] = useState(false);
+  const [draftPin, setDraftPin] = useState(currentPin);
   const [busy, setBusy] = useState(false);
 
-  async function pick(p) {
-    setPin(p);
+  function startEdit() {
+    setDraftPin(currentPin);
+    setEditing(true);
+  }
+
+  async function save() {
+    if (!draftPin) return;
     setBusy(true);
     await fetch("/api/contractor-profile", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ homeLat: p.lat, homeLng: p.lng }),
+      body: JSON.stringify({ homeLat: draftPin.lat, homeLng: draftPin.lng }),
     });
     setBusy(false);
+    setEditing(false);
     onChanged();
   }
 
+  const shownPin = editing ? draftPin : currentPin;
+
   return (
     <section className="mb-6">
-      <h2 className="mb-1 text-sm font-semibold">Home Base Location</h2>
+      <SectionHeader title="Home Base Location" onEdit={editing ? null : startEdit} />
       <p className="mb-2 text-[11px] text-[var(--text-tert)]">
         Used to route Today&apos;s Work — the closest open job to home comes
-        first. Tap the map to set it.
+        first.{editing ? " Tap the map to move the pin." : ""}
       </p>
-      <Map pin={pin} onPick={pick} height={200} />
+      <Map pin={shownPin} onPick={editing ? setDraftPin : null} height={200} />
       <p className="mt-1 text-[11px] text-[var(--text-tert)]">
-        {busy
-          ? "Saving…"
-          : pin
-          ? `Home at ${pin.lat.toFixed(5)}, ${pin.lng.toFixed(5)}`
+        {shownPin
+          ? `${editing ? "New location" : "Home at"} ${shownPin.lat.toFixed(5)}, ${shownPin.lng.toFixed(5)}`
+          : editing
+          ? "Tap the map to place the pin."
           : "No home base set yet."}
       </p>
+      {editing && (
+        <EditActions
+          busy={busy}
+          onCancel={() => setEditing(false)}
+          onSave={save}
+          saveDisabled={!draftPin}
+        />
+      )}
     </section>
   );
 }
@@ -181,13 +256,44 @@ function ServiceList({ services, unit, currency, onChanged }) {
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
+  const [editing, setEditing] = useState(false);
+  const [drafts, setDrafts] = useState({});
+  const [busy, setBusy] = useState(false);
 
-  async function savePrice(service, value) {
-    await fetch(`/api/services/${service.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ pricePerUnit: value }),
+  function startEdit() {
+    const d = {};
+    services.forEach((s) => {
+      d[s.id] = { price: String(Number(s.price_per_unit)), active: s.active };
     });
+    setDrafts(d);
+    setEditing(true);
+  }
+
+  function setDraft(id, patch) {
+    setDrafts((d) => ({ ...d, [id]: { ...d[id], ...patch } }));
+  }
+
+  async function save() {
+    setBusy(true);
+    await Promise.all(
+      services.map((s) => {
+        const d = drafts[s.id];
+        if (!d) return null;
+        const priceChanged = Number(d.price) !== Number(s.price_per_unit);
+        const activeChanged = d.active !== s.active;
+        if (!priceChanged && !activeChanged) return null;
+        return fetch(`/api/services/${s.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...(priceChanged ? { pricePerUnit: d.price } : {}),
+            ...(activeChanged ? { active: d.active } : {}),
+          }),
+        });
+      })
+    );
+    setBusy(false);
+    setEditing(false);
     onChanged();
   }
 
@@ -204,25 +310,23 @@ function ServiceList({ services, unit, currency, onChanged }) {
     onChanged();
   }
 
-  async function toggleAvailable(service) {
-    await fetch(`/api/services/${service.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ active: !service.active }),
-    });
-    onChanged();
-  }
-
   return (
     <section className="mb-6">
       <div className="mb-2 flex items-center justify-between">
         <h2 className="text-sm font-semibold">Services &amp; pricing</h2>
-        <button
-          onClick={() => setAdding(!adding)}
-          className="text-xs text-[var(--text-sec)] underline"
-        >
-          {adding ? "cancel" : "+ add"}
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setAdding(!adding)}
+            className="text-xs text-[var(--text-sec)] underline"
+          >
+            {adding ? "cancel" : "+ add"}
+          </button>
+          {!editing && (
+            <button onClick={startEdit} className="text-xs text-[var(--text-sec)] underline">
+              Edit
+            </button>
+          )}
+        </div>
       </div>
 
       {adding && (
@@ -246,33 +350,45 @@ function ServiceList({ services, unit, currency, onChanged }) {
       )}
 
       <div className="flex flex-col gap-2">
-        {services.map((s) => (
-          <div
-            key={s.id}
-            className={`flex items-center gap-2 card p-2 ${s.active ? "" : "opacity-50"}`}
-          >
-            <span className="flex-1 text-sm">{s.name}</span>
-            <input
-              type="number"
-              defaultValue={Number(s.price_per_unit)}
-              onBlur={(e) => savePrice(s, e.target.value)}
-              disabled={!s.active}
-              className="w-24 rounded border border-[var(--rule)] px-2 py-1 text-right text-sm"
-            />
-            <span className="w-16 text-xs text-[var(--text-tert)]">
-              {currency}/{unit}
-            </span>
-            <button
-              onClick={() => toggleAvailable(s)}
-              className={`rounded px-2 py-1 text-[11px] ${
-                s.active ? "bg-green-light text-green-dark" : "bg-surface text-tert"
-              }`}
+        {services.map((s) => {
+          const draft = drafts[s.id];
+          const active = editing ? draft?.active ?? s.active : s.active;
+          return (
+            <div
+              key={s.id}
+              className={`flex items-center gap-2 card p-2 ${active ? "" : "opacity-50"}`}
             >
-              {s.active ? "Available" : "Unavailable"}
-            </button>
-          </div>
-        ))}
+              <span className="flex-1 text-sm">{s.name}</span>
+              {editing ? (
+                <input
+                  type="number"
+                  value={draft?.price ?? ""}
+                  onChange={(e) => setDraft(s.id, { price: e.target.value })}
+                  disabled={!active}
+                  className="w-24 rounded border border-[var(--rule)] px-2 py-1 text-right text-sm"
+                />
+              ) : (
+                <span className="w-24 text-right text-sm">{Number(s.price_per_unit)}</span>
+              )}
+              <span className="w-16 text-xs text-[var(--text-tert)]">
+                {currency}/{unit}
+              </span>
+              <button
+                onClick={() => editing && setDraft(s.id, { active: !active })}
+                disabled={!editing}
+                className={`rounded px-2 py-1 text-[11px] ${
+                  active ? "bg-green-light text-green-dark" : "bg-surface text-tert"
+                }`}
+              >
+                {active ? "Available" : "Unavailable"}
+              </button>
+            </div>
+          );
+        })}
       </div>
+
+      {editing && <EditActions busy={busy} onCancel={() => setEditing(false)} onSave={save} />}
+
       <p className="mt-2 text-[11px] text-[var(--text-tert)]">
         A service priced 0 will bill nothing — set it before you report
         against it. Marking a service Unavailable hides it from new bookings
@@ -322,15 +438,6 @@ function Account({ profile, onChanged }) {
         <p className="mt-1 text-[11px] text-[var(--text-tert)]">
           Sets your preference — the rest of the app stays in English for now.
         </p>
-      </div>
-
-      <div className="mb-3 flex items-center justify-between text-sm">
-        <span className="text-[var(--text-sec)]">Mobile Number</span>
-        <span>{profile.phone || "—"}</span>
-      </div>
-      <div className="mb-4 flex items-center justify-between text-sm">
-        <span className="text-[var(--text-sec)]">LINE Connection</span>
-        <span>{profile.lineAccount ? `Connected · ${profile.lineAccount}` : "Not connected"}</span>
       </div>
 
       {confirming ? (
