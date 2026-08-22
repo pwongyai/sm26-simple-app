@@ -6,6 +6,8 @@ import { cropzoneInSite } from "@/lib/siteFarms";
 import { fetchMachineTrack } from "@/lib/trajectory";
 import { resolveWidthAndFuel } from "@/lib/machineRates";
 import { computeWork, clipToPolygon, toUnits, serviceCharge } from "@/lib/engine";
+import { cached, TTL } from "@/lib/cache";
+import { doesFieldwork, defaultCanonicalForKind } from "@/lib/workTypes";
 
 const MAX_DRAW_POINTS = 400;
 
@@ -67,6 +69,28 @@ export async function GET(request) {
 
   const sinceMs = new Date(sinceParam).getTime();
   const untilMs = untilParam ? new Date(untilParam).getTime() : Date.now();
+
+  // Work type assignment, version 1 (LOGIC_SPEC.md §2): a machine's own
+  // AgroAPI `kind` decides both whether it does fieldwork at all, and which
+  // service this report should default to if the caller didn't pick one.
+  // Checked first, before any of the expensive work below, since a
+  // service/utility vehicle should never get this far at all.
+  const machinesOrgId = contractorOrgId(user);
+  const { body: orgMachines } = await cached(
+    `machines:${machinesOrgId}`,
+    TTL.machines,
+    () => agroFetch(`/organizations/${machinesOrgId}/machines`)
+  );
+  const machineKind = Array.isArray(orgMachines)
+    ? orgMachines.find((m) => m.id === machineId)?.kind || null
+    : null;
+  if (!doesFieldwork(machineKind)) {
+    return Response.json(
+      { error: "This machine doesn't perform fieldwork — no report can be created for it" },
+      { status: 400 }
+    );
+  }
+  const defaultCanonical = defaultCanonicalForKind(machineKind);
 
   // Already reported *for this window*? Checked as early as possible and
   // re-checked once cropzoneId is fully resolved below — a tap on an
@@ -202,9 +226,16 @@ export async function GET(request) {
   }
 
   const services = servicesRes.data || [];
+  // No explicit service picked — default to whichever of this contractor's
+  // own services matches this machine kind's default work type (version 1,
+  // LOGIC_SPEC.md §2), falling back to plain first-in-list only if no such
+  // service is configured for this org yet.
+  const defaultService = defaultCanonical
+    ? services.find((s) => s.activity_canonical === defaultCanonical)
+    : null;
   const service = serviceIdParam
     ? services.find((s) => s.id === serviceIdParam) || services[0] || null
-    : services[0] || null;
+    : defaultService || services[0] || null;
 
   const resolved = await resolveWidthAndFuel({
     machineId,
