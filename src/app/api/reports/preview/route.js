@@ -73,8 +73,10 @@ export async function GET(request) {
   // Work type assignment, version 1 (LOGIC_SPEC.md §2): a machine's own
   // AgroAPI `kind` decides both whether it does fieldwork at all, and which
   // service this report should default to if the caller didn't pick one.
-  // Checked first, before any of the expensive work below, since a
-  // service/utility vehicle should never get this far at all.
+  // A service/utility vehicle gets no default at all (see the service
+  // selection below) — but the contractor can still manually pick a
+  // service and generate a report for one if they choose to. No block:
+  // this is a default-selection convenience, not a structural restriction.
   const machinesOrgId = contractorOrgId(user);
   const { body: orgMachines } = await cached(
     `machines:${machinesOrgId}`,
@@ -84,12 +86,7 @@ export async function GET(request) {
   const machineKind = Array.isArray(orgMachines)
     ? orgMachines.find((m) => m.id === machineId)?.kind || null
     : null;
-  if (!doesFieldwork(machineKind)) {
-    return Response.json(
-      { error: "This machine doesn't perform fieldwork — no report can be created for it" },
-      { status: 400 }
-    );
-  }
+  const machineDoesFieldwork = doesFieldwork(machineKind);
   const defaultCanonical = defaultCanonicalForKind(machineKind);
 
   // Already reported *for this window*? Checked as early as possible and
@@ -228,14 +225,16 @@ export async function GET(request) {
   const services = servicesRes.data || [];
   // No explicit service picked — default to whichever of this contractor's
   // own services matches this machine kind's default work type (version 1,
-  // LOGIC_SPEC.md §2), falling back to plain first-in-list only if no such
-  // service is configured for this org yet.
+  // LOGIC_SPEC.md §2). A non-fieldwork kind (utility vehicle, etc.) gets no
+  // default and no first-in-list fallback either — left unselected so the
+  // contractor sees a real "choose one" instead of a guessed-wrong service;
+  // they can still pick one manually and generate a report either way.
   const defaultService = defaultCanonical
     ? services.find((s) => s.activity_canonical === defaultCanonical)
     : null;
   const service = serviceIdParam
     ? services.find((s) => s.id === serviceIdParam) || services[0] || null
-    : defaultService || services[0] || null;
+    : defaultService || (machineDoesFieldwork ? services[0] : null) || null;
 
   const resolved = await resolveWidthAndFuel({
     machineId,
