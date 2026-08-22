@@ -521,6 +521,7 @@ function CreateReport({ onClose, onCreated, onViewExisting }) {
           serviceCharge: charge,
           fuelLPerKm: chosen.fuelLPerKm,
           fuelL: chosen.fuelL,
+          emissionKgPerL: chosen.emissionKgPerL,
           emissionsKg: chosen.emissionsKg,
         }),
       });

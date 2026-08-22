@@ -4,10 +4,11 @@ import { agroFetch } from "@/lib/agroapi";
 import { contractorOrgId } from "@/lib/contractor";
 import { cropzoneInSite } from "@/lib/siteFarms";
 import { fetchMachineTrack } from "@/lib/trajectory";
-import { resolveWidthAndFuel } from "@/lib/machineRates";
+import { resolveWidth, resolveFuel } from "@/lib/machineRates";
 import { computeWork, clipToPolygon, toUnits, serviceCharge } from "@/lib/engine";
 import { cached, TTL } from "@/lib/cache";
 import { doesFieldwork, defaultCanonicalForKind } from "@/lib/workTypes";
+import { emissionKgPerLForFuelType } from "@/lib/emissions";
 
 const MAX_DRAW_POINTS = 400;
 
@@ -56,7 +57,7 @@ export async function GET(request) {
   // Set only when the contractor corrects the implement on Edit Details —
   // the physical implement was swapped in the field without ever updating
   // Settings' assignment, so this report alone needs a different width than
-  // resolveWidthAndFuel() would otherwise pick. A one-off override, not a
+  // resolveWidth() would otherwise pick. A one-off override, not a
   // change to the machine's stored assignment.
   const widthMOverrideParam = searchParams.get("widthM");
 
@@ -236,20 +237,19 @@ export async function GET(request) {
     ? services.find((s) => s.id === serviceIdParam) || services[0] || null
     : defaultService || (machineDoesFieldwork ? services[0] : null) || null;
 
-  const resolved = await resolveWidthAndFuel({
-    machineId,
-    serviceId: service?.id || null,
-    points: track.points,
-  });
+  const [widthResolved, fuelResolved] = await Promise.all([
+    resolveWidth({ machineId, serviceId: service?.id || null, points: track.points }),
+    resolveFuel({ machineId, serviceId: service?.id || null }),
+  ]);
   const widthMOverride = widthMOverrideParam ? Number(widthMOverrideParam) : null;
-  const widthM = widthMOverride ?? resolved.widthM;
-  const widthSource = widthMOverride != null ? "override" : resolved.widthSource;
-  const fuelLPerKm = resolved.fuelLPerKm;
+  const widthM = widthMOverride ?? widthResolved.widthM;
+  const widthSource = widthMOverride != null ? "override" : widthResolved.widthSource;
+  const fuelLPerKm = fuelResolved.fuelLPerKm;
 
   const work = computeWork({ points: track.points, boundary, widthM });
   const unitM2 = Number(user.organization.area_unit_m2);
   const price = service ? Number(service.price_per_unit) : null;
-  const emissionKgPerL = Number(user.organization.emission_kg_per_l ?? 2.68);
+  const emissionKgPerL = emissionKgPerLForFuelType(fuelResolved.fuelType);
   const fuelL =
     fuelLPerKm != null && work ? Number(((work.insideDistanceM / 1000) * fuelLPerKm).toFixed(2)) : null;
   const emissionsKg = fuelL != null ? Number((fuelL * emissionKgPerL).toFixed(2)) : null;
@@ -277,6 +277,7 @@ export async function GET(request) {
     trackPoints: insideTrack(track.points, boundary),
     fuelLPerKm,
     fuelL,
+    emissionKgPerL,
     emissionsKg,
     unit: user.organization.area_unit,
     currency: user.organization.currency,

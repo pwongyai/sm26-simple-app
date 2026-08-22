@@ -3,6 +3,7 @@ import { requireAccess, unassignedFarmerId } from "@/lib/ownership";
 import { agroFetch } from "@/lib/agroapi";
 import { contractorOrgId } from "@/lib/contractor";
 import { cropzoneInSite } from "@/lib/siteFarms";
+import { EMISSION_KG_PER_L } from "@/lib/emissions";
 
 export async function GET() {
   const { user, response } = await requireAccess();
@@ -238,7 +239,11 @@ export async function POST(request) {
       service_charge: b.serviceCharge ?? null,
       fuel_l_per_km: b.fuelLPerKm ?? null,
       fuel_l: b.fuelL ?? null,
-      emission_kg_per_l: Number(user.organization.emission_kg_per_l ?? 2.68),
+      // Frozen from whatever preview actually used (resolved by the
+      // machine's real fuel type, src/lib/emissions.js) — never re-derived
+      // independently here, or this could silently diverge from the number
+      // emissions_kg was actually computed with.
+      emission_kg_per_l: b.emissionKgPerL ?? EMISSION_KG_PER_L.diesel,
       emissions_kg: b.emissionsKg ?? null,
       agroapi_activity_id: activityId,
       // Cash sometimes changes hands on the spot, before the report is even

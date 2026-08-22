@@ -1,11 +1,15 @@
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { modalWorkWidth } from "@/lib/trajectory";
 
-// Width and fuel for one machine doing one service — resolved from the
-// contractor's own local settings first, telemetry only as a last resort.
-//
-// Width priority, deliberately local-first (stated directly: "we want to
-// enforce our width setting and fuel rate setting locally from the app"):
+// Width and fuel are resolved separately — they used to live in one
+// function, but they don't actually depend on each other. Width is driven
+// by whatever implement is physically attached right now; fuel is a
+// property of the machine itself (a default rate, optionally overridden
+// per service for work that genuinely burns differently), and has nothing
+// to do with the implement.
+
+// Deliberately local-first (stated directly: "we want to enforce our width
+// setting ... locally from the app") —
 //   1. The implement currently assigned to this machine (Machine Details →
 //      Implement) — the most explicit "what's actually attached right now"
 //      signal, and the one a contractor expects to control directly.
@@ -13,24 +17,17 @@ import { modalWorkWidth } from "@/lib/trajectory";
 //   3. The machine's own reported width (NoukiOpenAPI telemetry) — last
 //      resort only, since a swapped implement in the field doesn't
 //      necessarily show up in what the machine reports.
-//
-// Fuel has always been local-only (AgroAPI reports no fuel figure) — per-
-// service override on machine_rates, falling back to that machine's Default
-// row (service_id null). The Default row is new; a plain `.find(service_id
-// === X)` never matches it, which silently dropped the Default rate
-// wherever this logic was duplicated before this file existed.
-export async function resolveWidthAndFuel({ machineId, serviceId, points }) {
+export async function resolveWidth({ machineId, serviceId, points }) {
   const [{ data: assignment }, { data: rateRows }] = await Promise.all([
     supabaseAdmin
       .from("machine_implements")
       .select("implement:implements(width_m)")
       .eq("agro_machine_id", machineId)
       .maybeSingle(),
-    supabaseAdmin.from("machine_rates").select("service_id, width_m, fuel_l_per_km").eq("agro_machine_id", machineId),
+    supabaseAdmin.from("machine_rates").select("service_id, width_m").eq("agro_machine_id", machineId),
   ]);
 
   const perService = (rateRows || []).find((r) => r.service_id === serviceId);
-  const defaultRow = (rateRows || []).find((r) => r.service_id === null);
 
   let widthM = assignment?.implement?.width_m != null ? Number(assignment.implement.width_m) : null;
   let widthSource = widthM != null ? "implement" : null;
@@ -48,6 +45,28 @@ export async function resolveWidthAndFuel({ machineId, serviceId, points }) {
     }
   }
 
+  return { widthM, widthSource };
+}
+
+// Always local-only (AgroAPI reports no fuel figure) — that machine's
+// Default row (service_id null) applies unless the specific work being
+// done has its own override. The Default row is new; a plain
+// `.find(service_id === X)` never matches it, which silently dropped the
+// Default rate wherever this logic was duplicated before this file
+// existed.
+//
+// Fuel type (machine_fuel_types, defaults "diesel") is resolved here too —
+// callers need it to pick the right emissions factor
+// (src/lib/emissions.js), not just the L/km rate.
+export async function resolveFuel({ machineId, serviceId }) {
+  const [{ data: rateRows }, { data: fuelTypeRow }] = await Promise.all([
+    supabaseAdmin.from("machine_rates").select("service_id, fuel_l_per_km").eq("agro_machine_id", machineId),
+    supabaseAdmin.from("machine_fuel_types").select("fuel_type").eq("agro_machine_id", machineId).maybeSingle(),
+  ]);
+
+  const perService = (rateRows || []).find((r) => r.service_id === serviceId);
+  const defaultRow = (rateRows || []).find((r) => r.service_id === null);
+
   const fuelLPerKm =
     perService?.fuel_l_per_km != null
       ? Number(perService.fuel_l_per_km)
@@ -55,5 +74,7 @@ export async function resolveWidthAndFuel({ machineId, serviceId, points }) {
         ? Number(defaultRow.fuel_l_per_km)
         : null;
 
-  return { widthM, widthSource, fuelLPerKm };
+  const fuelType = fuelTypeRow?.fuel_type || "diesel";
+
+  return { fuelLPerKm, fuelType };
 }
