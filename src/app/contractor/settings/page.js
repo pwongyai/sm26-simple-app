@@ -452,21 +452,21 @@ function Language({ profile, onChanged }) {
           onClick={() => setLanguage("th")}
           className={`btn flex-1 ${profile.language === "th" ? "btn-primary" : "btn-outline"}`}
         >
-          ไทย
+          🇹🇭 ไทย
         </button>
         <button
           disabled={busy}
           onClick={() => setLanguage("en")}
           className={`btn flex-1 ${profile.language === "en" ? "btn-primary" : "btn-outline"}`}
         >
-          English
+          🇬🇧 English
         </button>
         <button
           disabled={busy}
           onClick={() => setLanguage("vn")}
           className={`btn flex-1 ${profile.language === "vn" ? "btn-primary" : "btn-outline"}`}
         >
-          Tiếng Việt
+          🇻🇳 Tiếng Việt
         </button>
       </div>
       <p className="mt-1 text-[11px] text-[var(--text-tert)]">
