@@ -145,6 +145,23 @@ function ReportsTabInner() {
   const [reports, setReports] = useState([]);
   const [creating, setCreating] = useState(fromSelectArea);
   const [viewing, setViewing] = useState(null);
+
+  // Open a report's detail from its full row, not from the summary the list
+  // holds. The list deliberately omits `track_points` (~2 kB a report), and the
+  // detail view draws the machine's path from exactly that — so handing it the
+  // list row rendered a map with the field outline and no track, which is the
+  // most persuasive thing on the screen (2026-08-23).
+  //
+  // Falls back to the list row if the fetch fails: a map without a track beats
+  // a dead tap.
+  async function openReport(row) {
+    try {
+      const res = await fetch(`/api/reports/${row.id}`, { cache: "no-store" });
+      setViewing(res.ok ? await res.json() : row);
+    } catch {
+      setViewing(row);
+    }
+  }
   const [timeFilter, setTimeFilter] = useState("month");
   const [machineFilter, setMachineFilter] = useState("all");
   const [payFilter, setPayFilter] = useState("all");
@@ -244,7 +261,7 @@ function ReportsTabInner() {
 
         <div className="flex flex-col gap-3">
           {filtered.map((r) => (
-            <button key={r.id} className="report-card" onClick={() => setViewing(r)}>
+            <button key={r.id} className="report-card" onClick={() => openReport(r)}>
               <ReportThumb boundary={r.boundary} />
               <div className="txt">
                 <div className="name">{r.farmer?.name || "Unassigned"}</div>
