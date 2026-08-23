@@ -1,6 +1,5 @@
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireAccess } from "@/lib/ownership";
-import { contractorOrgId } from "@/lib/contractor";
 
 // The contractor's customer list. Used by the notebook's search-or-create
 // field (version 2 §8.3: typing a name that matches an existing customer
@@ -23,8 +22,15 @@ export async function GET() {
   const { data, error } = await supabaseAdmin
     .from("farmers")
     .select("id, name, phone, type")
+    // Community-wide, not per-contractor. The community keeps one book of its
+    // members; every contractor it admits sees all of them. Scoping this by
+    // contractor was what forced a second contractor to invent a duplicate
+    // customer (they could see the land but not its owner), which then split
+    // one farmer's history in two and left reports billed against a different
+    // record than the field's owner. Security is admission control — a
+    // contractor needs a farm_contractor_relationships row to be here at all —
+    // not row filtering (2026-08-23).
     .eq("organization_id", user.organization_id)
-    .or(`contractor_agro_org_id.eq.${contractorOrgId(user)},type.eq.smart`)
     .neq("name", "Unassigned")
     .order("name");
 
@@ -52,7 +58,6 @@ export async function POST(request) {
     .from("farmers")
     .insert({
       organization_id: user.organization_id,
-      contractor_agro_org_id: contractorOrgId(user),
       name: name.trim(),
       phone: phone?.trim() || null,
       type: "manual",

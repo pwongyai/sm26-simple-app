@@ -17,6 +17,7 @@ export default function OrderDetail({ order, services, onClose, onChanged }) {
   const [date, setDate] = useState(order.scheduled_date || "");
   const [workType, setWorkType] = useState(order.activity_type_name || "");
   const [rai, setRai] = useState(order.crop_size_rai ?? "");
+  const [note, setNote] = useState(order.note || "");
 
   const late = daysLate(order);
   const isPending = order.status === "pending";
@@ -27,6 +28,7 @@ export default function OrderDetail({ order, services, onClose, onChanged }) {
       scheduledDate: date || null,
       workType: workType ? { id: null, name: workType } : null,
       cropSizeRai: rai === "" ? null : Number(rai),
+      note: note.trim() || null,
     });
     setBusy(false);
     onChanged();
@@ -173,6 +175,15 @@ export default function OrderDetail({ order, services, onClose, onChanged }) {
                 placeholder="unknown"
               />
             </div>
+            <div>
+              <div className="field-label">Note</div>
+              <input
+                className="field"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="Anything the driver should know"
+              />
+            </div>
           </>
         ) : (
           <div className="detail-card">
@@ -196,6 +207,12 @@ export default function OrderDetail({ order, services, onClose, onChanged }) {
               <div className="detail-row">
                 <div className="lbl">Field</div>
                 <div className="val">{order.field_name}</div>
+              </div>
+            )}
+            {order.note && (
+              <div className="detail-row">
+                <div className="lbl">Note</div>
+                <div className="val">{order.note}</div>
               </div>
             )}
             <div className="detail-row">

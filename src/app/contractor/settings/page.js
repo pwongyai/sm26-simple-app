@@ -125,25 +125,36 @@ function EditActions({ busy, onCancel, onSave, saveDisabled }) {
 }
 
 function ContractorProfile({ profile, organization, onChanged }) {
+  // Only Owner Name is editable here, and it writes to the LOGIN, not to this
+  // business (R13, 2026-08-23):
+  //
+  //   Business Name  read-only — AgroAPI owns it. Editing it here would let the
+  //                  name a farmer sees disagree with AgroAPI and every other
+  //                  consumer of the platform. Change it in AgroAPI.
+  //   Mobile Number  read-only — it IS the login. Editing it would change how
+  //                  this account signs in, which during testing means a
+  //                  tester locking themselves out of a shared test account.
+  //                  Revisit when real authentication is built.
+  //   Owner Name     editable, via PATCH /api/me (app_users.name) — not a
+  //                  credential, so it is safe to change.
   const [editing, setEditing] = useState(false);
-  const [businessName, setBusinessName] = useState(profile.businessName || "");
   const [ownerName, setOwnerName] = useState(profile.ownerName || "");
-  const [phone, setPhone] = useState(profile.phone || "");
   const [busy, setBusy] = useState(false);
 
   function startEdit() {
-    setBusinessName(profile.businessName || "");
     setOwnerName(profile.ownerName || "");
-    setPhone(profile.phone || "");
     setEditing(true);
   }
 
   async function save() {
     setBusy(true);
-    await fetch("/api/contractor-profile", {
+    // The owner's name lives on the login, so this is /api/me — the same route
+    // the farmer's Profile screen uses. `phone` is passed unchanged because
+    // that route treats a missing phone as "keep the current one".
+    await fetch("/api/me", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ businessName, ownerName, phone }),
+      body: JSON.stringify({ name: ownerName, phone: profile.phone }),
     });
     setBusy(false);
     setEditing(false);
@@ -170,11 +181,10 @@ function ContractorProfile({ profile, organization, onChanged }) {
       <div className="flex flex-col gap-2">
         <div>
           <div className="field-label">Contractor / Business Name</div>
-          <input
-            className="field"
-            value={businessName}
-            onChange={(e) => setBusinessName(e.target.value)}
-          />
+          <div className="detail-row">
+            <div className="val">{profile.businessName || "—"}</div>
+          </div>
+          <p className="text-[11px] text-[var(--text-tert)]">Set in AgroAPI</p>
         </div>
         <div>
           <div className="field-label">Owner Name</div>
@@ -186,7 +196,12 @@ function ContractorProfile({ profile, organization, onChanged }) {
         </div>
         <div>
           <div className="field-label">Mobile Number</div>
-          <input className="field" value={phone} onChange={(e) => setPhone(e.target.value)} />
+          <div className="detail-row">
+            <div className="val">{profile.phone || "—"}</div>
+          </div>
+          <p className="text-[11px] text-[var(--text-tert)]">
+            The number you sign in with
+          </p>
         </div>
         <EditActions busy={busy} onCancel={() => setEditing(false)} onSave={save} />
         <p className="text-[11px] text-[var(--text-tert)]">Organization: {organization}</p>

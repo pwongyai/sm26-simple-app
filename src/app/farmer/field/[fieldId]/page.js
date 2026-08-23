@@ -456,6 +456,12 @@ export default function FieldDetailPage({ params }) {
               name: cropzone.field?.name || cropzone.name,
               areaUnits: Number((cropzone.area / 1600).toFixed(1)),
               crop: cropzone.crop?.name,
+              // Required, not decorative: RequestService stamps the order with
+              // this field's centre so Today's Work can sort by distance from
+              // the contractor's home base. Omitting it (as this page did
+              // until 2026-08-23) silently saved every order from here with
+              // NULL coordinates, while the same flow from My Fields worked.
+              boundary,
             },
           ]}
           services={services}

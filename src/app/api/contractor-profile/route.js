@@ -1,6 +1,6 @@
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireAccess } from "@/lib/ownership";
-import { contractorOrgId } from "@/lib/contractor";
+import { contractorOrgId, contractorNames } from "@/lib/contractor";
 
 // The contractor's own business details — version 3's "Contractor Profile" +
 // "Home Base Location" Settings sections.
@@ -34,11 +34,19 @@ export async function GET() {
     return Response.json({ error: "Could not load profile" }, { status: 500 });
   }
 
+  // Business name from AgroAPI, which owns it. Owner name and phone come from
+  // the one login bound to this business (app_users.contractor_agro_org_id is
+  // uniquely indexed, so there is exactly one). Neither is stored here any
+  // more — R13, 2026-08-23. The old fallback for businessName was
+  // `user.organization.name`, the FARMING community's name, so a contractor
+  // who never edited their profile saw their business called "Ruang Kaeo Rice
+  // Community".
+  const names = await contractorNames([orgId]);
+
   return Response.json({
-    businessName: data?.name ?? user.organization.name,
-    ownerName: data?.owner_name ?? user.name,
-    phone: data?.phone ?? user.phone,
-    lineAccount: data?.line_account ?? null,
+    businessName: names.get(orgId) ?? null,
+    ownerName: user.name,
+    phone: user.phone,
     language: data?.language ?? "th",
     homeLat: data?.home_lat ?? null,
     homeLng: data?.home_lng ?? null,
@@ -54,9 +62,10 @@ export async function PATCH(request) {
 
   const body = await request.json();
   const updates = { agro_contractor_org_id: contractorOrgId(user) };
-  if (body.businessName !== undefined) updates.name = body.businessName;
-  if (body.ownerName !== undefined) updates.owner_name = body.ownerName;
-  if (body.phone !== undefined) updates.phone = body.phone;
+  // businessName / ownerName / phone are deliberately NOT accepted here. The
+  // name belongs to AgroAPI; owner name and phone belong to the login and are
+  // changed through PATCH /api/me. Accepting them would write columns that no
+  // longer exist (R13).
   if (body.language !== undefined) updates.language = body.language;
   if (body.homeLat !== undefined) updates.home_lat = body.homeLat;
   if (body.homeLng !== undefined) updates.home_lng = body.homeLng;
@@ -73,11 +82,12 @@ export async function PATCH(request) {
     return Response.json({ error: "Could not save profile" }, { status: 500 });
   }
 
+  const names = await contractorNames([updates.agro_contractor_org_id]);
+
   return Response.json({
-    businessName: data.name,
-    ownerName: data.owner_name,
-    phone: data.phone,
-    lineAccount: data.line_account,
+    businessName: names.get(updates.agro_contractor_org_id) ?? null,
+    ownerName: user.name,
+    phone: user.phone,
     language: data.language,
     homeLat: data.home_lat,
     homeLng: data.home_lng,

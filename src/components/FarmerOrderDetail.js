@@ -76,9 +76,12 @@ export default function FarmerOrderDetail({ order, onClose, onChanged }) {
     ["Machine Name", report.machine_name || "—"],
     ["Implement Width", report.width_m ? `${report.width_m} m` : "—"],
     [
+      // Inside the farmer's own field — the machine's wider travel that day is
+      // none of this report's business, and showing it invited the question
+      // "am I being charged for that?" (2026-08-23).
       "Total Distance",
-      report.total_distance_m != null
-        ? `${(report.total_distance_m / 1000).toFixed(2)} km`
+      report.inside_distance_m != null
+        ? `${(report.inside_distance_m / 1000).toFixed(2)} km`
         : "—",
     ],
     ["Fuel Consumption", report.fuel_l != null ? `${report.fuel_l} L` : "—"],
@@ -231,6 +234,15 @@ export default function FarmerOrderDetail({ order, onClose, onChanged }) {
               {new Date(`${order.booking_date}T00:00:00`).toLocaleDateString()}
             </div>
           </div>
+          {/* Shown to the farmer too: the note is usually about their field
+              ("gate locked", "moved, too wet"), so hiding it would keep them
+              guessing about their own job. */}
+          {order.note && (
+            <div className="detail-row">
+              <div className="lbl">Note</div>
+              <div className="val">{order.note}</div>
+            </div>
+          )}
         </div>
 
         {order.status === "declined" && (

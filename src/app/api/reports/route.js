@@ -11,7 +11,18 @@ export async function GET() {
 
   let query = supabaseAdmin
     .from("work_reports")
-    .select("*, farmer:farmers(id, name, phone)")
+    // Explicit columns, not "*": the list would otherwise pull `track_points`
+    // (~2 kB per report) and `boundary` for every row — 19 kB at 8 reports,
+    // ~2.6 MB at a thousand. The map on a single report fetches them itself.
+    .select(
+      "id, organization_id, work_order_id, farmer_id, agro_cropzone_id, agro_machine_id, " +
+        "field_name, machine_name, work_type_id, work_type_name, started_at, ended_at, " +
+        "width_m, field_area_m2, work_area_m2, percent_worked, inside_distance_m, hours, " +
+        "currency, unit_label, price_per_unit, service_charge, payment_status, " +
+        "agroapi_activity_id, created_at, service_id, service_name, fuel_l_per_km, fuel_l, " +
+        "emission_kg_per_l, emissions_kg, work_area_units, field_area_units, " +
+        "contractor_agro_org_id, farmer:farmers(id, name, phone)"
+    )
     .eq("contractor_agro_org_id", contractorOrgId(user))
     // Unpaid first: the point of this list is knowing who still owes you
     // (version 2 §14.1). Most recent first within each group.
@@ -136,12 +147,35 @@ export async function POST(request) {
   if (workOrderId) {
     const { data: order } = await supabaseAdmin
       .from("work_orders")
-      .select("id, farmer_id")
+      .select("id, farmer_id, cropzone_id, field_name")
       .eq("id", workOrderId)
       .eq("contractor_org_id", contractorOrgId(user))
       .maybeSingle();
     if (!order) {
       return Response.json({ error: "That work order no longer exists" }, { status: 400 });
+    }
+    // The order must be for the same land as the report. The client chooses
+    // the match, and until 2026-08-23 the server took its word for it — which
+    // let a report for one field be billed against another field's order (a
+    // real case: a Test Plot East report attached to RK0541). It matters more
+    // than a mislabelled row, because a successful match writes BACK to the
+    // order: crop_size_rai becomes the measured area and scheduled_date
+    // becomes the session date, so a wrong match silently rewrites an
+    // unrelated job.
+    //
+    // Deliberately narrow: only enforced when the order actually names a
+    // cropzone. Manual orders legitimately have none — Add Work Order allows
+    // booking before the field is known — and those must stay matchable.
+    if (order.cropzone_id && order.cropzone_id !== b.cropzoneId) {
+      return Response.json(
+        {
+          error:
+            "That job is for a different field" +
+            (order.field_name ? ` (${order.field_name})` : "") +
+            ". Pick the job for this field, or leave it unmatched.",
+        },
+        { status: 400 }
+      );
     }
     farmerId = order.farmer_id;
     matched = true;
@@ -172,6 +206,11 @@ export async function POST(request) {
       .from("work_orders")
       .update({
         status: "completed",
+        // How the job finished, not just that it did. Without this the column
+        // only ever held 'force_closed', so a properly reported job and one
+        // merely marked complete both read as NULL and could not be told
+        // apart without joining work_reports (2026-08-23).
+        completion_type: "matched",
         completed_at: new Date().toISOString(),
         agroapi_activity_id: activityId,
         // Reality overwrites the plan: the measured area replaces the estimate.
@@ -229,7 +268,6 @@ export async function POST(request) {
       work_area_units: b.workAreaUnits ?? null,
       percent_worked: b.percentWorked ?? null,
       inside_distance_m: b.insideDistanceM ?? null,
-      total_distance_m: b.totalDistanceM ?? null,
       hours: b.hours ?? null,
       currency: user.organization.currency,
       unit_label: user.organization.area_unit,

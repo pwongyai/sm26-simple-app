@@ -302,7 +302,15 @@ function ViewReport({ report: r, onClose, onTogglePaid }) {
   const machineFields = [
     ["Machine Name", r.machine_name || "—"],
     ["Implement Width", r.width_m ? `${r.width_m} m` : "—"],
-    ["Total Distance", r.total_distance_m != null ? `${(r.total_distance_m / 1000).toFixed(2)} km` : "—"],
+    // The distance INSIDE the field, not the machine's whole day. This row
+    // used to read total_distance_m, which meant it could not produce the
+    // fuel figure printed directly beneath it (155.68 km against 8.28 L at
+    // 2.4 L/km). Sourced from inside_distance_m, distance x rate = fuel x
+    // factor = emissions all check out on the page (2026-08-23).
+    [
+      "Total Distance",
+      r.inside_distance_m != null ? `${(r.inside_distance_m / 1000).toFixed(2)} km` : "—",
+    ],
     ["Fuel Consumption", r.fuel_l != null ? `${r.fuel_l} L` : "rate not set"],
     ["Emissions", r.emissions_kg != null ? `${r.emissions_kg} kg CO₂` : "—"],
   ];
@@ -514,7 +522,6 @@ function CreateReport({ onClose, onCreated, onViewExisting }) {
           workAreaM2: chosen.work?.workAreaM2,
           percentWorked: chosen.work?.percentWorked,
           insideDistanceM: chosen.work?.insideDistanceM,
-          totalDistanceM: chosen.work?.totalDistanceM,
           hours: chosen.work?.hours,
           workAreaUnits: chosen.workAreaUnits,
           pricePerUnit: service?.price ?? null,
@@ -557,7 +564,9 @@ function CreateReport({ onClose, onCreated, onViewExisting }) {
     ["Implement Width", chosen.widthM ? `${chosen.widthM} m` : "—"],
     [
       "Total Distance",
-      chosen.work?.totalDistanceM != null ? `${(chosen.work.totalDistanceM / 1000).toFixed(2)} km` : "—",
+      chosen.work?.insideDistanceM != null
+        ? `${(chosen.work.insideDistanceM / 1000).toFixed(2)} km`
+        : "—",
     ],
     ["Fuel Consumption", chosen.fuelL != null ? `${chosen.fuelL} L` : "rate not set"],
     ["Emissions", chosen.emissionsKg != null ? `${chosen.emissionsKg} kg CO₂` : "—"],

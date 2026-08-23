@@ -1,6 +1,5 @@
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getSessionUser } from "@/lib/session";
-import { contractorOrgId } from "@/lib/contractor";
 
 // The ownership gate. Every route that proxies to AgroAPI must call
 // requireAccess() before making the call — AgroAPI itself cannot tell our users
@@ -52,7 +51,7 @@ export async function unassignedFarmerId(user) {
   const { data } = await supabaseAdmin
     .from("farmers")
     .select("id")
-    .eq("contractor_agro_org_id", contractorOrgId(user))
+    .eq("organization_id", user.organization_id)
     .eq("name", "Unassigned")
     .maybeSingle();
   if (data) return data.id;
@@ -61,7 +60,6 @@ export async function unassignedFarmerId(user) {
     .from("farmers")
     .insert({
       organization_id: user.organization_id,
-      contractor_agro_org_id: contractorOrgId(user),
       name: "Unassigned",
       phone: "0000000000",
       type: "manual",

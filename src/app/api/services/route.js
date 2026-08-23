@@ -65,7 +65,12 @@ export async function POST(request) {
   const { data, error } = await supabaseAdmin
     .from("services")
     .insert({
-      organization_id: user.organization_id,
+      // No organization_id: a price list belongs to a contractor, not to a
+      // farming community. Every read of this table scopes by
+      // contractor_agro_org_id, so the column was written and never read —
+      // and under the default-farm-organization design it would have frozen
+      // whichever community happened to be selected at creation time
+      // (2026-08-23).
       contractor_agro_org_id: contractorOrgId(user),
       name: name.trim(),
       price_per_unit: Number(pricePerUnit) || 0,

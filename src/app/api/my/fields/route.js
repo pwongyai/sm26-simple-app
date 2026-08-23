@@ -50,7 +50,10 @@ export async function GET() {
         // (rate limit, AgroAPI hiccup) is not the same signal — only a
         // confirmed 404 justifies deleting real data.
         if (status === 404) {
-          await supabaseAdmin.from("farmer_fields").delete().eq("id", row.id);
+          await supabaseAdmin
+            .from("farmer_fields")
+            .delete()
+            .eq("agro_field_id", row.agro_field_id);
         }
         return { ...base, areaM2: null, crop: null, unavailable: true };
       }

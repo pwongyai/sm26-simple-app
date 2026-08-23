@@ -21,6 +21,7 @@ export default function AddOrderForm({ services, onClose, onCreated }) {
   const [newPhone, setNewPhone] = useState("");
 
   const [cropSize, setCropSize] = useState("");
+  const [note, setNote] = useState("");
   const [workType, setWorkType] = useState("");
   const [scheduled, setScheduled] = useState(() =>
     new Date().toLocaleDateString("en-CA")
@@ -78,6 +79,7 @@ export default function AddOrderForm({ services, onClose, onCreated }) {
         activityTypeName: service?.name || null,
         scheduledDate: scheduled || null,
         cropSizeRai: cropSize === "" ? null : Number(cropSize),
+        note: note.trim() || null,
         lat: locationType === "pin" && pin ? pin.lat : null,
         lng: locationType === "pin" && pin ? pin.lng : null,
       });
@@ -238,6 +240,20 @@ export default function AddOrderForm({ services, onClose, onCreated }) {
                   ))}
                 </select>
               </div>
+            </div>
+
+            {/* Free text — the one thing a form cannot anticipate. What a paper
+                notebook carries and no structured column does: "call before
+                coming", "gate locked, use the north track", "moved because the
+                field was too wet". Optional by design. */}
+            <div>
+              <div className="field-label">Note (optional)</div>
+              <input
+                className="field"
+                placeholder="Anything the driver should know"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+              />
             </div>
 
             <div>

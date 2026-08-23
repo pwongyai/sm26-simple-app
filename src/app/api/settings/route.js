@@ -10,8 +10,10 @@ import { requireAccess } from "@/lib/ownership";
 // was both unsourced and wrong for a gasoline machine. The PATCH had no
 // caller left after the Settings page's Emissions section was removed, so
 // it went with it rather than sitting here as a way to write a value
-// nothing reads. The column itself stays for historical frozen reports —
-// see DATABASE_ERD.md.
+// nothing reads. The column was then DROPPED — an earlier note here claimed
+// it "stays for historical frozen reports", which was wrong: frozen reports
+// carry their own work_reports.emission_kg_per_l, which is what preserves
+// history. See DATABASE_ERD.md.
 export async function GET() {
   const { user, response } = await requireAccess();
   if (response) return response;

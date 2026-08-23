@@ -100,8 +100,7 @@ export async function PUT(request, { params }) {
     const { error } = existing
       ? await supabaseAdmin.from("machine_rates").update({ fuel_l_per_km: rate }).eq("id", existing.id)
       : await supabaseAdmin.from("machine_rates").insert({
-          organization_id: user.organization_id,
-          contractor_agro_org_id: orgId,
+            contractor_agro_org_id: orgId,
           agro_machine_id: machineId,
           service_id: null,
           fuel_l_per_km: rate,
@@ -116,7 +115,6 @@ export async function PUT(request, { params }) {
 
   const { error } = await supabaseAdmin.from("machine_rates").upsert(
     {
-      organization_id: user.organization_id,
       contractor_agro_org_id: orgId,
       agro_machine_id: machineId,
       service_id: serviceId,

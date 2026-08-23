@@ -20,7 +20,7 @@ export async function PATCH(request, { params }) {
   const farmerId = await resolveFarmerId(user);
   const { data: owned } = await supabaseAdmin
     .from("farmer_fields")
-    .select("id, agro_field_id, agro_cropzone_id")
+    .select("agro_field_id, agro_cropzone_id")
     .eq("agro_field_id", fieldId)
     .eq("farmer_id", farmerId)
     .maybeSingle();
@@ -87,7 +87,10 @@ export async function PATCH(request, { params }) {
     await supabaseAdmin
       .from("farmer_fields")
       .update({ name: fieldPatch.name })
-      .eq("id", owned.id);
+      // Addressed by agro_field_id — the field's own identity, and the table's
+      // primary key. The surrogate `id` it replaced identified a "registration"
+      // that nothing referenced (R12, 2026-08-23).
+      .eq("agro_field_id", owned.agro_field_id);
   }
 
   if (failed.length && !applied.length) {

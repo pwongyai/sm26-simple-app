@@ -83,7 +83,6 @@ export function computeWork({ points, boundary, widthM }) {
   // without needing real per-segment clipping for the distance/time figures.
   const SAMPLES = 8;
   let insideLengthM = 0;
-  let totalLengthM = 0;
   let firstInside = null;
   let lastInside = null;
   const runs = [];
@@ -93,7 +92,6 @@ export function computeWork({ points, boundary, widthM }) {
     const a = track[i - 1];
     const b = track[i];
     const segLen = dist(a.xy, b.xy);
-    totalLengthM += segLen;
 
     // A machine sitting still with the engine on shouldn't accumulate area.
     if (segLen === 0) continue;
@@ -133,7 +131,6 @@ export function computeWork({ points, boundary, widthM }) {
     workAreaM2: Math.round(workAreaM2),
     percentWorked: fieldAreaM2 ? Math.round((workAreaM2 / fieldAreaM2) * 100) : 0,
     insideDistanceM: Math.round(insideLengthM),
-    totalDistanceM: Math.round(totalLengthM),
     firstInside,
     lastInside,
     hours:

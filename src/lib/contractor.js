@@ -1,3 +1,6 @@
+import { agroFetch } from "@/lib/agroapi";
+import { cached, TTL } from "@/lib/cache";
+
 // Which contractor business is this user acting as?
 //
 // Two different questions, depending on who is asking:
@@ -44,4 +47,27 @@ export function availableContractors(user) {
 export function canUseContractor(user, contractorOrgId) {
   if (!contractorOrgId) return false;
   return availableContractors(user).some((c) => c.id === contractorOrgId);
+}
+
+// A contractor business's display name. AgroAPI owns it — a contractor
+// organization is an AgroAPI organization, and its name is set there — so this
+// app reads it rather than keeping an editable copy (2026-08-23, R13). The
+// local copy could be edited independently, which meant the name a farmer saw
+// here could disagree with AgroAPI and every other consumer of the platform.
+//
+// Cached hard: a business name effectively never changes, and without a cache
+// an AgroAPI hiccup would leave the farmer's contractor picker nameless — it
+// used to be a local read that could not fail.
+//
+// One call covers every contractor the caller might need, which is why this
+// takes the list endpoint rather than /organizations/:id per business.
+export async function contractorNames(ids = []) {
+  if (!ids.length) return new Map();
+  const { ok, body } = await cached("contractor-names", TTL.catalog, () =>
+    agroFetch("/contractors")
+  );
+  const all = ok && Array.isArray(body) ? body : [];
+  return new Map(
+    all.filter((c) => ids.includes(c.id)).map((c) => [c.id, c.name || null])
+  );
 }
