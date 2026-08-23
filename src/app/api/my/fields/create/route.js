@@ -12,9 +12,15 @@ import { agroFetch } from "@/lib/agroapi";
 // and it's the only thing keeping one farmer out of another's data. Both
 // halves have to succeed for the field to be usable.
 //
-// A Farm is created per farmer on first use: it's a thin container, it keeps
-// the org's field list navigable, and it means a manual farmer who later gets
-// their own account can simply be linked to the Farm that already exists.
+// A brand-new Farm is created for EACH field, never reused across a farmer's
+// fields. This path used to cache one Farm per farmer (`app_users
+// .agro_farm_id`) as "a thin container that keeps the org's field list
+// navigable" — but that is the design that broke a real field and was reverted
+// on the contractor side: AgroAPI stamps a Farm's `location` once at creation
+// and never recomputes it as fields are added, so a farmer's second field
+// somewhere else inherits the first one's location and disappears from
+// location-based search. This was the last path still doing it (fixed
+// 2026-08-23); it now matches `api/farmers/[farmerId]/fields`.
 export async function POST(request) {
   const { user, response } = await requireAccess();
   if (response) return response;
@@ -34,25 +40,20 @@ export async function POST(request) {
 
   const orgId = user.organization.agro_org_id;
 
-  // 1. This farmer's Farm inside the community org.
-  let farmId = user.agro_farm_id;
-  if (!farmId) {
-    const created = await agroFetch(`/organizations/${orgId}/farms`, {
-      method: "POST",
-      body: JSON.stringify({ name: `${user.name} Farm` }),
-    });
-    if (!created.ok) {
-      return Response.json(
-        { error: "Could not create your farm in AgroAPI", detail: created.body },
-        { status: 502 }
-      );
-    }
-    farmId = created.body.id;
-    await supabaseAdmin
-      .from("app_users")
-      .update({ agro_farm_id: farmId })
-      .eq("id", user.id);
+  // 1. A brand-new Farm for this one field alone, named after the field so the
+  //    wrapper is self-evidently incidental (same convention as the
+  //    contractor path).
+  const createdFarm = await agroFetch(`/organizations/${orgId}/farms`, {
+    method: "POST",
+    body: JSON.stringify({ name: name.trim() }),
+  });
+  if (!createdFarm.ok) {
+    return Response.json(
+      { error: "Could not create this field's Farm in AgroAPI", detail: createdFarm.body },
+      { status: 502 }
+    );
   }
+  const farmId = createdFarm.body.id;
 
   // 2. The field itself, with the drawn boundary.
   const field = await agroFetch(`/farms/${farmId}/fields`, {
