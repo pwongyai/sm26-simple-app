@@ -1,6 +1,6 @@
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireAccess } from "@/lib/ownership";
-import { contractorOrgId } from "@/lib/contractor";
+import { contractorOrgId, canUseContractor } from "@/lib/contractor";
 
 // The contractor's own price list. Version 2 §4.2: services and cost per area
 // are the contractor's setting, not a fixed number from anywhere else.
@@ -8,16 +8,33 @@ export async function GET(request) {
   const { user, response } = await requireAccess();
   if (response) return response;
 
+  const params = new URL(request.url).searchParams;
   // Booking/report forms only ever want services you can currently book
   // against. Settings' own list needs everything, including services
   // switched off, so the Available/Unavailable toggle has something to show.
-  const includeInactive = new URL(request.url).searchParams.get("includeInactive");
+  const includeInactive = params.get("includeInactive");
+
+  // A farmer choosing between contractors needs THAT contractor's list —
+  // each one prices the same work differently, so "Harvesting ฿700" is
+  // meaningless until you know whose list it came from. Validated against the
+  // organization's own relationships: without that check a caller could name
+  // any contractor and read their prices.
+  const requested = params.get("contractorOrgId");
+  const scopeTo =
+    requested && canUseContractor(user, requested) ? requested : contractorOrgId(user);
+
+  if (requested && !canUseContractor(user, requested)) {
+    return Response.json(
+      { error: "That contractor does not serve your organization" },
+      { status: 403 }
+    );
+  }
 
   let query = supabaseAdmin
     .from("services")
     .select("*")
     // A price list belongs to one business, not to the whole community.
-    .eq("contractor_agro_org_id", contractorOrgId(user));
+    .eq("contractor_agro_org_id", scopeTo);
 
   if (!includeInactive) query = query.eq("active", true);
 

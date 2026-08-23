@@ -1,6 +1,6 @@
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireAccess, resolveFarmerId } from "@/lib/ownership";
-import { contractorOrgId } from "@/lib/contractor";
+import { contractorOrgId, canUseContractor } from "@/lib/contractor";
 
 // Work orders, server-side. Previously the browser talked to Supabase directly
 // with the anon key and wide-open policies — anyone could read or edit every
@@ -60,6 +60,22 @@ export async function POST(request) {
   // contractor writing in their own notebook is already a booked job.
   const isFarmer = user.role !== "contractor";
 
+  // Which contractor this request goes to. A farmer may choose among the ones
+  // their organization works with; anything else is refused rather than
+  // silently redirected to the default, because a request routed to the wrong
+  // business is worse than a failed one. A contractor writing their own
+  // notebook is always themselves.
+  let assignedContractor = contractorOrgId(user);
+  if (isFarmer && body.contractorOrgId) {
+    if (!canUseContractor(user, body.contractorOrgId)) {
+      return Response.json(
+        { error: "That contractor does not serve your organization" },
+        { status: 403 }
+      );
+    }
+    assignedContractor = body.contractorOrgId;
+  }
+
   let farmerId = body.farmerId || null;
 
   if (isFarmer) {
@@ -72,7 +88,7 @@ export async function POST(request) {
       organization_id: user.organization_id,
       farmer_id: farmerId,
       farmer_org_id: user.organization.agro_org_id,
-      contractor_org_id: contractorOrgId(user),
+      contractor_org_id: assignedContractor,
       field_id: body.fieldId || null,
       cropzone_id: body.cropzoneId || null,
       field_name: body.fieldName || null,

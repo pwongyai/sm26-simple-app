@@ -4,16 +4,25 @@ import { useEffect, useRef, useState } from "react";
 import { createOrder } from "@/lib/store";
 import FieldThumb from "@/components/FieldThumb";
 
-// Request Contractor — version 3's four steps, in order:
-//   Field → Service → Preferred Date → Review.
+// Request Contractor — five steps, in order:
+//   Field → Contractor → Service → Preferred Date → Review.
 //
-// The contractor step is skipped while a community has exactly one contractor,
-// exactly as v3 does: it auto-assigns rather than asking a question with one
-// answer. The date step shows weather purely as information — no "best day",
-// no recommendation, ever.
+// Contractor comes BEFORE service on purpose, and this ordering is load-
+// bearing rather than cosmetic: each contractor keeps their own price list, so
+// "Harvesting ฿700" has no meaning until you know whose list it came from.
+// Picking the contractor first is what makes the service step answerable.
+//
+// The step is shown even when an organization has only one contractor
+// (2026-08-23, explicit product decision): it makes visible that the system
+// supports several, rather than hiding a capability until it is used. The
+// single contractor arrives pre-selected, so it stays one tap.
+//
+// The date step shows weather purely as information — no "best day", no
+// recommendation, ever.
 
 const STEP_TITLES = {
   field: "Choose Field",
+  contractor: "Choose Contractor",
   service: "Choose Service",
   date: "Preferred Date",
   review: "Review Request",
@@ -32,7 +41,7 @@ export default function RequestService({
   services,
   unit,
   // Launched from a field's own page, the field is already decided — so the
-  // flow opens at Choose Service and Back returns to that field rather than
+  // flow opens at Choose Contractor and Back returns to that field rather than
   // asking which field the farmer meant (version 3's `prefillFieldId`).
   presetFieldId = null,
   onClose,
@@ -41,8 +50,15 @@ export default function RequestService({
   // Real forecast for the chosen field — fetched once a field is picked, since
   // weather is a property of the land, not of the app.
   const [forecast, setForecast] = useState([]);
-  const [step, setStep] = useState(presetFieldId ? "service" : "field");
+  const [step, setStep] = useState(presetFieldId ? "contractor" : "field");
   const [fieldId, setFieldId] = useState(presetFieldId);
+  const [contractors, setContractors] = useState([]);
+  const [contractor, setContractor] = useState(null);
+  // Services belong to the chosen contractor, so they are fetched per choice
+  // rather than taken from the `services` prop (which is the organization's
+  // default contractor's list — right for the common case, wrong the moment
+  // the farmer picks someone else).
+  const [contractorServices, setContractorServices] = useState(null);
   const [service, setService] = useState(null);
   const [date, setDate] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -50,6 +66,37 @@ export default function RequestService({
   const customDateRef = useRef(null);
 
   const field = fields.find((f) => (f.cropzoneId || f.fieldId) === fieldId);
+  const shownServices = contractorServices ?? services;
+
+  // Who this organization works with. Pre-select the default so a single
+  // contractor is one tap, not a decision.
+  useEffect(() => {
+    fetch("/api/my/contractors")
+      .then((r) => (r.ok ? r.json() : []))
+      .then((list) => {
+        const arr = Array.isArray(list) ? list : [];
+        setContractors(arr);
+        setContractor((cur) => cur ?? arr.find((c) => c.isDefault) ?? arr[0] ?? null);
+      })
+      .catch(() => setContractors([]));
+  }, []);
+
+  async function chooseContractor(c) {
+    setContractor(c);
+    // A different contractor means a different price list — and a service
+    // picked from the previous one would no longer exist.
+    setService(null);
+    setContractorServices(null);
+    setStep("service");
+    try {
+      const res = await fetch(
+        `/api/services?contractorOrgId=${encodeURIComponent(c.id)}`
+      );
+      setContractorServices(res.ok ? await res.json() : []);
+    } catch {
+      setContractorServices([]);
+    }
+  }
 
   useEffect(() => {
     if (!field?.fieldId) return;
@@ -67,6 +114,7 @@ export default function RequestService({
       fieldId: field.fieldId,
       cropzoneId: field.cropzoneId,
       fieldName: field.name,
+      contractorOrgId: contractor?.id || null,
       activityTypeName: service.name,
       scheduledDate: date,
       cropSizeRai: field.areaUnits,
@@ -82,7 +130,7 @@ export default function RequestService({
         <button
           className="ov-back"
           onClick={() => {
-            const order = ["field", "service", "date", "review"];
+            const order = ["field", "contractor", "service", "date", "review"];
             const i = order.indexOf(step);
             // Don't walk back into a step that was decided for us.
             const first = presetFieldId ? 1 : 0;
@@ -104,7 +152,7 @@ export default function RequestService({
               className="choice-card"
               onClick={() => {
                 setFieldId(f.cropzoneId || f.fieldId);
-                setStep("service");
+                setStep("contractor");
               }}
             >
               <FieldThumb boundary={f.boundary} size={34} />
@@ -122,13 +170,48 @@ export default function RequestService({
           <p className="empty-msg">No fields registered to you yet.</p>
         )}
 
+        {step === "contractor" && (
+          <>
+            <div className="fieldset-note">
+              Who should do this work? These are the contractors your community
+              works with.
+            </div>
+            {contractors.length === 0 && (
+              <p className="empty-msg">
+                No contractor is set up for your community yet.
+              </p>
+            )}
+            {contractors.map((c) => (
+              <button
+                key={c.id}
+                className={`choice-card ${contractor?.id === c.id ? "selected" : ""}`}
+                onClick={() => chooseContractor(c)}
+              >
+                <div className="icon">🚜</div>
+                <div className="txt">
+                  <b>{c.name}</b>
+                  <span>
+                    {[c.ownerName, c.phone].filter(Boolean).join(" · ") ||
+                      (c.isDefault ? "Your community's contractor" : "Contractor")}
+                  </span>
+                </div>
+                {contractor?.id === c.id && <span className="ml-auto font-bold">✓</span>}
+              </button>
+            ))}
+          </>
+        )}
+
         {/* No prices here. The farmer is choosing what work they want; what it
             costs depends on the area the machine actually covers, which nobody
             knows yet — and a service the contractor hasn't priced would show as
             "price not set", which tells a farmer nothing useful. */}
+        {step === "service" && contractorServices === null && contractor && (
+          <p className="text-sm text-[var(--text-sec)]">Loading services…</p>
+        )}
         {step === "service" &&
-          (services.length ? (
-            services.map((s) => (
+          !(contractorServices === null && contractor) &&
+          (shownServices.length ? (
+            shownServices.map((s) => (
               <button
                 key={s.id}
                 className={`choice-card ${service?.id === s.id ? "selected" : ""}`}
@@ -225,6 +308,10 @@ export default function RequestService({
               <div className="val">
                 {field?.areaUnits ?? "—"} {unit}
               </div>
+            </div>
+            <div className="detail-row">
+              <div className="lbl">Contractor</div>
+              <div className="val">{contractor?.name ?? "—"}</div>
             </div>
             <div className="detail-row">
               <div className="lbl">Service</div>

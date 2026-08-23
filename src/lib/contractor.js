@@ -25,11 +25,23 @@ export function contractorOrgId(user) {
   const links = user?.organization?.contractor_links || [];
   const active = links.filter((l) => l.status === "active");
   const chosen = active.find((l) => l.is_default) || active[0];
-  if (chosen?.contractor_organization_id) return chosen.contractor_organization_id;
+  return chosen?.contractor_organization_id || null;
+}
 
-  // Legacy fallback, deliberately last: the pre-2026-08-23 column. Kept as a
-  // safety net for the transition so behaviour is identical to before even if
-  // a relationship row is missing. Remove once
-  // organizations.contractor_agro_org_id is dropped.
-  return user?.organization?.contractor_agro_org_id || null;
+// Every contractor this user's farming organization may use, defaults first.
+// A farmer picks from these; today most organizations have exactly one, in
+// which case the choice is made for them (see RequestService).
+export function availableContractors(user) {
+  return (user?.organization?.contractor_links || [])
+    .filter((l) => l.status === "active")
+    .sort((a, b) => Number(b.is_default) - Number(a.is_default))
+    .map((l) => ({ id: l.contractor_organization_id, isDefault: !!l.is_default }));
+}
+
+// Is this contractor actually one the user's organization may use? Guards any
+// contractor id that arrives from the client — without this, a farmer could
+// name any contractor in the world and have work orders routed to them.
+export function canUseContractor(user, contractorOrgId) {
+  if (!contractorOrgId) return false;
+  return availableContractors(user).some((c) => c.id === contractorOrgId);
 }
