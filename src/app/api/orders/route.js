@@ -15,7 +15,19 @@ export async function GET() {
     .from("work_orders")
     .select("*, farmer:farmers(id, name, phone, type)")
     .eq("organization_id", user.organization_id)
-    .order("booking_date", { ascending: false })
+    // A notebook: the newest entry stays on top. Ordered by created_at — when
+    // the job was written down — and nothing else.
+    //
+    // This used to lead with booking_date, which is only a date (no time) and
+    // is NOT reliably the day the row was written: the backfill path sets it
+    // to the work session's date, so 13 of 22 rows had a booking_date on a
+    // different day from their creation. A backfilled order written today for
+    // a session last November therefore sank to the bottom of the list, which
+    // is the opposite of a notebook (2026-08-23).
+    //
+    // Note the card shows scheduled_date — when the job is DUE — so the dates
+    // on screen will not run in order. That is a display question, not a sort
+    // one: the order here is "what did I write down most recently".
     .order("created_at", { ascending: false });
 
   // A contractor sees only their own jobs; a farmer only their own requests.
