@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createOrder } from "@/lib/store";
+import { boundaryCentre } from "@/lib/engine";
 import FieldThumb from "@/components/FieldThumb";
 
 // Request Contractor — five steps, in order:
@@ -110,6 +111,10 @@ export default function RequestService({
 
   async function send() {
     setBusy(true);
+    // The field's centre, so Today's Work can route by distance from the
+    // contractor's home base. Without it the order is created "unmapped" and
+    // shown separately rather than mis-ordered.
+    const centre = boundaryCentre(field.boundary);
     await createOrder({
       fieldId: field.fieldId,
       cropzoneId: field.cropzoneId,
@@ -118,6 +123,8 @@ export default function RequestService({
       activityTypeName: service.name,
       scheduledDate: date,
       cropSizeRai: field.areaUnits,
+      lat: centre ? centre[1] : null,
+      lng: centre ? centre[0] : null,
     });
     setBusy(false);
     onSent();

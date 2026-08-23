@@ -38,11 +38,7 @@ export const TTL = {
   siteFarmIds: 5 * 60,
   // AgroAPI's vocabularies are effectively static.
   catalog: 24 * 60 * 60,
-  // Work detection for a day that has already finished can never change, so it
-  // can be cached hard. Today is still moving — see suggestionTtl() below.
-  suggestionsPast: 7 * 24 * 60 * 60,
-  suggestionsToday: 10 * 60,
-  // Same "finished can't change" logic as suggestionsPast, applied to raw GPS
+  // Same "a finished window can't change" logic, applied to raw GPS
   // windows (see trackWindowTtl() below) — a window that ended more than a few
   // minutes ago is permanent, so re-viewing a machine's trajectory tomorrow, or
   // switching between Today/2 days/Custom when they overlap, costs no AgroAPI
@@ -50,14 +46,6 @@ export const TTL = {
   // AgroAPI ever backfills/corrects a reading after the fact.
   trackWindowFinished: 30 * 24 * 60 * 60,
 };
-
-// A finished day's work is history; today's isn't.
-export function suggestionTtl(date, days) {
-  const end = new Date(`${date}T00:00:00Z`);
-  end.setUTCDate(end.getUTCDate() + days - 1);
-  const finished = end < new Date(new Date().toISOString().slice(0, 10));
-  return finished ? TTL.suggestionsPast : TTL.suggestionsToday;
-}
 
 // A GPS window is only "still moving" if it reaches into the last few
 // minutes — a device can lag a little, so a window that ended 2 minutes ago

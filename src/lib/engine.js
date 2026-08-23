@@ -227,3 +227,34 @@ export function polygonAreaM2(ring) {
   }
   return Math.abs(sum / 2);
 }
+
+// Rough centre of a field boundary, as [lng, lat].
+//
+// Stamped onto a work order at creation so Today's Work can sort jobs by
+// distance from the contractor's home base (see nearestNeighborOrder in
+// contractor/page.js). That routing existed but silently never ran, because
+// nothing ever populated work_orders.location_lat/lng — the Settings screen
+// claimed "the closest open job to home comes first" while the calculation had
+// no coordinates to work with (fixed 2026-08-23).
+//
+// A plain average of the ring's vertices, not a true area centroid: for a
+// field-shaped polygon the two are close enough that the driving order never
+// differs, and this needs no projection. Returns null rather than a guess when
+// the boundary is unusable, because a wrong pin is worse than no pin — an
+// unmapped job is shown separately rather than mis-routed.
+export function boundaryCentre(boundary) {
+  const ring = boundary?.[0];
+  if (!Array.isArray(ring) || ring.length < 3) return null;
+
+  let lng = 0;
+  let lat = 0;
+  let n = 0;
+  for (const c of ring) {
+    if (!Array.isArray(c) || !Number.isFinite(c[0]) || !Number.isFinite(c[1])) continue;
+    lng += c[0];
+    lat += c[1];
+    n++;
+  }
+  if (!n) return null;
+  return [lng / n, lat / n];
+}
