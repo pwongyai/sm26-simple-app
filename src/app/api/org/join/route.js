@@ -6,7 +6,7 @@ import { getSessionUser, USER_SELECT } from "@/lib/session";
 // the code either.
 export async function GET() {
   const { data, error } = await supabaseAdmin
-    .from("organizations")
+    .from("farm_organizations")
     .select("id, name, join_code")
     .eq("active", true)
     .order("name");
@@ -28,7 +28,7 @@ export async function POST(request) {
   const cleanCode = (code || "").trim().toUpperCase();
 
   const { data: org } = await supabaseAdmin
-    .from("organizations")
+    .from("farm_organizations")
     .select("*")
     .eq("join_code", cleanCode)
     .eq("active", true)

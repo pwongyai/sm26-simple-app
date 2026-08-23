@@ -22,7 +22,7 @@ export async function POST(request, { params }) {
 
   const farmerId = await resolveFarmerId(user);
   const { data: owned } = await supabaseAdmin
-    .from("farmer_fields")
+    .from("fields")
     .select("agro_field_id, agro_cropzone_id")
     .eq("agro_field_id", fieldId)
     .eq("farmer_id", farmerId)
@@ -63,7 +63,7 @@ export async function POST(request, { params }) {
   }
 
   const { error } = await supabaseAdmin
-    .from("farmer_fields")
+    .from("fields")
     .update({ agro_cropzone_id: newCropzoneId })
     .eq("agro_field_id", owned.agro_field_id);
 

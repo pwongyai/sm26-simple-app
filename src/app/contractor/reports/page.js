@@ -379,7 +379,7 @@ function ViewReport({ report: r, onClose, onTogglePaid }) {
           {r.work_order_id && " · Linked to an existing work order"}
         </p>
 
-        {r.agroapi_activity_id && (
+        {r.agro_activity_id && (
           <p className="rounded bg-emerald-50 p-2 text-xs text-emerald-800">Recorded in AgroAPI as a permanent activity.</p>
         )}
       </div>

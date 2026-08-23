@@ -11,7 +11,7 @@ export async function GET() {
   if (response) return response;
 
   let query = supabaseAdmin
-    .from("farmer_fields")
+    .from("fields")
     .select("*")
     .eq("organization_id", user.organization_id)
     .order("created_at");
@@ -51,7 +51,7 @@ export async function GET() {
         // confirmed 404 justifies deleting real data.
         if (status === 404) {
           await supabaseAdmin
-            .from("farmer_fields")
+            .from("fields")
             .delete()
             .eq("agro_field_id", row.agro_field_id);
         }

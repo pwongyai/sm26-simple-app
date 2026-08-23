@@ -37,7 +37,7 @@ export async function GET(request) {
   const [{ ok, status, body }, { data: settingsRows }] = await Promise.all([
     cached(`machines:${orgId}`, TTL.machines, () => agroFetch(`/organizations/${orgId}/machines`)),
     supabaseAdmin
-      .from("machine_settings")
+      .from("machines")
       .select("agro_machine_id, active, sort_order")
       .eq("contractor_agro_org_id", orgId),
   ]);

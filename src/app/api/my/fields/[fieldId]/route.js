@@ -19,7 +19,7 @@ export async function PATCH(request, { params }) {
   // The ownership row tells us which cropzone is the live one for this field.
   const farmerId = await resolveFarmerId(user);
   const { data: owned } = await supabaseAdmin
-    .from("farmer_fields")
+    .from("fields")
     .select("agro_field_id, agro_cropzone_id")
     .eq("agro_field_id", fieldId)
     .eq("farmer_id", farmerId)
@@ -85,7 +85,7 @@ export async function PATCH(request, { params }) {
   // Keep our own denormalised label in step with the real one.
   if (fieldPatch.name) {
     await supabaseAdmin
-      .from("farmer_fields")
+      .from("fields")
       .update({ name: fieldPatch.name })
       // Addressed by agro_field_id — the field's own identity, and the table's
       // primary key. The surrogate `id` it replaced identified a "registration"

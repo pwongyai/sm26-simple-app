@@ -14,7 +14,7 @@ export async function GET(request, { params }) {
   if (response) return response;
 
   const { data, error } = await supabaseAdmin
-    .from("machine_settings")
+    .from("machines")
     .select("implement_id, implement:implements(*)")
     .eq("agro_machine_id", machineId)
     .eq("contractor_agro_org_id", contractorOrgId(user))
@@ -39,7 +39,7 @@ export async function PUT(request, { params }) {
   const orgId = contractorOrgId(user);
 
   const { data, error } = await supabaseAdmin
-    .from("machine_settings")
+    .from("machines")
     .upsert(
       {
         agro_machine_id: machineId,

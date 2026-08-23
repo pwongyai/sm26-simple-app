@@ -15,7 +15,7 @@ export async function GET(request, { params }) {
   if (response) return response;
 
   const { data, error } = await supabaseAdmin
-    .from("machine_settings")
+    .from("machines")
     .select("fuel_type")
     .eq("agro_machine_id", machineId)
     .eq("contractor_agro_org_id", contractorOrgId(user))
@@ -41,7 +41,7 @@ export async function PUT(request, { params }) {
     return Response.json({ error: "fuelType must be diesel or gasoline" }, { status: 400 });
   }
 
-  const { error } = await supabaseAdmin.from("machine_settings").upsert(
+  const { error } = await supabaseAdmin.from("machines").upsert(
     {
       agro_machine_id: machineId,
       contractor_agro_org_id: contractorOrgId(user),

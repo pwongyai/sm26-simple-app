@@ -47,7 +47,7 @@ export async function GET(request, { params }) {
       .order("sort_order")
       .order("name"),
     supabaseAdmin
-      .from("machine_rates")
+      .from("fuel_rates")
       .select("service_id, fuel_l_per_km")
       .eq("contractor_agro_org_id", orgId)
       .eq("agro_machine_id", machineId),
@@ -91,15 +91,15 @@ export async function PUT(request, { params }) {
     // usual (agro_machine_id, service_id) constraint (NULL is never "equal"
     // to NULL there). Check-then-write instead of upsert.
     const { data: existing } = await supabaseAdmin
-      .from("machine_rates")
+      .from("fuel_rates")
       .select("id")
       .eq("agro_machine_id", machineId)
       .is("service_id", null)
       .maybeSingle();
 
     const { error } = existing
-      ? await supabaseAdmin.from("machine_rates").update({ fuel_l_per_km: rate }).eq("id", existing.id)
-      : await supabaseAdmin.from("machine_rates").insert({
+      ? await supabaseAdmin.from("fuel_rates").update({ fuel_l_per_km: rate }).eq("id", existing.id)
+      : await supabaseAdmin.from("fuel_rates").insert({
             contractor_agro_org_id: orgId,
           agro_machine_id: machineId,
           service_id: null,
@@ -113,7 +113,7 @@ export async function PUT(request, { params }) {
     return Response.json({ ok: true });
   }
 
-  const { error } = await supabaseAdmin.from("machine_rates").upsert(
+  const { error } = await supabaseAdmin.from("fuel_rates").upsert(
     {
       contractor_agro_org_id: orgId,
       agro_machine_id: machineId,
@@ -144,7 +144,7 @@ export async function DELETE(request, { params }) {
   }
 
   const { error } = await supabaseAdmin
-    .from("machine_rates")
+    .from("fuel_rates")
     .delete()
     .eq("agro_machine_id", machineId)
     .eq("contractor_agro_org_id", contractorOrgId(user))

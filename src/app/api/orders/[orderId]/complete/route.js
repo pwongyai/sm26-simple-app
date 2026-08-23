@@ -31,7 +31,7 @@ export async function POST(request, { params }) {
     .update({
       status: "completed",
       completed_at: new Date().toISOString(),
-      agroapi_activity_id: agroApiActivityId || null,
+      agro_activity_id: agroApiActivityId || null,
       unseen_by_farmer: true,
     })
     .eq("id", orderId)

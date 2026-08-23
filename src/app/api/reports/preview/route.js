@@ -144,7 +144,7 @@ export async function GET(request) {
     // this app never wrote a mapping row for, or for boundary once we know
     // this genuinely isn't already reported).
     const { data: cached } = await supabaseAdmin
-      .from("farmer_fields")
+      .from("fields")
       .select("agro_cropzone_id")
       .eq("agro_field_id", fieldId)
       .eq("organization_id", user.organization_id)

@@ -221,7 +221,7 @@ export default function OrderDetail({ order, services, onClose, onChanged }) {
                 {new Date(`${order.booking_date}T00:00:00`).toLocaleDateString()}
               </div>
             </div>
-            {order.status === "completed" && order.agroapi_activity_id && (
+            {order.status === "completed" && order.agro_activity_id && (
               <div className="detail-row">
                 <div className="lbl">AgroAPI</div>
                 <div className="val">Recorded</div>

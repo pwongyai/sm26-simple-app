@@ -119,7 +119,7 @@ export async function POST(request, { params }) {
   // order/report happens to reference it. Manual farmers have no app_users
   // row (so they can't go in user_fields), but they still need to surface
   // as an owner the next time this same field comes up in a search.
-  await supabaseAdmin.from("farmer_fields").insert({
+  await supabaseAdmin.from("fields").insert({
     farmer_id: farmerId,
     organization_id: user.organization_id,
     agro_field_id: field.body.id,

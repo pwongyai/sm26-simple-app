@@ -65,7 +65,7 @@ export async function clearSession() {
 // once, where the session is built — avoids making 38 call sites across 21
 // files await a lookup.
 export const USER_SELECT =
-  "*, organization:organizations(*, contractor_links:farm_contractor_relationships(contractor_organization_id, is_default, status))";
+  "*, organization:farm_organizations(*, contractor_links:farm_contractor_relationships(contractor_organization_id, is_default, status))";
 
 // Returns the full user row (with their organization joined) or null.
 export async function getSessionUser() {

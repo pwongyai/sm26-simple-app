@@ -28,7 +28,7 @@ export async function PUT(request) {
   }));
 
   const { error } = await supabaseAdmin
-    .from("machine_settings")
+    .from("machines")
     .upsert(rows, { onConflict: "agro_machine_id" });
 
   if (error) {

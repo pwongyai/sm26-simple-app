@@ -78,7 +78,7 @@ async function isAccessible(user, { cropzoneId, fieldId }) {
   // the query, isAccessible returns false, and every field request answers
   // 404 "Not found" — indistinguishable from a real permission denial, which
   // is exactly how it slipped through an endpoint sweep.
-  let query = supabaseAdmin.from("farmer_fields").select("agro_field_id");
+  let query = supabaseAdmin.from("fields").select("agro_field_id");
 
   if (user.role === "contractor") {
     query = query.eq("organization_id", user.organization_id);

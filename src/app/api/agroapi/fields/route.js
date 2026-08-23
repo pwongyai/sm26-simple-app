@@ -118,7 +118,7 @@ export async function GET(request) {
     // one appear retroactively after the report is approved.
     if (fields.length) {
       const { data: owned } = await supabaseAdmin
-        .from("farmer_fields")
+        .from("fields")
         .select("agro_field_id, farmer_id, farmers(name)")
         .in("agro_field_id", fields.map((f) => f.id));
       const ownerByField = new Map(

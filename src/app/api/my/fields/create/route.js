@@ -94,7 +94,7 @@ export async function POST(request) {
   // 4. Ours: who owns it. Without this row the field is invisible to everyone,
   //    including the farmer who just drew it.
   const farmerId = await resolveFarmerId(user);
-  const { error } = await supabaseAdmin.from("farmer_fields").insert({
+  const { error } = await supabaseAdmin.from("fields").insert({
     farmer_id: farmerId,
     organization_id: user.organization_id,
     agro_field_id: field.body.id,

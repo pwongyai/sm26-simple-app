@@ -45,7 +45,7 @@ export async function GET() {
   const ids = (links || []).map((l) => l.farm_organization_id);
   const { data: orgs } = ids.length
     ? await supabaseAdmin
-        .from("organizations")
+        .from("farm_organizations")
         .select("id, name, currency, area_unit")
         .in("id", ids)
         .eq("active", true)

@@ -19,7 +19,7 @@ export async function GET() {
         "field_name, machine_name, work_type_id, work_type_name, started_at, ended_at, " +
         "width_m, field_area_m2, work_area_m2, percent_worked, inside_distance_m, hours, " +
         "currency, unit_label, price_per_unit, service_charge, payment_status, " +
-        "agroapi_activity_id, created_at, service_id, service_name, fuel_l_per_km, fuel_l, " +
+        "agro_activity_id, created_at, service_id, service_name, fuel_l_per_km, fuel_l, " +
         "emission_kg_per_l, emissions_kg, work_area_units, field_area_units, " +
         "contractor_agro_org_id, farmer:farmers(id, name, phone)"
     )
@@ -212,7 +212,7 @@ export async function POST(request) {
         // apart without joining work_reports (2026-08-23).
         completion_type: "matched",
         completed_at: new Date().toISOString(),
-        agroapi_activity_id: activityId,
+        agro_activity_id: activityId,
         // Reality overwrites the plan: the measured area replaces the estimate.
         crop_size_rai: b.workAreaUnits ?? null,
         scheduled_date: String(b.startedAt).slice(0, 10),
@@ -237,7 +237,7 @@ export async function POST(request) {
         source: "backfilled",
         status: "completed",
         completed_at: new Date().toISOString(),
-        agroapi_activity_id: activityId,
+        agro_activity_id: activityId,
       })
       .select("id")
       .single();
@@ -283,7 +283,7 @@ export async function POST(request) {
       // emissions_kg was actually computed with.
       emission_kg_per_l: b.emissionKgPerL ?? EMISSION_KG_PER_L.diesel,
       emissions_kg: b.emissionsKg ?? null,
-      agroapi_activity_id: activityId,
+      agro_activity_id: activityId,
       // Cash sometimes changes hands on the spot, before the report is even
       // approved — version 3's Payment Status toggle is live on this same
       // screen, not a separate step. Falls back to the column default
