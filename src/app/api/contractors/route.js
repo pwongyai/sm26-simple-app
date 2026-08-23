@@ -118,7 +118,8 @@ export async function POST(request) {
         ["Weed Control", "weed_control"],
         ["Harvesting", "harvesting"],
       ].map(([name, canonical], i) => ({
-        organization_id: user.organization_id,
+        // No organization_id — a price list belongs to the contractor, not to
+        // a farming community (R3, 2026-08-23).
         contractor_agro_org_id: contractorOrgId,
         name,
         activity_canonical: canonical,
