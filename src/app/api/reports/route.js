@@ -232,8 +232,33 @@ export async function POST(request) {
 
   // Backfilling a brand-new order for a pre-existing field with no owner on
   // record — fall back to the placeholder rather than leaving it NULL.
+  const assignedExplicitly = !!b.farmerId;
   if (!workOrderId && !farmerId) {
     farmerId = await unassignedFarmerId(user);
+  }
+
+  // ---- Ownership follows the contractor's assignment (2026-08-23) ----
+  //
+  // Naming a customer on a report is how an unclaimed field gets an owner, and
+  // how a wrongly-owned one is corrected. The contractor is standing in the
+  // field and knows whose it is; most of this community's 630+ AgroAPI plots
+  // have no owner on record, and this is the only moment anyone is in a
+  // position to say.
+  //
+  // The trust rule, and it is asymmetric on purpose:
+  //
+  //   MANUAL customers  — the contractor is the authority. They may claim an
+  //                       unowned field, and may transfer one held by another
+  //                       manual customer. A manual customer cannot speak for
+  //                       themselves; they do not use the app.
+  //   SMART farmers     — untouchable. They registered the field themselves
+  //                       and can be asked. Nobody overrides them.
+  //
+  // Only ever runs on an EXPLICIT assignment (b.farmerId). A farmer inherited
+  // from a matched work order, or the Unassigned fallback, is not somebody
+  // claiming anything.
+  if (assignedExplicitly && farmerId) {
+    await claimFieldOwnership({ user, cropzoneId: b.cropzoneId, farmerId });
   }
 
   if (workOrderId) {
@@ -334,4 +359,60 @@ export async function POST(request) {
   }
 
   return Response.json({ report, matched, activityId });
+}
+
+// Claim or transfer a field's ownership on the strength of a contractor's
+// report assignment. See the trust rule at the call site.
+//
+// Never throws into the caller's path: a report that is otherwise correct must
+// not fail because ownership bookkeeping did. Anything unexpected is logged and
+// the report still saves.
+async function claimFieldOwnership({ user, cropzoneId, farmerId }) {
+  try {
+    // The order's field_id is NULL on backfilled rows, so resolve the field
+    // from the cropzone — AgroAPI knows which field it belongs to.
+    const { ok, body } = await agroFetch(`/cropzones/${cropzoneId}`);
+    const fieldId = ok ? body?.field?.id : null;
+    if (!fieldId) return;
+    const fieldName = body?.field?.name || body?.name || null;
+
+    const { data: existing } = await supabaseAdmin
+      .from("fields")
+      .select("agro_field_id, farmer_id, farmers(type, name)")
+      .eq("agro_field_id", fieldId)
+      .maybeSingle();
+
+    if (!existing) {
+      // Unclaimed land: register it to this customer.
+      await supabaseAdmin.from("fields").insert({
+        agro_field_id: fieldId,
+        agro_cropzone_id: cropzoneId,
+        farmer_id: farmerId,
+        organization_id: user.organization_id,
+        name: fieldName || fieldId.slice(0, 8),
+      });
+      return;
+    }
+
+    if (existing.farmer_id === farmerId) return; // already theirs
+
+    // A smart farmer registered this field themselves — they are the authority
+    // on it, so the contractor's assignment bills whoever they chose but does
+    // NOT move the land.
+    if (existing.farmers?.type === "smart") {
+      console.warn(
+        `ownership unchanged: field ${fieldId} belongs to smart farmer ` +
+          `${existing.farmers?.name}; report attributed to ${farmerId}`
+      );
+      return;
+    }
+
+    // Held by another manual customer — the contractor is correcting it.
+    await supabaseAdmin
+      .from("fields")
+      .update({ farmer_id: farmerId, agro_cropzone_id: cropzoneId })
+      .eq("agro_field_id", fieldId);
+  } catch (e) {
+    console.error("claimFieldOwnership failed", e);
+  }
 }
