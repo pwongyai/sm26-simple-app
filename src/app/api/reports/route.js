@@ -11,11 +11,17 @@ export async function GET() {
 
   let query = supabaseAdmin
     .from("work_reports")
-    // Explicit columns, not "*": the list would otherwise pull `track_points`
-    // (~2 kB per report) and `boundary` for every row — 19 kB at 8 reports,
-    // ~2.6 MB at a thousand. The map on a single report fetches them itself.
+    // Explicit columns, not "*", to leave out `track_points` — ~2 kB per report,
+    // 19 kB at nine reports and ~2.6 MB at a thousand. Only the map on a single
+    // report needs the trace, and that view fetches it itself.
+    //
+    // `boundary` STAYS. It was excluded on the first attempt at this and the
+    // list's polygon thumbnails (ReportThumb, contractor/reports/page.js:236)
+    // silently rendered empty — every card showed a blank placeholder. It is
+    // also an order of magnitude smaller than the trace: ~630 bytes against
+    // ~2 kB, so dropping it saved little and cost the one thing the list draws.
     .select(
-      "id, organization_id, work_order_id, farmer_id, agro_cropzone_id, agro_machine_id, " +
+      "id, organization_id, work_order_id, farmer_id, agro_cropzone_id, agro_machine_id, boundary, " +
         "field_name, machine_name, work_type_id, work_type_name, started_at, ended_at, " +
         "width_m, field_area_m2, work_area_m2, percent_worked, inside_distance_m, hours, " +
         "currency, unit_label, price_per_unit, service_charge, payment_status, " +
