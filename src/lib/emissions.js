@@ -4,7 +4,7 @@
 // concept, not a generic industry rule of thumb:
 //   軽油 (diesel)   2.619 kg-CO2/L
 //   ガソリン (gasoline) 2.322 kg-CO2/L
-// Resolved by the machine's own fuel type (machine_fuel_types, see
+// Resolved by the machine's own fuel type (machine_settings.fuel_type, see
 // resolveFuel in machineRates.js) — replaces the old single org-wide
 // organizations.emission_kg_per_l constant (2.68, an unsourced generic
 // figure), which is no longer read by report calculation. That column and

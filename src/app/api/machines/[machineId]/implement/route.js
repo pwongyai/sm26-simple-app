@@ -4,13 +4,17 @@ import { contractorOrgId } from "@/lib/contractor";
 
 // Which implement is currently attached to this real AgroAPI machine —
 // local-only state, since AgroAPI has no concept of a swappable implement.
+//
+// Lives on `machine_settings` (one row per machine, alongside fuel type and
+// active/order). It used to have a table of its own, `machine_implements`,
+// which was the same shape keyed the same way — folded in 2026-08-23.
 export async function GET(request, { params }) {
   const { machineId } = await params;
   const { user, response } = await requireAccess();
   if (response) return response;
 
   const { data, error } = await supabaseAdmin
-    .from("machine_implements")
+    .from("machine_settings")
     .select("implement_id, implement:implements(*)")
     .eq("agro_machine_id", machineId)
     .eq("contractor_agro_org_id", contractorOrgId(user))
@@ -35,7 +39,7 @@ export async function PUT(request, { params }) {
   const orgId = contractorOrgId(user);
 
   const { data, error } = await supabaseAdmin
-    .from("machine_implements")
+    .from("machine_settings")
     .upsert(
       {
         agro_machine_id: machineId,

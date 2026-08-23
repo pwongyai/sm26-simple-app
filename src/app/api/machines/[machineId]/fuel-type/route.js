@@ -5,13 +5,17 @@ import { contractorOrgId } from "@/lib/contractor";
 // Which fuel this real AgroAPI machine runs on — local-only, AgroAPI has no
 // such field. Defaults to diesel (this fleet's overwhelming norm) until a
 // contractor says otherwise.
+//
+// Lives on `machine_settings` (one row per machine, alongside the attached
+// implement and active/order). It used to have a table of its own,
+// `machine_fuel_types` — same shape, same key — folded in 2026-08-23.
 export async function GET(request, { params }) {
   const { machineId } = await params;
   const { user, response } = await requireAccess();
   if (response) return response;
 
   const { data, error } = await supabaseAdmin
-    .from("machine_fuel_types")
+    .from("machine_settings")
     .select("fuel_type")
     .eq("agro_machine_id", machineId)
     .eq("contractor_agro_org_id", contractorOrgId(user))
@@ -37,7 +41,7 @@ export async function PUT(request, { params }) {
     return Response.json({ error: "fuelType must be diesel or gasoline" }, { status: 400 });
   }
 
-  const { error } = await supabaseAdmin.from("machine_fuel_types").upsert(
+  const { error } = await supabaseAdmin.from("machine_settings").upsert(
     {
       agro_machine_id: machineId,
       contractor_agro_org_id: contractorOrgId(user),

@@ -420,7 +420,7 @@ function MachineDetailsPane({ meta }) {
   );
 }
 
-// Fuel type is per machine (machine_fuel_types, defaults to diesel — this
+// Fuel type is per machine (machine_settings.fuel_type, defaults to diesel — this
 // fleet's overwhelming norm — until set otherwise). The L/km rate is a
 // separate concern: a Default rate always applies, and a specific job only
 // needs its own row when it genuinely burns differently (wet ground, a

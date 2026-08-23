@@ -26,7 +26,7 @@ import { modalWorkWidth } from "@/lib/trajectory";
 // history; see DATABASE_ERD.md.
 export async function resolveWidth({ machineId, points }) {
   const { data: assignment } = await supabaseAdmin
-    .from("machine_implements")
+    .from("machine_settings")
     .select("implement:implements(width_m)")
     .eq("agro_machine_id", machineId)
     .maybeSingle();
@@ -52,13 +52,13 @@ export async function resolveWidth({ machineId, points }) {
 // Default rate wherever this logic was duplicated before this file
 // existed.
 //
-// Fuel type (machine_fuel_types, defaults "diesel") is resolved here too —
+// Fuel type (machine_settings.fuel_type, defaults "diesel") is resolved here too —
 // callers need it to pick the right emissions factor
 // (src/lib/emissions.js), not just the L/km rate.
 export async function resolveFuel({ machineId, serviceId }) {
   const [{ data: rateRows }, { data: fuelTypeRow }] = await Promise.all([
     supabaseAdmin.from("machine_rates").select("service_id, fuel_l_per_km").eq("agro_machine_id", machineId),
-    supabaseAdmin.from("machine_fuel_types").select("fuel_type").eq("agro_machine_id", machineId).maybeSingle(),
+    supabaseAdmin.from("machine_settings").select("fuel_type").eq("agro_machine_id", machineId).maybeSingle(),
   ]);
 
   const perService = (rateRows || []).find((r) => r.service_id === serviceId);
