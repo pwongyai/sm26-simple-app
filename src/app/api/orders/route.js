@@ -87,7 +87,6 @@ export async function POST(request) {
     .insert({
       organization_id: user.organization_id,
       farmer_id: farmerId,
-      farmer_org_id: user.organization.agro_org_id,
       contractor_org_id: assignedContractor,
       field_id: body.fieldId || null,
       cropzone_id: body.cropzoneId || null,
@@ -97,7 +96,6 @@ export async function POST(request) {
       crop_size_rai: body.cropSizeRai ?? null,
       location_lat: body.lat ?? null,
       location_lng: body.lng ?? null,
-      requested_date: body.scheduledDate || null,
       scheduled_date: body.scheduledDate || null,
       note: body.note || null,
       source: isFarmer ? "smart_farmer" : "manual",
