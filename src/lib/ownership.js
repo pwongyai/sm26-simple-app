@@ -20,6 +20,20 @@ import { getSessionUser } from "@/lib/session";
 // have no app login at all. A smart farmer's app_users row is just their
 // login; created on first use, same as their AgroAPI farm elsewhere.
 export async function resolveFarmerId(user) {
+  // Farmers only. This used to run for ANY caller, so a contractor touching a
+  // farmer-scoped route (/api/my/fields/*, /api/orders) had a `farmers` row
+  // created for them on the spot — type "smart", named after their login. The
+  // request then failed its ownership check anyway, but the row stayed. Since
+  // the customer book became community-wide (R7) that row shows up as a
+  // customer: "Kinari Contractor" appearing in his own customer list, and
+  // occupying the unique (organization_id, name) slot for that name
+  // (2026-08-23).
+  //
+  // Returning null rather than throwing: every caller already fails closed on
+  // a null farmer id — the ownership lookups match nothing and answer 404 —
+  // and the two routes that would otherwise insert with it guard explicitly.
+  if (user.role !== "farmer") return null;
+
   const { data: existing } = await supabaseAdmin
     .from("farmers")
     .select("id")

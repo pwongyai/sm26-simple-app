@@ -19,6 +19,9 @@ export async function POST(request, { params }) {
   const { fieldId } = await params;
   const { user, response } = await requireAccess({ fieldId });
   if (response) return response;
+  if (user.role !== "farmer") {
+    return Response.json({ error: "Farmers only" }, { status: 403 });
+  }
 
   const farmerId = await resolveFarmerId(user);
   const { data: owned } = await supabaseAdmin

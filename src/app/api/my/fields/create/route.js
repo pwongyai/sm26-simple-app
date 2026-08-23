@@ -24,6 +24,9 @@ import { agroFetch } from "@/lib/agroapi";
 export async function POST(request) {
   const { user, response } = await requireAccess();
   if (response) return response;
+  if (user.role !== "farmer") {
+    return Response.json({ error: "Farmers only" }, { status: 403 });
+  }
 
   const { name, boundary, cropId, plantingDate } = await request.json();
 

@@ -9,6 +9,9 @@ import { agroFetch } from "@/lib/agroapi";
 export async function GET() {
   const { user, response } = await requireAccess();
   if (response) return response;
+  if (user.role !== "farmer") {
+    return Response.json({ error: "Farmers only" }, { status: 403 });
+  }
 
   let query = supabaseAdmin
     .from("fields")
