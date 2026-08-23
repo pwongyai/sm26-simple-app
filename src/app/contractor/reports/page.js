@@ -23,6 +23,18 @@ function fmtDate(iso) {
 // v3's ledger filters: This Month/Week/Today are rolling windows ending
 // today (not calendar boundaries) — matches `reportDateInRange` in
 // `digital-notebook-prototype.html` exactly.
+//
+// Applied to created_at — WHEN THE REPORT WAS WRITTEN — not started_at, the
+// work date (changed 2026-08-23). It filtered on the work date, which meant a
+// report written minutes ago for a session last November fell outside the
+// default 30-day window and vanished the instant it was created. A contractor
+// finishes a report, lands on this list, and cannot find it.
+//
+// This deviates from the v3 prototype on purpose: v3 was filled with
+// fictional same-week data, so work date and written date were never more than
+// a few days apart and the distinction never surfaced. Real machine tracks are
+// months old, so it matters. The list sorts by created_at too — filter and
+// sort must share an axis or the list appears to lose rows.
 function inTimeRange(iso, filter) {
   if (filter === "all") return true;
   if (!iso) return false;
@@ -162,7 +174,7 @@ function ReportsTabInner() {
   const filtered = reports.filter((r) => {
     if (machineFilter !== "all" && r.machine_name !== machineFilter) return false;
     if (payFilter !== "all" && r.payment_status !== payFilter) return false;
-    if (!inTimeRange(r.started_at, timeFilter)) return false;
+    if (!inTimeRange(r.created_at, timeFilter)) return false;
     return true;
   });
 
