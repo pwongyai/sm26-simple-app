@@ -1,0 +1,208 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>SM26 ERD</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<style>
+  html,body{margin:0;background:#fff;color:#000;font-family:system-ui,-apple-system,sans-serif}
+  #wrap{padding:28px}
+  h1{font-size:20px;margin:0 0 4px}
+  p.sub{margin:0 0 18px;font-size:12px;color:#333}
+  .mermaid{background:#fff}
+  /* High contrast for paper: black text, black borders, white fill */
+  .mermaid text{fill:#000!important;font-weight:600!important}
+  .mermaid rect{stroke:#000!important;stroke-width:1.6px!important}
+  .mermaid path{stroke:#000!important;stroke-width:1.6px!important}
+</style></head>
+<body><div id="wrap">
+<h1>SM26 Simple App &mdash; database, after the 2026-08-23 review</h1>
+<p class="sub">13 tables in <code>public</code>: the 12 domain tables below plus <code>api_cache</code> (infrastructure, not drawn).
+Timestamps (<code>created_at</code>/<code>updated_at</code>) are deliberately not drawn.
+Every <code>agro_*</code> column is a raw AgroAPI id, never an enforceable foreign key.</p>
+<pre class="mermaid">
+erDiagram
+    FARM_ORGANIZATIONS {
+        text id PK
+        text name
+        text join_code
+        text agro_org_id
+        text currency
+        text area_unit
+        numeric area_unit_m2
+        boolean active
+        integer next_field_number
+    }
+
+    APP_USERS {
+        uuid id PK
+        text phone "unique"
+        text name
+        text role "farmer or contractor"
+        text organization_id FK
+        text contractor_agro_org_id
+    }
+
+    FARMERS {
+        uuid id PK
+        text organization_id FK
+        text name
+        text phone
+        text type "manual or smart"
+        uuid app_user_id FK "null for manual"
+    }
+
+    FIELDS {
+        text agro_field_id PK
+        uuid farmer_id FK
+        text organization_id FK
+        text agro_cropzone_id
+        text name
+    }
+
+
+    WORK_ORDERS {
+        uuid id PK
+        text organization_id FK
+        uuid farmer_id FK
+        text contractor_org_id
+        text field_id
+        text cropzone_id
+        text activity_type_id
+        text activity_type_name
+        text status "pending/booked/completed/declined"
+        text source "manual/smart_farmer/backfilled"
+        text completion_type "matched/force_closed"
+        date booking_date
+        date scheduled_date
+        timestamptz completed_at
+        text agro_activity_id
+        numeric crop_size_rai
+        double location_lat
+        double location_lng
+        text field_name
+        text note
+        jsonb history
+        boolean unseen_by_farmer
+        boolean unseen_by_contractor
+    }
+
+    WORK_REPORTS {
+        uuid id PK
+        text organization_id FK
+        uuid work_order_id FK
+        uuid farmer_id FK
+        uuid service_id FK
+        text contractor_agro_org_id
+        text agro_cropzone_id "unique with machine+started_at"
+        text agro_machine_id "unique with cropzone+started_at"
+        text field_name
+        text machine_name
+        text work_type_id "AgroAPI activity type"
+        text work_type_name "AgroAPI activity type"
+        text service_name "contractor price list"
+        jsonb boundary
+        jsonb track_points
+        timestamptz started_at "unique with machine+cropzone"
+        timestamptz ended_at
+        numeric field_area_m2
+        numeric work_area_m2
+        numeric field_area_units
+        numeric work_area_units
+        numeric percent_worked
+        numeric inside_distance_m
+        numeric width_m
+        numeric hours
+        text currency
+        text unit_label
+        numeric price_per_unit
+        numeric service_charge
+        text payment_status "unpaid or paid"
+        numeric fuel_l_per_km
+        numeric fuel_l
+        numeric emission_kg_per_l
+        numeric emissions_kg
+        text agro_activity_id
+    }
+
+    SERVICES {
+        uuid id PK
+        text contractor_agro_org_id "unique with name"
+        text name
+        text activity_canonical
+        numeric price_per_unit
+        integer sort_order
+        boolean active
+    }
+
+    IMPLEMENTS {
+        uuid id PK
+        text contractor_agro_org_id
+        text name
+        numeric width_m
+    }
+
+
+    FUEL_RATES {
+        uuid id PK
+        text contractor_agro_org_id
+        text agro_machine_id "unique with service_id"
+        uuid service_id FK "null row = machine default"
+        numeric fuel_l_per_km
+    }
+
+
+    MACHINES {
+        text agro_machine_id PK "one row per machine"
+        text contractor_agro_org_id
+        uuid implement_id FK "what is attached"
+        text fuel_type "diesel or gasoline"
+        boolean active "default true"
+        integer sort_order
+    }
+
+    CONTRACTOR_ORGANIZATIONS {
+        text agro_contractor_org_id PK "the AgroAPI org id itself"
+        text language "th, en, or vn"
+        double home_lat
+        double home_lng
+        text status "active or inactive"
+    }
+
+    FARM_CONTRACTOR_RELATIONSHIPS {
+        uuid id PK
+        text farm_organization_id FK "-> farm_organizations.id"
+        text contractor_organization_id FK
+        boolean is_default "who gets an unpicked order"
+        text status "active or inactive"
+    }
+
+
+    FARM_ORGANIZATIONS ||--o{ APP_USERS : "has"
+    FARM_ORGANIZATIONS ||--o{ FARMERS : "has"
+    FARM_ORGANIZATIONS ||--o{ FIELDS : "scopes"
+    FARM_ORGANIZATIONS ||--o{ WORK_ORDERS : "scopes"
+    FARM_ORGANIZATIONS ||--o{ WORK_REPORTS : "scopes"
+    FARM_ORGANIZATIONS ||--o{ SERVICES : "scopes"
+    FARM_ORGANIZATIONS ||--o{ FUEL_RATES : "scopes"
+
+    APP_USERS ||--o| FARMERS : "smart farmer login"
+
+    FARMERS ||--o{ FIELDS : "owns"
+    FARMERS ||--o{ WORK_ORDERS : "requests/booked for"
+    FARMERS ||--o{ WORK_REPORTS : "billed to"
+
+    WORK_ORDERS ||--o| WORK_REPORTS : "completed into"
+    SERVICES ||--o{ WORK_REPORTS : "priced by"
+    SERVICES ||--o{ FUEL_RATES : "rate per service"
+    IMPLEMENTS ||--o{ MACHINES : "attached to machine"
+
+    FARM_ORGANIZATIONS ||--o{ FARM_CONTRACTOR_RELATIONSHIPS : "may use"
+    CONTRACTOR_ORGANIZATIONS ||--o{ FARM_CONTRACTOR_RELATIONSHIPS : "serves"
+
+    CONTRACTOR_ORGANIZATIONS ||--o| APP_USERS : "one login"
+    CONTRACTOR_ORGANIZATIONS ||--o{ SERVICES : "price list"
+    CONTRACTOR_ORGANIZATIONS ||--o{ IMPLEMENTS : "owns"
+    CONTRACTOR_ORGANIZATIONS ||--o{ MACHINES : "configures"
+    CONTRACTOR_ORGANIZATIONS ||--o{ FUEL_RATES : "sets"
+    CONTRACTOR_ORGANIZATIONS ||--o{ WORK_REPORTS : "billed by"
+</pre></div>
+<script>mermaid.initialize({startOnLoad:true,theme:"neutral",er:{entityPadding:20,useMaxWidth:false}});</script>
+</body></html>

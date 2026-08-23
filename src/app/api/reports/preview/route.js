@@ -194,7 +194,23 @@ export async function GET(request) {
 
   // Refuse a cropzone from outside this contractor's own community, same
   // guard every other write/compute path against real AgroAPI data uses.
-  if (!(await cropzoneInSite(cropzoneId, user.organization.agro_org_id))) {
+  // Two different answers, and they must not be confused: "this cropzone is
+  // outside your community" (403, a real refusal) versus "AgroAPI would not
+  // tell us right now" (503, try again). Before 2026-08-23 a truncated site
+  // walk produced the first message for the second situation, so a transient
+  // hiccup looked like a permissions problem on land the community plainly
+  // owns.
+  let inSite;
+  try {
+    inSite = await cropzoneInSite(cropzoneId, user.organization.agro_org_id);
+  } catch (e) {
+    console.error("site check failed", e);
+    return Response.json(
+      { error: "Could not verify this field with AgroAPI just now — try again" },
+      { status: 503 }
+    );
+  }
+  if (!inSite) {
     return Response.json({ error: "That field is not in your organization" }, { status: 403 });
   }
 
