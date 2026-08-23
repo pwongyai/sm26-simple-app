@@ -1,6 +1,7 @@
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireAccess } from "@/lib/ownership";
 import { agroFetch } from "@/lib/agroapi";
+import { USER_SELECT } from "@/lib/session";
 
 // The contractor businesses a new contractor account can claim, taken from
 // AgroAPI's own list of organizations that publish services.
@@ -82,7 +83,7 @@ export async function POST(request) {
     .from("app_users")
     .update({ contractor_agro_org_id: contractorOrgId })
     .eq("id", user.id)
-    .select("*, organization:organizations(*)")
+    .select(USER_SELECT)
     .single();
 
   if (error) {

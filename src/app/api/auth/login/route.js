@@ -1,5 +1,5 @@
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { setSession } from "@/lib/session";
+import { setSession, USER_SELECT } from "@/lib/session";
 
 // Sign in by phone number, no verification code (prototype — see
 // identity-schema.sql). An existing phone signs back into the same account
@@ -19,7 +19,7 @@ export async function POST(request) {
 
   const { data: existing, error: lookupError } = await supabaseAdmin
     .from("app_users")
-    .select("*, organization:organizations(*)")
+    .select(USER_SELECT)
     .eq("phone", cleanPhone)
     .maybeSingle();
 

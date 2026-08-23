@@ -52,6 +52,21 @@ export async function clearSession() {
   jar.delete(COOKIE);
 }
 
+// The one definition of "a signed-in user, fully loaded". Every place that
+// builds a user object must use this, or `contractorOrgId()` silently falls
+// back to the legacy column on some code paths and not others — a bug that
+// looks like nothing at all, because the fallback returns the right answer
+// today.
+//
+// The organization brings its contractor relationships along
+// (`contractor_links`). That is what lets `contractorOrgId()` stay a plain
+// synchronous function: a farmer's contractor now comes from
+// farm_contractor_relationships rather than a column, and resolving it here —
+// once, where the session is built — avoids making 38 call sites across 21
+// files await a lookup.
+export const USER_SELECT =
+  "*, organization:organizations(*, contractor_links:farm_contractor_relationships(contractor_organization_id, is_default, status))";
+
 // Returns the full user row (with their organization joined) or null.
 export async function getSessionUser() {
   const jar = await cookies();
@@ -60,7 +75,7 @@ export async function getSessionUser() {
 
   const { data, error } = await supabaseAdmin
     .from("app_users")
-    .select("*, organization:organizations(*)")
+    .select(USER_SELECT)
     .eq("id", userId)
     .maybeSingle();
 

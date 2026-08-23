@@ -1,5 +1,5 @@
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { getSessionUser } from "@/lib/session";
+import { getSessionUser, USER_SELECT } from "@/lib/session";
 
 // Lists the sites a user may join. Inactive sites (Vietnam, until the Thailand
 // prototype is done) are never returned, so they can't be joined by guessing
@@ -50,7 +50,7 @@ export async function POST(request) {
     .from("app_users")
     .update({ organization_id: org.id })
     .eq("id", user.id)
-    .select("*, organization:organizations(*)")
+    .select(USER_SELECT)
     .single();
 
   if (error) {
