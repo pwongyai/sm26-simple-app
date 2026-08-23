@@ -64,6 +64,13 @@ export default function SettingsTab() {
         }}
       />
 
+      <FarmOrganization
+        onChanged={() => {
+          load();
+          flash("Community switched");
+        }}
+      />
+
       <HomeBase
         profile={profile}
         onChanged={() => {
@@ -206,6 +213,135 @@ function ContractorProfile({ profile, organization, onChanged }) {
         <EditActions busy={busy} onCancel={() => setEditing(false)} onSave={save} />
         <p className="text-[11px] text-[var(--text-tert)]">Organization: {organization}</p>
       </div>
+    </section>
+  );
+}
+
+// Which farming community this contractor is currently working in (R2).
+//
+// Shown even when there is only one — the same decision as the farmer's
+// Choose Contractor step: it makes the capability visible rather than hiding
+// it until a second community exists.
+//
+// This is a HARD scope, not a display filter. Switching hides the previous
+// community's fields, customers, orders and reports rather than adding to
+// them, which is why the open-job count is shown before committing. Nothing
+// is deleted — every row keeps its own community, so switching back restores
+// the view exactly.
+function FarmOrganization({ onChanged }) {
+  const [data, setData] = useState(null);
+  const [editing, setEditing] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [pending, setPending] = useState(null);
+
+  const load = useCallback(() => {
+    fetch("/api/my/farm-organizations", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then(setData)
+      .catch(() => setData(null));
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  async function choose(orgId) {
+    setBusy(true);
+    const res = await fetch("/api/my/farm-organizations", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ organizationId: orgId }),
+    });
+    setBusy(false);
+    setPending(null);
+    setEditing(false);
+    if (res.ok) {
+      load();
+      onChanged();
+    }
+  }
+
+  if (!data) return null;
+  const current = data.options.find((o) => o.isCurrent);
+
+  if (!editing) {
+    return (
+      <section className="mb-6">
+        <SectionHeader
+          title="Farming Community"
+          onEdit={data.options.length ? () => setEditing(true) : undefined}
+        />
+        <div className="flex flex-col gap-1.5">
+          <ViewRow label="Working in" value={current?.name || data.current || "—"} />
+          {current && (
+            <ViewRow
+              label="Prices shown in"
+              value={`${current.currency} per ${current.areaUnit}`}
+            />
+          )}
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="mb-6">
+      <h2 className="mb-2 text-sm font-semibold">Farming Community</h2>
+      <div className="fieldset-note">
+        Which community you are working in. Jobs, customers and fields from the
+        others are hidden until you switch back — nothing is lost.
+      </div>
+      <div className="flex flex-col gap-2">
+        {data.options.map((o) => (
+          <button
+            key={o.id}
+            className={`choice-card ${o.isCurrent ? "selected" : ""}`}
+            onClick={() => (o.isCurrent ? setEditing(false) : setPending(o))}
+          >
+            <div className="txt">
+              <b>{o.name}</b>
+              <span>
+                {o.currency} per {o.areaUnit}
+                {o.openJobs ? ` · ${o.openJobs} open job${o.openJobs > 1 ? "s" : ""}` : ""}
+              </span>
+            </div>
+            {o.isCurrent && <span className="ml-auto font-bold">✓</span>}
+          </button>
+        ))}
+        <button className="btn btn-outline" onClick={() => setEditing(false)}>
+          Cancel
+        </button>
+      </div>
+
+      {pending && (
+        <div className="fixed inset-0 z-[1200] flex items-center justify-center bg-black/40 p-6">
+          <div className="w-full max-w-xs rounded-2xl bg-white p-5">
+            <p className="mb-1 font-bold">Switch to {pending.name}?</p>
+            <p className="mb-4 text-xs text-[var(--text-sec)]">
+              {current?.openJobs
+                ? `${current.name} has ${current.openJobs} open job${
+                    current.openJobs > 1 ? "s" : ""
+                  }. They stay saved but disappear from your screens until you switch back.`
+                : "Your current community's work stays saved and hidden until you switch back."}
+            </p>
+            <div className="flex gap-2">
+              <button
+                className="btn btn-outline flex-1"
+                onClick={() => setPending(null)}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-go flex-1"
+                disabled={busy}
+                onClick={() => choose(pending.id)}
+              >
+                {busy ? "Switching…" : "Switch"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
