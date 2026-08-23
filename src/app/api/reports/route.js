@@ -32,20 +32,23 @@ export async function GET() {
     .eq("contractor_agro_org_id", contractorOrgId(user))
     // Unpaid first: the point of this list is knowing who still owes you
     // (version 2 §14.1). Most recent first within each group.
-    // Newest work first, full stop. This used to sort on payment_status FIRST,
-    // which floated every paid report above every unpaid one regardless of age
-    // — so a job from last November sat above one from this May and the list
-    // looked half-sorted. It was also backwards for its apparent intent:
-    // 'paid' sorts before 'unpaid' alphabetically, so ascending buried the
-    // money still owed rather than surfacing it.
+    // Most recently CREATED report first — the order the contractor made them
+    // in, not the order the work happened in. A report written today for a
+    // session back in November belongs at the top, because "the one I just
+    // finished" is what the contractor is looking for.
     //
-    // Grouping by payment status does not belong in the sort anyway — the
-    // All / Unpaid / Paid filter above the list already does exactly that, and
-    // does it where the contractor can see and change it.
+    // Two earlier versions of this were wrong. It first sorted on
+    // payment_status, which floated every paid report above every unpaid one
+    // regardless of age — and backwards even for that intent, since 'paid'
+    // sorts before 'unpaid' alphabetically, so ascending buried the money still
+    // owed. Grouping by payment does not belong in the sort at all: the
+    // All / Unpaid / Paid filter above the list already does it, visibly. It
+    // was then changed to started_at, the work date, which is the date the card
+    // shows but not the one the contractor thinks in.
     //
-    // created_at breaks ties so two reports on the same day keep a stable
-    // order; nulls last so a report without a start date can't head the list.
-    .order("started_at", { ascending: false, nullsFirst: false })
+    // NOTE for whoever reads the screen and not this file: because the card
+    // displays started_at (the work date), the visible dates will NOT run in
+    // order. That is correct — the list is newest-written first.
     .order("created_at", { ascending: false });
 
   if (user.role !== "contractor") {
