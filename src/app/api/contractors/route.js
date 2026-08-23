@@ -102,11 +102,19 @@ export async function POST(request) {
   if (!existing?.length) {
     await supabaseAdmin.from("services").insert(
       // Crop-cycle order, not alphabetical.
+      // Must stay in step with what existing contractors actually have —
+      // every contractor in an organization should offer the same set, so a
+      // farmer sees a comparable list whoever they pick. "Chemical
+      // Application" was deliberately retired (2026-08-22): it mapped only
+      // to `pest_disease`, so weed-control work recorded against it went to
+      // AgroAPI as a pest & disease activity. Split into the two real
+      // services below; do not reintroduce a combined one.
       [
         ["Land Preparation", "land_preparation"],
         ["Planting", "planting"],
         ["Fertilizer Application", "fertilization"],
-        ["Chemical Application", "pest_disease"],
+        ["Pest & Disease Control", "pest_disease"],
+        ["Weed Control", "weed_control"],
         ["Harvesting", "harvesting"],
       ].map(([name, canonical], i) => ({
         organization_id: user.organization_id,
