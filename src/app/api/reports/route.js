@@ -32,8 +32,21 @@ export async function GET() {
     .eq("contractor_agro_org_id", contractorOrgId(user))
     // Unpaid first: the point of this list is knowing who still owes you
     // (version 2 §14.1). Most recent first within each group.
-    .order("payment_status", { ascending: true })
-    .order("started_at", { ascending: false });
+    // Newest work first, full stop. This used to sort on payment_status FIRST,
+    // which floated every paid report above every unpaid one regardless of age
+    // — so a job from last November sat above one from this May and the list
+    // looked half-sorted. It was also backwards for its apparent intent:
+    // 'paid' sorts before 'unpaid' alphabetically, so ascending buried the
+    // money still owed rather than surfacing it.
+    //
+    // Grouping by payment status does not belong in the sort anyway — the
+    // All / Unpaid / Paid filter above the list already does exactly that, and
+    // does it where the contractor can see and change it.
+    //
+    // created_at breaks ties so two reports on the same day keep a stable
+    // order; nulls last so a report without a start date can't head the list.
+    .order("started_at", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false });
 
   if (user.role !== "contractor") {
     return Response.json({ error: "Contractors only" }, { status: 403 });
