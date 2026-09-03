@@ -28,7 +28,7 @@ cd "Projects/SM26/Simple App"
 cp .env.local.example .env.local
 ```
 
-Fill in `.env.local` — Supabase URL, anon key, `SUPABASE_SERVICE_ROLE_KEY`, `AGROAPI_TOKEN`, and a
+Fill in `.env.local` — Supabase URL, anon key, `SUPABASE_SERVICE_ROLE_KEY`, the two AgroAPI credentials, and a
 `SESSION_SECRET` (`openssl rand -hex 32`). Then:
 
 ```bash
@@ -58,7 +58,15 @@ Easiest path is Vercel, since it's built by the Next.js team and has a generous 
    - `SUPABASE_SERVICE_ROLE_KEY` = your Supabase service-role key (server-only)
    - `SESSION_SECRET` = a long random string
    - `AGROAPI_BASE_URL` = `https://agro.api.listenfield.com`
-   - `AGROAPI_TOKEN` = your AgroAPI bearer token
+   - `AGROAPI_CLIENT_ID` = the service account's user UUID
+   - `AGROAPI_CLIENT_SECRET` = a refresh token (scope `tokens:refresh_token`), read **and** write
+
+     AgroAPI access tokens expire after six hours, so there is deliberately no
+     long-lived bearer token to paste here. These two never expire; the app
+     exchanges them for a six-hour token itself and re-mints as needed, so
+     nothing has to be updated by hand. Set them once here and once locally.
+     `AGROAPI_TOKEN` still works as an override if you ever need to pin a
+     specific token, but it will die in six hours.
 4. Click **Deploy**. Vercel gives you a live `https://your-app.vercel.app` URL a minute or two later.
 
 Alternative if you'd rather do it from the terminal once you have a Vercel account: run `npx vercel` from this folder and follow its prompts (it'll open your browser to log in — that's you authenticating, not me).
