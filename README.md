@@ -58,8 +58,12 @@ Easiest path is Vercel, since it's built by the Next.js team and has a generous 
    - `SUPABASE_SERVICE_ROLE_KEY` = your Supabase service-role key (server-only)
    - `SESSION_SECRET` = a long random string
    - `AGROAPI_BASE_URL` = `https://agro.api.listenfield.com`
-   - `AGROAPI_CLIENT_ID` = the service account's user UUID
-   - `AGROAPI_CLIENT_SECRET` = a refresh token (scope `tokens:refresh_token`), read **and** write
+   - `SM_CLIENT_ID` = the service account's user UUID
+   - `SM_CLIENT_SECRET` = a refresh token (scope `tokens:refresh_token`), read **and** write
+
+     Both values live in `Projects/SM26/Credential/.env`; `SM_AGROAPI_CREDENTIAL.md`
+     documents the credential. `AGROAPI_CLIENT_ID` / `AGROAPI_CLIENT_SECRET`
+     are accepted as aliases.
 
      AgroAPI access tokens expire after six hours, so there is deliberately no
      long-lived bearer token to paste here. These two never expire; the app

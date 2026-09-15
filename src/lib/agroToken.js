@@ -11,9 +11,12 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 // The fix is not "paste a new token more often". Nothing here ever needs
 // updating by hand:
 //
-//   AGROAPI_CLIENT_ID      the service account's user UUID
-//   AGROAPI_CLIENT_SECRET  a token carrying scope `tokens:refresh_token`,
-//                          which itself NEVER expires (expires_at is null)
+//   SM_CLIENT_ID      the service account's user UUID
+//   SM_CLIENT_SECRET  a long-lived refresh token, traded in for access tokens
+//
+// Those names match Projects/SM26/Credential/.env and SM_AGROAPI_CREDENTIAL.md,
+// which is where this credential is documented and stored. AGROAPI_CLIENT_ID /
+// AGROAPI_CLIENT_SECRET are accepted as aliases.
 //
 // Those two are set once, in .env.local and in Vercel — the same two places
 // AGROAPI_TOKEN used to live. This module exchanges them for a six-hour access
@@ -42,13 +45,13 @@ function stillGood(expiresAtMs) {
 // useful, and a silent empty string would surface later as a confusing 401.
 async function mint() {
   const base = process.env.AGROAPI_BASE_URL;
-  const clientId = process.env.AGROAPI_CLIENT_ID;
-  const clientSecret = process.env.AGROAPI_CLIENT_SECRET;
+  const clientId = process.env.SM_CLIENT_ID || process.env.AGROAPI_CLIENT_ID;
+  const clientSecret = process.env.SM_CLIENT_SECRET || process.env.AGROAPI_CLIENT_SECRET;
 
   if (!base) throw new Error("AGROAPI_BASE_URL is not set — see .env.local.example");
   if (!clientId || !clientSecret) {
     throw new Error(
-      "AgroAPI credentials missing: set AGROAPI_CLIENT_ID and AGROAPI_CLIENT_SECRET " +
+      "AgroAPI credentials missing: set SM_CLIENT_ID and SM_CLIENT_SECRET " +
         "(or AGROAPI_TOKEN for a static token) — see .env.local.example"
     );
   }
@@ -101,6 +104,12 @@ async function mint() {
 
   memo = { token: body.access_token, expiresAtMs };
 
+  // Worth knowing (SM_AGROAPI_CREDENTIAL.md): every exchange creates a NEW token
+  // row server-side, each alive for six hours. Exchanging per request would
+  // leave hundreds of live credentials lying around, so the caching below is not
+  // just a latency optimisation — it is the difference between one token per
+  // instance per six hours and one per request.
+  //
   // Share it with the other serverless instances. Deliberately NOT via
   // lib/cache.js `cached()`: that has no single-flight and its upsert is
   // last-write-wins, so a slow loser can overwrite a fresher winner's row.
@@ -148,8 +157,8 @@ async function fromCache() {
 export function isRefreshable() {
   return (
     !process.env.AGROAPI_TOKEN &&
-    !!process.env.AGROAPI_CLIENT_ID &&
-    !!process.env.AGROAPI_CLIENT_SECRET
+    !!(process.env.SM_CLIENT_ID || process.env.AGROAPI_CLIENT_ID) &&
+    !!(process.env.SM_CLIENT_SECRET || process.env.AGROAPI_CLIENT_SECRET)
   );
 }
 

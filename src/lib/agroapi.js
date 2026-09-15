@@ -54,7 +54,7 @@ export async function agroFetch(path, options = {}) {
         ? "the pinned AGROAPI_TOKEN has expired — unset it to let the app mint " +
           "its own tokens, or paste a fresh one"
         : out.body?.code === "access_denied"
-          ? "AGROAPI_CLIENT_SECRET is dead or revoked and must be re-issued; " +
+          ? "SM_CLIENT_SECRET is dead or revoked and must be re-issued; " +
             "retrying will not help"
           : "check the token's scopes";
     console.error(`AgroAPI refused the credential (${out.body?.code || "no code"}) on ${path} — ${why}`);
