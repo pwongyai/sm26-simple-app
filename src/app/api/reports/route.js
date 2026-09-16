@@ -4,6 +4,7 @@ import { agroFetch } from "@/lib/agroapi";
 import { contractorOrgId } from "@/lib/contractor";
 import { cropzoneInSite } from "@/lib/siteFarms";
 import { EMISSION_KG_PER_L } from "@/lib/emissions";
+import { recordWorkOrder, recordWorkRecord } from "@/lib/adapt";
 
 export async function GET() {
   const { user, response } = await requireAccess();
@@ -178,11 +179,14 @@ export async function POST(request) {
   let workOrderId = b.workOrderId || null;
   let farmerId = b.farmerId || null;
   let matched = false;
+  // Held for the ADAPT Work Record, which needs the order it answers in order
+  // to write the CAUSAL correlation and the PROPOSED time scope.
+  let adaptOrder = null;
 
   if (workOrderId) {
     const { data: order } = await supabaseAdmin
       .from("work_orders")
-      .select("id, farmer_id, cropzone_id, field_name")
+      .select("id, farmer_id, cropzone_id, field_name, field_id, scheduled_date")
       .eq("id", workOrderId)
       .eq("contractor_org_id", contractorOrgId(user))
       .maybeSingle();
@@ -213,11 +217,12 @@ export async function POST(request) {
       );
     }
     farmerId = order.farmer_id;
+    adaptOrder = order;
     matched = true;
   } else if (!farmerId) {
     const { data: openOrder } = await supabaseAdmin
       .from("work_orders")
-      .select("id, farmer_id")
+      .select("id, farmer_id, cropzone_id, field_name, field_id, scheduled_date")
       .eq("contractor_org_id", contractorOrgId(user))
       .eq("cropzone_id", b.cropzoneId)
       .neq("status", "completed")
@@ -226,6 +231,7 @@ export async function POST(request) {
     if (openOrder) {
       workOrderId = openOrder.id;
       farmerId = openOrder.farmer_id;
+      adaptOrder = openOrder;
       matched = true;
     }
   }
@@ -299,9 +305,19 @@ export async function POST(request) {
         completed_at: new Date().toISOString(),
         agro_activity_id: activityId,
       })
-      .select("id")
+      .select("*")
       .single();
     workOrderId = created?.id || null;
+    adaptOrder = created || null;
+
+    // Workflow C. A report arrived with no order to answer, so one is created
+    // after the fact — and it gets a Work Order document like any other. The
+    // Booking calendar is driven by orders, so a job with no order leaves the
+    // day looking empty even though the contractor worked it; over a season a
+    // calendar full of gaps misrepresents the business far more than a
+    // late-recorded order does. The envelope carries the truth: the order's own
+    // source is 'backfilled' and the document was never posted anywhere.
+    if (created) await recordWorkOrder(created, { service });
   }
 
   const { data: report, error } = await supabaseAdmin
@@ -357,6 +373,22 @@ export async function POST(request) {
     console.error(error);
     return Response.json({ error: "Could not save report" }, { status: 500 });
   }
+
+  // The ADAPT package for this job. The Work Record is what an external FMIS
+  // would return in workflow A and what we hand back in B; it carries a CAUSAL
+  // correlation to the order so the two read as one job.
+  //
+  // `fieldId` comes from the request rather than the report row, because
+  // work_reports stores field_name but not the field id, and ADAPT requires it.
+  // `trackUrl` is a reference — never the points themselves; the track is two
+  // thirds of a report's storage and ADAPT's spatialRecordsFile is defined as a
+  // file/URL reference.
+  await recordWorkRecord(report, {
+    order: adaptOrder,
+    service,
+    fieldId: b.fieldId || null,
+    trackUrl: `/api/reports/${report.id}/track`,
+  });
 
   return Response.json({ report, matched, activityId });
 }

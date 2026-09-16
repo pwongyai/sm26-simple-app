@@ -1,6 +1,7 @@
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireAccess, resolveFarmerId } from "@/lib/ownership";
 import { contractorOrgId, canUseContractor } from "@/lib/contractor";
+import { recordWorkOrder, serviceForActivityType } from "@/lib/adapt";
 
 // Work orders, server-side. Previously the browser talked to Supabase directly
 // with the anon key and wide-open policies — anyone could read or edit every
@@ -122,5 +123,20 @@ export async function POST(request) {
     console.error(error);
     return Response.json({ error: "Could not create work order" }, { status: 500 });
   }
+
+  // Workflows A and B: a smart farmer's request, or a contractor booking a job
+  // for a manual farmer. Both produce an ADAPT Work Order — in A addressed to
+  // the farmer's chosen contractor, in B self-addressed, since the creator is
+  // the one who will do the work. Stored, not sent: `counterparty` stays null
+  // until there is genuinely an outside company on the other end.
+  //
+  // Deliberately awaited rather than fired and forgotten: on a serverless
+  // instance the function can be frozen the moment the response is returned,
+  // which would lose the document. It cannot fail the request — `recordWorkOrder`
+  // swallows and logs.
+  await recordWorkOrder(data, {
+    service: await serviceForActivityType(assignedContractor, data.activity_type_id),
+  });
+
   return Response.json(data);
 }
