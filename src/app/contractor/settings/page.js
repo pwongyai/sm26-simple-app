@@ -1,7 +1,7 @@
 "use client";
 
 
-import { groupedWorkTypes, workType } from "@/lib/workTypes";
+import { ADAPT_VERSION, groupedWorkTypes, workType } from "@/lib/workTypes";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { logout } from "@/lib/useSession";
@@ -642,10 +642,13 @@ function ServiceList({ services, unit, currency, onChanged }) {
         />
       )}
 
+      {/* The version this app's work types were built against. One of the
+          three places it is pinned — the other two are WORK_TYPE_MAP.md and
+          every stored ADAPT document. Shown here so the version in use is
+          visible without reading the source, and so a mismatch is noticeable
+          if AgGateway publishes a new one. */}
       <p className="mt-2 text-[11px] text-[var(--text-tert)]">
-        A service priced 0 will bill nothing — set it before you report
-        against it. Marking a service Unavailable hides it from new bookings
-        without losing its price history.
+        Work types are compatible with ADAPT v{ADAPT_VERSION}.
       </p>
     </section>
   );
