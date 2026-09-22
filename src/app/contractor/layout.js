@@ -93,10 +93,6 @@ function ContractorChrome({ user, children }) {
             <span className="ov-title">Incoming Requests</span>
           </div>
           <div className="ov-body">
-            <div className="fieldset-note">
-              Requests sent by Smart Farmers through the app. Accepting adds the
-              job to your notebook; you can change the date first.
-            </div>
             {pending.length === 0 && (
               <p className="empty-msg">Nothing waiting right now.</p>
             )}
