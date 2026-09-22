@@ -74,7 +74,6 @@ export default function MachinesTab() {
           </button>
         )}
       </div>
-      <p className="mb-4 text-xs text-[var(--text-tert)]">Live from AgroAPI · NoukiOpenAPI telemetry</p>
     </>
   );
 
