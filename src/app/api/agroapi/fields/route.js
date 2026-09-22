@@ -1,7 +1,7 @@
 import { requireAccess, unassignedFarmerId } from "@/lib/ownership";
 import { agroFetch } from "@/lib/agroapi";
 import { cached, TTL } from "@/lib/cache";
-import { agroFetchWithRetry, mapWithConcurrency } from "@/lib/agroConcurrency";
+import { agroFetchWithRetry } from "@/lib/agroConcurrency";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 const DEFAULT_RADIUS_M = 250;
@@ -58,53 +58,45 @@ export async function GET(request) {
   const cacheKey = `site-fields:${orgId}:${lat.toFixed(3)}:${lng.toFixed(3)}:${radiusM}`;
 
   const { ok, status, body } = await cached(cacheKey, TTL.siteFields, async () => {
-    const nearbyFarms = [];
+    // The organization is what owns land here, so ask it for its fields.
+    //
+    // This used to walk the org's FARMS, measure each farm's own location
+    // point against the tap, and stop at the first one beyond the radius.
+    // That works only when every farm sits near its fields. Huong Ngai keeps
+    // all eleven of its fields under one farm whose location point is 35 km
+    // east of them, so the walk measured 35 km, stopped, and Select Area drew
+    // no polygons at all on land the contractor was standing on (2026-09-23).
+    //
+    // A field's own boundary cannot lie about where it is. The radius is
+    // applied to that instead, so a farm's centroid no longer decides whether
+    // its fields exist.
+    const all = [];
     for (let page = 1; page <= 40; page++) {
-      const r = await agroFetch(
-        `/organizations/${orgId}/farms?sort_by=distance&location=${lng},${lat}&simple=true&page=${page}`
-      );
+      const r = await agroFetchWithRetry(`/organizations/${orgId}/fields?page=${page}`);
       if (!r.ok || !Array.isArray(r.body) || r.body.length === 0) break;
-
-      let hitEdge = false;
-      for (const farm of r.body) {
-        const coord = farm.location?.coordinates;
-        const distanceM = coord ? haversineM([lng, lat], coord) : Infinity;
-        if (distanceM > radiusM) {
-          hitEdge = true;
-          break;
-        }
-        nearbyFarms.push(farm);
-      }
-      if (hitEdge || r.body.length < 50) break;
+      all.push(...r.body);
+      if (r.body.length < 50) break;
     }
 
-    const fieldLists = await mapWithConcurrency(nearbyFarms, (farm) =>
-      agroFetchWithRetry(`/farms/${farm.id}/fields`)
-    );
-
     const fields = [];
-    let failedFarms = 0;
-    fieldLists.forEach((r, i) => {
-      if (!r.ok || !Array.isArray(r.body)) {
-        failedFarms++;
-        return;
-      }
-      for (const f of r.body) {
-        const ring = f.location?.boundary?.coordinates;
-        if (!ring) continue; // no shape drawn yet — can't be tapped on the map
-        fields.push({
-          id: f.id,
-          name: f.name,
-          farmId: nearbyFarms[i].id,
-          farmerName: nearbyFarms[i].name,
-          boundary: ring,
-          areaM2: f.area ?? null,
-        });
-      }
-    });
-
-    if (failedFarms) {
-      console.error(`/api/agroapi/fields: ${failedFarms}/${nearbyFarms.length} nearby farms' field-lists failed`);
+    for (const f of all) {
+      const ring = f.location?.boundary?.coordinates;
+      if (!ring) continue; // no shape drawn yet — can't be tapped on the map
+      const pts = ring[0] || [];
+      if (!pts.length) continue;
+      const centroid = [
+        pts.reduce((sum, p) => sum + p[0], 0) / pts.length,
+        pts.reduce((sum, p) => sum + p[1], 0) / pts.length,
+      ];
+      if (haversineM([lng, lat], centroid) > radiusM) continue;
+      fields.push({
+        id: f.id,
+        name: f.name,
+        farmId: f.farm_id ?? f.farm?.id ?? null,
+        farmerName: f.farm?.name ?? null,
+        boundary: ring,
+        areaM2: f.area ?? null,
+      });
     }
 
     // Fields under this community's one shared Farm (every locally-drawn
