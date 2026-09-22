@@ -36,11 +36,17 @@ const pinIcon = L.divIcon({
 
 // Today's Work routing — the home base and each numbered stop along the
 // nearest-neighbor route.
+// A drawn house rather than the "⌂" character: that glyph sets no colour, so
+// it came out dark on the dark circle and read as a plain dot, and it renders
+// thinly or not at all on many fonts.
 const homeIcon = L.divIcon({
   className: "",
   html: `<div style="width:26px;height:26px;border-radius:50%;background:var(--ink);
     border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);display:flex;
-    align-items:center;justify-content:center;font-size:14px">⌂</div>`,
+    align-items:center;justify-content:center">
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="#fff" aria-hidden="true">
+      <path d="M12 3 2.5 11h2.7v9h5.1v-5.4h3.4V20h5.1v-9h2.7L12 3z"/>
+    </svg></div>`,
   iconSize: [26, 26],
   iconAnchor: [13, 13],
 });
