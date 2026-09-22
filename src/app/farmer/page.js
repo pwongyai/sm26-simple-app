@@ -31,7 +31,7 @@ function cropStatus(f) {
   }
   if (f.harvestingDate) return "Harvested";
   if (f.endDate && new Date(f.endDate) < new Date()) return "Season ended";
-  return "No Active Crop";
+  return "Not planted yet";
 }
 
 export default function MyFieldsTab() {
@@ -106,11 +106,15 @@ export default function MyFieldsTab() {
                     <p className="text-xs text-[var(--text-sec)]">
                       {f.areaUnits ?? "—"} {unit}
                     </p>
-                    <p className="text-xs text-[var(--text-sec)]">
-                      {f.plantingDate
-                        ? `Planting Date: ${fmtDate(f.plantingDate)}`
-                        : "Not planted yet"}
-                    </p>
+                    {/* An empty field said "Not planted yet" and then "No
+                        Active Crop" underneath it — the same fact, twice, and
+                        two strings to translate. The date line only earns its
+                        place once there is a date on it. */}
+                    {f.plantingDate && (
+                      <p className="text-xs text-[var(--text-sec)]">
+                        Planted {fmtDate(f.plantingDate)}
+                      </p>
+                    )}
                     <p className="text-xs text-[var(--text-tert)]">{cropStatus(f)}</p>
                   </div>
                 </div>
