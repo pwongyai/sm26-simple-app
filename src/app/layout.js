@@ -23,10 +23,13 @@ export const metadata = {
 // when the app is opened from the home screen.
 export const viewport = {
   themeColor: "#171717",
-  // Let the page reach under the Dynamic Island and the home indicator, so
-  // `env(safe-area-inset-*)` below has real numbers to work with. Without it
-  // iOS letterboxes a standalone app between grey bars.
-  viewportFit: "cover",
+  // Deliberately NOT viewport-fit: cover. With it, the page draws under the
+  // Dynamic Island and every header has to hold that space itself — which put
+  // "Work Order" behind the camera cutout, and iOS went back to opening the
+  // app zoomed in. Without it iOS insets the content below the safe area on
+  // its own, which is the behaviour we want and needs nothing from us.
+  // The env(safe-area-inset-*) paddings elsewhere read 0 in that mode and do
+  // no harm (2026-09-23).
 };
 
 export default function RootLayout({ children }) {
