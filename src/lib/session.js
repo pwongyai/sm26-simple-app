@@ -10,7 +10,18 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 // verification later changes the login route only, not the architecture.
 
 const COOKIE = "sm_session";
-const MAX_AGE = 60 * 60 * 24 * 30; // 30 days
+
+// A year, i.e. "stays signed in until you sign out" for anything this project
+// will see — it ends well inside that. Raised from 30 days because the cookie
+// is NOT refreshed on use: at 30 days a farmer who checks the app monthly gets
+// silently logged out and, with no SMS reset in the app, has to be given their
+// password again by hand. On a shared phone in a field that is a support call,
+// not a login.
+//
+// The cookie stays httpOnly and HMAC-signed, so a longer life does not make it
+// forgeable — it only means the same proof is accepted for longer. Signing out
+// deletes it immediately.
+const MAX_AGE = 60 * 60 * 24 * 365;
 
 function secret() {
   const s = process.env.SESSION_SECRET;
