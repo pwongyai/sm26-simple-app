@@ -647,30 +647,30 @@ function ServiceList({ services, unit, currency, settings, onChanged }) {
               className={`card p-2 ${active ? "" : "opacity-50"}`}
             >
               <div className="flex items-center gap-2">
-              <span className="flex-1 text-xs">{s.name}</span>
+              <span className="flex-1 whitespace-nowrap text-xs">{s.name}</span>
               {editing ? (
                 <input
                   type="number"
                   value={draft?.price ?? ""}
                   onChange={(e) => setDraft(s.id, { price: e.target.value })}
                   disabled={!active}
-                  className="w-24 rounded border border-[var(--rule)] px-2 py-1 text-right text-xs"
+                  className="w-20 rounded border border-[var(--rule)] px-1.5 py-1 text-right text-xs"
                 />
               ) : (
-                <span className="w-24 text-right text-xs">
+                <span className="w-20 text-right text-xs">
                   {roundMoney(
                     priceOut(s.price_per_m2_thb, settings.areaUnitM2, settings.currency),
                     settings.currency
                   ).toLocaleString()}
                 </span>
               )}
-              <span className="w-16 text-[11px] text-[var(--text-tert)]">
+              <span className="w-12 text-[10px] text-[var(--text-tert)]">
                 {currency}/{unit}
               </span>
               <button
                 onClick={() => editing && setDraft(s.id, { active: !active })}
                 disabled={!editing}
-                className={`rounded px-2 py-0.5 text-[10px] ${
+                className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] ${
                   active ? "bg-green-light text-green-dark" : "bg-surface text-tert"
                 }`}
               >
