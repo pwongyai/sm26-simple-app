@@ -131,7 +131,22 @@ function FitBounds({ shapes, initialView, onViewChange }) {
       }
     }
     window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
+
+    // The window is not the only thing that resizes the map. A report opens
+    // in an overlay whose content lays out after the map has already fitted —
+    // the payment block, the tabs, whatever loads underneath — and the map
+    // keeps the zoom it chose for the box it had a moment earlier. That is
+    // why the same field looked tight on Create Work Report and zoomed out on
+    // Review Work Report (2026-09-23). Watch the container itself.
+    const el = map.getContainer();
+    const observer =
+      typeof ResizeObserver === "function" ? new ResizeObserver(onResize) : null;
+    if (observer) observer.observe(el);
+
+    return () => {
+      window.removeEventListener("resize", onResize);
+      if (observer) observer.disconnect();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, key]);
 
