@@ -2,7 +2,14 @@
 
 
 import { ADAPT_VERSION, groupedWorkTypes, workType } from "@/lib/workTypes";
-import { AREA_UNITS, CURRENCIES, areaUnit } from "@/lib/units";
+import {
+  AREA_UNITS,
+  CURRENCIES,
+  areaUnit,
+  convertMoney,
+  convertPricePerUnit,
+  roundMoney,
+} from "@/lib/units";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { logout } from "@/lib/useSession";
@@ -96,6 +103,7 @@ export default function SettingsTab() {
 
       <CurrencyAndArea
         settings={settings}
+        services={services}
         onChanged={() => {
           load();
           flash("Saved");
@@ -721,7 +729,7 @@ function Language({ profile, onChanged }) {
 // Safe to change whenever: each work report freezes its own currency and unit
 // label at creation, so past reports keep reading in whatever was set when the
 // work was done.
-function CurrencyAndArea({ settings, onChanged }) {
+function CurrencyAndArea({ settings, services, onChanged }) {
   const [editing, setEditing] = useState(false);
   const [currency, setCurrency] = useState(settings.currency);
   const [unit, setUnit] = useState(settings.areaUnit);
@@ -746,6 +754,20 @@ function CurrencyAndArea({ settings, onChanged }) {
   }
 
   const chosen = areaUnit(unit);
+  const from = { currency: settings.currency, m2: Number(settings.areaUnitM2) || null };
+  const willConvert =
+    (currency !== from.currency || (chosen && chosen.m2 !== from.m2)) && from.m2;
+
+  // What this actually does to the prices on file, shown before it happens.
+  // The 800 is a hardcoded rate; a constant buried in a library is invisible at
+  // the moment it matters, so it is stated on screen next to the numbers it
+  // changes.
+  function preview(price) {
+    let v = Number(price) || 0;
+    if (chosen && from.m2) v = convertPricePerUnit(v, from.m2, chosen.m2);
+    if (currency !== from.currency) v = convertMoney(v, from.currency, currency);
+    return roundMoney(v, currency);
+  }
 
   if (!editing) {
     return (
@@ -803,6 +825,28 @@ function CurrencyAndArea({ settings, onChanged }) {
         <p className="mt-1 text-[11px] text-[var(--text-tert)]">
           1 {chosen.unit} = {chosen.m2.toLocaleString()} m²
         </p>
+      )}
+
+      {willConvert && (
+        <div className="mt-3 rounded border border-[var(--rule)] p-2">
+          <p className="text-[11px] text-[var(--text-sec)]">
+            Existing prices are re-expressed so they are worth the same
+            {currency !== from.currency ? " (1 THB = 800 VND)" : ""}. Reports
+            already written are not changed.
+          </p>
+          <div className="mt-1 flex flex-col gap-0.5">
+            {services.map((sv) => (
+              <div key={sv.id} className="flex justify-between text-[11px]">
+                <span className="text-[var(--text-tert)]">{sv.name}</span>
+                <span>
+                  {Number(sv.price_per_unit).toLocaleString()} {from.currency}/
+                  {settings.areaUnit} → {preview(sv.price_per_unit).toLocaleString()}{" "}
+                  {currency}/{unit}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
 
       <EditActions busy={busy} onCancel={() => setEditing(false)} onSave={save} />

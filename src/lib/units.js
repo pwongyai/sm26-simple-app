@@ -41,3 +41,54 @@ export function isValidCurrency(code) {
 export function isValidAreaUnit(unit) {
   return AREA_UNITS.some((u) => u.unit === unit);
 }
+
+// Converting stored values when a community changes its settings.
+//
+// THE BOUNDARY THAT MATTERS: only LIVE settings convert. Frozen history never
+// does — every work_reports row carries its own `currency` and `unit_label`
+// captured at the moment the work was billed, so a past report keeps reading
+// exactly as the farmer was charged. Converting one would rewrite what someone
+// actually paid, which is not a display preference, it is falsifying a record.
+//
+//   convert        services.price_per_unit, work_orders.crop_size_rai
+//   never touch    work_reports.* — price_per_unit, service_charge,
+//                  field_area_units, work_area_units
+//
+// The rate is a fixed conversion applied once, at the moment of switching, not
+// a live exchange rate. It will drift from the market; that is accepted. Round
+// trips do not land back exactly (VND carries no decimals in practice), so
+// switching back and forth compounds rounding — noted rather than solved,
+// because a community changes this approximately never.
+export const THB_PER_VND = 1 / 800; // 1 THB = 800 VND
+
+export function convertMoney(amount, fromCurrency, toCurrency) {
+  const n = Number(amount);
+  if (!Number.isFinite(n) || fromCurrency === toCurrency) return n;
+  if (fromCurrency === "THB" && toCurrency === "VND") return n * 800;
+  if (fromCurrency === "VND" && toCurrency === "THB") return n / 800;
+  return n;
+}
+
+// A PRICE is per unit of area, so it moves opposite to an area measurement.
+// 700 THB per rai (1,600 m²) is 157.5 THB per sào (360 m²) — the same money
+// for the same ground. Getting this backwards silently multiplies every bill.
+export function convertPricePerUnit(price, fromM2, toM2) {
+  const n = Number(price);
+  if (!Number.isFinite(n) || !fromM2 || !toM2 || fromM2 === toM2) return n;
+  return n * (toM2 / fromM2);
+}
+
+// An AREA measurement moves with the unit: 10.1 rai is 44.9 sào.
+export function convertArea(area, fromM2, toM2) {
+  const n = Number(area);
+  if (!Number.isFinite(n) || !fromM2 || !toM2 || fromM2 === toM2) return n;
+  return n * (fromM2 / toM2);
+}
+
+// Money is rounded to what the currency actually uses: VND has no subunit in
+// practice, THB has satang but prices here are whole baht.
+export function roundMoney(amount, currency) {
+  const n = Number(amount);
+  if (!Number.isFinite(n)) return n;
+  return currency === "VND" ? Math.round(n) : Math.round(n * 100) / 100;
+}

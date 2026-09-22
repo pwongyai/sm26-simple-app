@@ -24,6 +24,13 @@ export async function GET() {
     role: user.role,
     organization: user.organization.name,
     contractor: contractorName,
+    // The community's currency and area unit. A farmer cannot change these —
+    // they belong to the community (review item R4) and the contractor sets
+    // them — but every price and area the farmer reads is expressed in them, so
+    // the profile says which.
+    currency: user.organization.currency,
+    areaUnit: user.organization.area_unit,
+    areaUnitM2: user.organization.area_unit_m2,
     joinedAt: user.created_at,
   });
 }

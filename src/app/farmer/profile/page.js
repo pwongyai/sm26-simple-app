@@ -101,6 +101,20 @@ export default function ProfileTab() {
           <div className="val">{me.contractor || "—"}</div>
         </div>
         <div className="detail-row">
+          <div className="lbl">Currency</div>
+          <div className="val">{me.currency || "—"}</div>
+        </div>
+        <div className="detail-row">
+          <div className="lbl">Area unit</div>
+          <div className="val">
+            {me.areaUnit
+              ? me.areaUnitM2
+                ? `${me.areaUnit} · ${Number(me.areaUnitM2).toLocaleString()} m²`
+                : me.areaUnit
+              : "—"}
+          </div>
+        </div>
+        <div className="detail-row">
           <div className="lbl">Joined</div>
           <div className="val">
             {me.joinedAt ? new Date(me.joinedAt).toLocaleDateString() : "—"}
