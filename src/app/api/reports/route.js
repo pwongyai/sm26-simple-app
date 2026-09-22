@@ -210,20 +210,27 @@ export async function POST(request) {
       (b.machineName ? ` by ${b.machineName}` : "") +
       " — recorded via SM26";
 
-    // AgroAPI keeps one planting activity per cropzone and will not accept a
-    // second, and updating the existing one is accepted and discarded. So if
-    // the field already has a planting record, this job adds nothing there.
-    // The report is still saved and billed; it simply does not claim a write
-    // that did not happen (2026-09-23).
-    let alreadyPlanted = false;
+    // Planting work sets the field's planting date, from the date on the work
+    // order. AgroAPI keeps one planting activity per cropzone and the
+    // cropzone's planting_date is what carries it, so that is the field to
+    // write — not the activity, whose update discards start_date.
     if (activityType.canonical_name === "planting") {
-      const existing = await agroFetch(`/cropzones/${b.cropzoneId}/activities`);
-      alreadyPlanted =
-        existing.ok &&
-        (existing.body || []).some((a) => a.activity_type?.canonical_name === "planting");
-    }
+      await agroFetch(`/cropzones/${b.cropzoneId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ planting_date: `${startDate}T00:00:00Z` }),
+      });
 
-    if (!alreadyPlanted) {
+      // Read it back. This API answers 200 to an update it silently throws
+      // away, so a status code is not evidence (2026-09-23). The report saves
+      // either way; only the claim that AgroAPI holds it depends on this.
+      const after = await agroFetch(`/cropzones/${b.cropzoneId}`);
+      if (String(after.body?.planting_date || "").slice(0, 10) === startDate) {
+        const acts = await agroFetch(`/cropzones/${b.cropzoneId}/activities`);
+        activityId =
+          (acts.body || []).find((a) => a.activity_type?.canonical_name === "planting")?.id ||
+          null;
+      }
+    } else {
       const written = await agroFetch(
         `/cropzones/${b.cropzoneId}/activities?organization_id=${encodeURIComponent(orgId)}`,
         {
