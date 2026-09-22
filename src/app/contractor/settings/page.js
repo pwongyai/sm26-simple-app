@@ -81,7 +81,7 @@ export default function SettingsTab() {
       )}
 
       {view === "services" && (
-        <>
+        <div className="settings-sections">
           <HomeBase
             profile={profile}
             onChanged={() => {
@@ -100,11 +100,11 @@ export default function SettingsTab() {
               flash("Saved");
             }}
           />
-        </>
+        </div>
       )}
 
       {view === "general" && (
-        <>
+        <div className="settings-sections">
           <ContractorProfile
             profile={profile}
             organization={settings.organization}
@@ -132,7 +132,7 @@ export default function SettingsTab() {
           />
 
           <LogOut />
-        </>
+        </div>
       )}
     </>
   );
