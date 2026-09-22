@@ -139,9 +139,16 @@ export default function OrderDetail({ order, services, onClose, onChanged }) {
             className="fieldset-note"
             style={{ background: "var(--danger-light)", color: "var(--danger)" }}
           >
-            <b>⚠️ Unmatched — {late} {late === 1 ? "day" : "days"} late.</b> No
-            matching machine work found. If this job is actually finished, you
-            can close it manually.
+            {/* "Unmatched" is our word for "we looked for machine work on
+                this field and found none" — it means nothing to a contractor.
+                And telling him to close it manually without naming the button
+                that does it is half an instruction; the button is Force Close,
+                at the bottom of this screen. */}
+            <b>
+              {late} {late === 1 ? "day" : "days"} late.
+            </b>{" "}
+            No machine has recorded work on this field. If the job is done, use
+            Force Close below.
           </div>
         )}
 
