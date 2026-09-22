@@ -262,7 +262,12 @@ export default function SatelliteMap({
 
   return (
     <div
-      style={{ height }}
+      // minHeight and flexShrink because a flex parent shrinks a plain
+      // `height`: inside the report overlay this box asked for 220 and was
+      // given 190, so the map fitted correctly to a container that was
+      // quietly smaller than requested and the field came out small
+      // (2026-09-23).
+      style={{ height, minHeight: height, flexShrink: 0 }}
       className="overflow-hidden rounded-xl border border-[var(--rule)]"
     >
       <MapContainer
