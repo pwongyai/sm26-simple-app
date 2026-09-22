@@ -151,32 +151,43 @@ function ContractorProfile({ profile, organization, onChanged }) {
   //   Business Name  read-only — AgroAPI owns it. Editing it here would let the
   //                  name a farmer sees disagree with AgroAPI and every other
   //                  consumer of the platform. Change it in AgroAPI.
-  //   Mobile Number  read-only — it IS the login. Editing it would change how
-  //                  this account signs in, which during testing means a
-  //                  tester locking themselves out of a shared test account.
-  //                  Revisit when real authentication is built.
-  //   Owner Name     editable, via PATCH /api/me (app_users.name) — not a
-  //                  credential, so it is safe to change.
+  //   Owner Name     editable, via PATCH /api/me (app_users.name).
+  //   Phone number   editable, same route. It IS the login, so changing it
+  //                  changes how this account signs in — which is the point:
+  //                  a contractor's number is his own, and the farmer's side
+  //                  has always been editable. The read-only rule here was to
+  //                  stop a tester locking themselves out of a shared test
+  //                  account, which is not who uses this any more.
+  //   Password       changeable, POST /api/me/password.
   const [editing, setEditing] = useState(false);
   const [ownerName, setOwnerName] = useState(profile.ownerName || "");
+  const [phone, setPhone] = useState(profile.phone || "");
+  const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
   function startEdit() {
     setOwnerName(profile.ownerName || "");
+    setPhone(profile.phone || "");
+    setError("");
     setEditing(true);
   }
 
   async function save() {
     setBusy(true);
-    // The owner's name lives on the login, so this is /api/me — the same route
-    // the farmer's Profile screen uses. `phone` is passed unchanged because
-    // that route treats a missing phone as "keep the current one".
-    await fetch("/api/me", {
+    setError("");
+    // Owner name and phone both live on the login, so this is /api/me — the
+    // same route the farmer's Profile uses, with the same validation and the
+    // same duplicate check.
+    const res = await fetch("/api/me", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: ownerName, phone: profile.phone }),
+      body: JSON.stringify({ name: ownerName, phone }),
     });
     setBusy(false);
+    if (!res.ok) {
+      setError((await res.json()).error || "Could not save.");
+      return;
+    }
     setEditing(false);
     onChanged();
   }
@@ -188,9 +199,10 @@ function ContractorProfile({ profile, organization, onChanged }) {
         <div className="flex flex-col gap-1.5">
           <ViewRow label="Business Name" value={profile.businessName} />
           <ViewRow label="Owner Name" value={profile.ownerName} />
-          <ViewRow label="Mobile Number" value={profile.phone} />
+          <ViewRow label="Phone number" value={profile.phone} />
           <p className="mt-1 text-[11px] text-[var(--text-tert)]">Organization: {organization}</p>
         </div>
+        <ChangePassword />
       </section>
     );
   }
@@ -215,18 +227,117 @@ function ContractorProfile({ profile, organization, onChanged }) {
           />
         </div>
         <div>
-          <div className="field-label">Mobile Number</div>
-          <div className="detail-row">
-            <div className="val">{profile.phone || "—"}</div>
-          </div>
+          {/* Editable now. It used to be read-only to stop a tester locking
+              themselves out of a shared test account — but the people about to
+              use this are real contractors whose number is their own, and the
+              farmer's side has been editable all along. */}
+          <div className="field-label">Phone number</div>
+          <input
+            className="field"
+            type="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+          />
           <p className="text-[11px] text-[var(--text-tert)]">
-            The number you sign in with
+            This is how you sign in — changing it changes your login.
           </p>
         </div>
+        {error && <p className="text-sm text-[var(--danger)]">{error}</p>}
         <EditActions busy={busy} onCancel={() => setEditing(false)} onSave={save} />
         <p className="text-[11px] text-[var(--text-tert)]">Organization: {organization}</p>
       </div>
     </section>
+  );
+}
+
+// Same panel as the farmer's Profile, closed until asked for: a password box
+// standing open on a settings screen is something to scroll past, not to use.
+function ChangePassword() {
+  const [open, setOpen] = useState(false);
+  const [current, setCurrent] = useState("");
+  const [next, setNext] = useState("");
+  const [msg, setMsg] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function submit() {
+    setBusy(true);
+    setError("");
+    setMsg("");
+    const res = await fetch("/api/me/password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ currentPassword: current, newPassword: next }),
+    });
+    setBusy(false);
+    if (!res.ok) {
+      setError((await res.json()).error || "Could not change password.");
+      return;
+    }
+    setCurrent("");
+    setNext("");
+    setMsg("Password changed");
+    setTimeout(() => {
+      setMsg("");
+      setOpen(false);
+    }, 1500);
+  }
+
+  if (!open) {
+    return (
+      <button
+        className="mt-3 flex w-full items-center justify-between text-left"
+        onClick={() => setOpen(true)}
+      >
+        <span className="text-sm font-medium">Change Password</span>
+        <span className="text-[var(--text-tert)]">›</span>
+      </button>
+    );
+  }
+
+  return (
+    <div className="mt-3">
+      <div className="field-label">Change Password</div>
+      <input
+        className="field mb-2"
+        type="password"
+        placeholder="Current password"
+        autoComplete="current-password"
+        value={current}
+        onChange={(e) => setCurrent(e.target.value)}
+      />
+      <input
+        className="field"
+        type="password"
+        placeholder="New password"
+        autoComplete="new-password"
+        value={next}
+        onChange={(e) => setNext(e.target.value)}
+      />
+      <p className="mt-1 text-[11px] text-[var(--text-tert)]">At least 6 characters.</p>
+      {error && <p className="mt-2 text-sm text-[var(--danger)]">{error}</p>}
+      {msg && <p className="mt-2 text-sm text-[var(--green-dark)]">{msg}</p>}
+      <div className="mt-2 flex gap-2">
+        <button
+          className="btn btn-outline flex-1"
+          onClick={() => {
+            setOpen(false);
+            setCurrent("");
+            setNext("");
+            setError("");
+          }}
+        >
+          Cancel
+        </button>
+        <button
+          className="btn btn-primary flex-1"
+          disabled={busy || !current || !next}
+          onClick={submit}
+        >
+          {busy ? "Saving…" : "Save"}
+        </button>
+      </div>
+    </div>
   );
 }
 
