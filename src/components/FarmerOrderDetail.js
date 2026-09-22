@@ -161,9 +161,6 @@ export default function FarmerOrderDetail({ order, onClose, onChanged }) {
             {fmtMoney(Number(report.price_per_unit ?? 0), report.currency)}
           </p>
 
-          <p className="text-xs text-[var(--text-tert)]">
-            {fmtDate(report.started_at)}
-          </p>
 
         </div>
 

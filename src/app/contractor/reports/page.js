@@ -405,9 +405,6 @@ function ViewReport({ report: r, onClose, onTogglePaid }) {
           </p>
         </div>
 
-        <p className="text-xs text-[var(--text-tert)]">
-          {fmtDate(r.started_at)}
-        </p>
 
       </div>
 
@@ -712,9 +709,6 @@ function CreateReport({ onClose, onCreated, onViewExisting }) {
               </p>
             </div>
 
-            <p className="text-xs text-[var(--text-tert)]">
-              {fmtDate(chosen.startedAt)}
-            </p>
 
             {error && <p className="text-sm text-red-600">{error}</p>}
           </>
