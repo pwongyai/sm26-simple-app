@@ -510,10 +510,14 @@ function HomeBase({ profile, onChanged }) {
   return (
     <section className="mb-6">
       <SectionHeader title="Home Base Location" onEdit={editing ? null : startEdit} />
-      <p className="mb-2 text-[11px] text-[var(--text-tert)]">
-        Used to route Today&apos;s Work — the closest open job to home comes
-        first.{editing ? " Tap the map to move the pin." : ""}
-      </p>
+      {/* The line explaining what a home base is for lived here and was read
+          once, by whoever set it. The one instruction worth keeping is the one
+          you need while you are actually moving the pin. */}
+      {editing && (
+        <p className="mb-2 text-[11px] text-[var(--text-tert)]">
+          Tap the map to move the pin.
+        </p>
+      )}
       <Map pin={shownPin} onPick={editing ? setDraftPin : null} height={200} />
       <p className="mt-1 text-[11px] text-[var(--text-tert)]">
         {shownPin
