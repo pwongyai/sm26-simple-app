@@ -82,15 +82,28 @@ export function priceIn(displayPrice, areaUnitM2, currency) {
   return toThb(n, currency) / (Number(areaUnitM2) || 1);
 }
 
+// How many decimals an area is worth showing, from the size of the unit it is
+// shown in. One fixed count cannot serve units spanning 1 m² to 10,000 m²:
+// "16165.0 m²" is absurd precision theatre, while "1.6 ha" hides a thousand
+// square metres. Derived rather than listed, so a unit added later gets a
+// sensible answer without anyone remembering to set one.
+export function areaDigits(areaUnitM2) {
+  const per = Number(areaUnitM2) || 1;
+  if (per >= 10000) return 2; // hectare and up
+  if (per >= 100) return 1; // rai, sào
+  return 0; // square metres
+}
+
 // m² -> the reader's unit, and back.
-export function areaOut(areaM2, areaUnitM2, digits = 1) {
+export function areaOut(areaM2, areaUnitM2, digits) {
   const n = Number(areaM2);
   const per = Number(areaUnitM2);
   // No unit yet (settings still loading) returns null so the caller shows "—".
   // Falling back to 1 would print raw square metres under a heading that says
   // sào, which is the same class of lie this whole change removes.
   if (!Number.isFinite(n) || !per) return null;
-  return Number((n / per).toFixed(digits));
+  const dp = digits ?? areaDigits(per);
+  return Number((n / per).toFixed(dp));
 }
 
 export function areaIn(displayArea, areaUnitM2) {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { areaDigits } from "@/lib/units";
 
 // The community's currency and area unit, for any client component that
 // displays a price or an area.
@@ -84,9 +85,9 @@ export function useUnits() {
 
 // Square metres expressed in the community's unit. Returns a string, because
 // every caller was doing `.toFixed(1)` on it anyway.
-export function toUnits(areaM2, areaUnitM2, digits = 1) {
+export function toUnits(areaM2, areaUnitM2, digits) {
   const m2 = Number(areaM2);
   const per = Number(areaUnitM2) || FALLBACK.areaUnitM2;
   if (!Number.isFinite(m2)) return null;
-  return (m2 / per).toFixed(digits);
+  return (m2 / per).toFixed(digits ?? areaDigits(per));
 }
