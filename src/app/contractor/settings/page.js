@@ -200,7 +200,6 @@ function ContractorProfile({ profile, organization, onChanged }) {
           <ViewRow label="Business Name" value={profile.businessName} />
           <ViewRow label="Owner Name" value={profile.ownerName} />
           <ViewRow label="Phone number" value={profile.phone} />
-          <p className="mt-1 text-[11px] text-[var(--text-tert)]">Organization: {organization}</p>
         </div>
         <ChangePassword />
       </section>
@@ -244,7 +243,6 @@ function ContractorProfile({ profile, organization, onChanged }) {
         </div>
         {error && <p className="text-sm text-[var(--danger)]">{error}</p>}
         <EditActions busy={busy} onCancel={() => setEditing(false)} onSave={save} />
-        <p className="text-[11px] text-[var(--text-tert)]">Organization: {organization}</p>
       </div>
     </section>
   );
@@ -387,6 +385,16 @@ function FarmOrganization({ onChanged }) {
 
   if (!data) return null;
   const current = data.options.find((o) => o.isCurrent);
+
+  // A contractor who works in exactly one community is not choosing anything,
+  // and the community's name is already in the header on every screen. This
+  // page said "Huong Ngai Experimental Fields" three times (2026-09-22).
+  //
+  // Hidden rather than deleted: switching community is a real capability (R2)
+  // and a hard scope change — it hides the other community's fields,
+  // customers, orders and reports. It comes back the moment there is a second
+  // one to switch to.
+  if (data.options.length < 2) return null;
 
   if (!editing) {
     return (
