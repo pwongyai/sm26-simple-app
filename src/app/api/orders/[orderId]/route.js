@@ -38,6 +38,11 @@ export async function PATCH(request, { params }) {
         return Response.json({ error: "Unknown status" }, { status: 400 });
       }
       updates.status = body.status;
+      // Accepting or declining IS having seen it. Until now the flag was
+      // cleared only by opening the order from the List, so a request accepted
+      // straight from the bell stayed marked unseen for the contractor who had
+      // just acted on it.
+      updates.unseen_by_contractor = false;
       // Tell the farmer something happened to their request.
       if (order.source === "smart_farmer") updates.unseen_by_farmer = true;
     }
