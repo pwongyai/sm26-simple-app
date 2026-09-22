@@ -43,18 +43,32 @@ export async function PATCH(request) {
   if (response) return response;
 
   const body = await request.json();
-  const name = (body.name || "").trim();
-  if (!name) {
-    return Response.json({ error: "Enter your name" }, { status: 400 });
+
+  // Only what was actually sent is validated and written. The language picker
+  // sends `{ language }` on its own, and this route used to demand a name from
+  // every caller — so choosing a language answered 400 "Enter your name" and
+  // silently changed nothing. Nobody could switch back to English
+  // (2026-09-23).
+  const updates = {};
+
+  if (body.name !== undefined) {
+    const name = String(body.name).trim();
+    if (!name) {
+      return Response.json({ error: "Enter your name" }, { status: 400 });
+    }
+    updates.name = name;
   }
 
   // A farmer changing their own number is changing their login — so it has to
   // be a number they can actually type at the sign-in screen. Spaces, dashes
   // and a leading +, which are how people write a phone down, are stripped
   // rather than refused; anything left over is not a phone.
-  const phone = normalizePhone(body.phone);
-  const problem = phoneProblem(phone);
-  if (problem) return Response.json({ error: problem }, { status: 400 });
+  const phone = body.phone !== undefined ? normalizePhone(body.phone) : user.phone;
+  if (body.phone !== undefined) {
+    const problem = phoneProblem(phone);
+    if (problem) return Response.json({ error: problem }, { status: 400 });
+    updates.phone = phone;
+  }
 
   // Checked rather than guessed. The unique index on app_users.phone caught
   // this before, but only as a 500 that said the number "may" be in use, which
@@ -75,7 +89,6 @@ export async function PATCH(request) {
 
   // Language is the one field here a person may change without touching their
   // identity, so it is accepted on its own as well as alongside a name change.
-  const updates = { name, phone };
   if (body.language !== undefined) {
     if (!["th", "en", "vn", null].includes(body.language)) {
       return Response.json({ error: "Unknown language" }, { status: 400 });
@@ -98,10 +111,13 @@ export async function PATCH(request) {
   // card and the customer list read. Writing only the login left the
   // contractor holding the old number — the one person who needs to phone the
   // farmer had the dead one (2026-09-22).
-  if (user.role === "farmer") {
+  if (user.role === "farmer" && (updates.name || updates.phone)) {
+    const mirror = {};
+    if (updates.name) mirror.name = updates.name;
+    if (updates.phone) mirror.phone = updates.phone;
     const { error: mirrorError } = await supabaseAdmin
       .from("farmers")
-      .update({ name, phone })
+      .update(mirror)
       .eq("app_user_id", user.id);
     // Not fatal: the login is already saved and is the thing the farmer is
     // about to sign in with. Logged so a drift between the two is traceable.
