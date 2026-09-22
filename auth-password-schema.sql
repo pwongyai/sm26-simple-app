@@ -37,11 +37,11 @@ update public.contractor_organizations
 -- so the country is visible at a glance and the two sites cannot be confused
 -- when someone reads a number aloud.
 insert into public.app_users (phone, name, role, organization_id, contractor_agro_org_id)
-values ('1800000001', 'Huong Ngai Farmer', 'farmer', 'HN', null)
+values ('1800000001', 'Mr. Trung', 'farmer', 'HN', null)
 on conflict (phone) do nothing;
 
 insert into public.app_users (phone, name, role, organization_id, contractor_agro_org_id)
-values ('1900000002', 'Nguyen The Thinh', 'contractor', 'HN',
+values ('1900000002', 'Mr. Thinh', 'contractor', 'HN',
         '59296315-2537-4184-9cc9-8d24db0eae0f')
 on conflict (phone) do nothing;
 
@@ -51,9 +51,12 @@ on conflict (phone) do nothing;
 -- 24 Sep demo shows, and it is the one work type that maps to ADAPT in a single
 -- step. Price is a placeholder — the contractor sets their own on the settings
 -- screen, which is the whole point of services being free-form.
+-- 150,000 VND per sào (360 m²), set by the project. The contractor can change
+-- it, and add services, on the Settings screen — services are free-form by
+-- design and the app already supports add/edit/delete.
 insert into public.services (name, activity_canonical, adapt_code, price_per_unit,
                              active, contractor_agro_org_id, sort_order)
-select 'Harvesting', 'harvesting', 'HARVEST', 0, true,
+select 'Harvesting', 'harvesting', 'HARVEST', 150000, true,
        '59296315-2537-4184-9cc9-8d24db0eae0f', 50
 where not exists (
   select 1 from public.services
