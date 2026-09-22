@@ -490,7 +490,17 @@ export default function SelectArea({ machine, points, day, since, until, initial
           </>
         )}
 
-        {mode === "match" && (
+        {/* Picking an order runs the whole report computation — the same
+            several seconds the map screen already shows a spinner for. Without
+            this the tap looked like it had done nothing at all. */}
+        {mode === "match" && busy && (
+          <div className="flex flex-col items-center justify-center gap-3 py-14 text-sm text-[var(--text-sec)]">
+            <span className="spinner" />
+            Generating report…
+          </div>
+        )}
+
+        {mode === "match" && !busy && (
           <>
             <div className="fieldset-note">
               {matchOwner?.name} has {matchCandidates.length} open order
@@ -579,6 +589,7 @@ export default function SelectArea({ machine, points, day, since, until, initial
         {mode === "match" && (
           <button
             className="btn btn-outline w-full"
+            disabled={busy}
             onClick={() =>
               goToReport(matchField, {
                 farmerId: matchOwner.id,
