@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { createOrder } from "@/lib/store";
 import { boundaryCentre } from "@/lib/engine";
 import FieldThumb from "@/components/FieldThumb";
@@ -58,7 +58,6 @@ export default function RequestService({
   const [date, setDate] = useState(null);
   const [busy, setBusy] = useState(false);
   const [confirming, setConfirming] = useState(false);
-  const customDateRef = useRef(null);
 
   const field = fields.find((f) => (f.cropzoneId || f.fieldId) === fieldId);
   const shownServices = contractorServices ?? services;
@@ -267,34 +266,29 @@ export default function RequestService({
             {/* The native picker only appears when asked for — no permanently
                 visible date box. Any future date is allowed, not just the
                 forecast window; a date beyond it simply shows no weather. */}
-            <button
-              className={`choice-card ${isCustom ? "selected" : ""}`}
-              onClick={() => {
-                const el = customDateRef.current;
-                if (el?.showPicker) {
-                  try {
-                    el.showPicker();
-                    return;
-                  } catch {}
-                }
-                el?.click();
-              }}
-            >
-              <div className="txt">
-                <b>
-                  {isCustom
-                    ? `✓ ${fmtDate(date)}`
-                    : "📅 Choose another date"}
-                </b>
-                {!isCustom && <span>Not one of the days above? Pick any date.</span>}
+            {/* A real, visible date input rather than a button that opens a
+                hidden one.
+
+                It used to be a card that called showPicker() on an input
+                styled `opacity-0 h-px w-px pointer-events-none`, falling back
+                to .click(). Both do nothing on iOS Safari, which will not open
+                a picker for an element that is not genuinely visible — so
+                "Choose another date" was dead on every iPhone while working on
+                Android and desktop (reported 2026-09-23).
+
+                Tapping the field itself is also one step instead of two, and
+                needs no JavaScript on any platform. */}
+            <div className={`choice-card ${isCustom ? "selected" : ""}`}>
+              <div className="txt w-full">
+                <b>📅 Choose another date</b>
+                <input
+                  type="date"
+                  className="field mt-2"
+                  value={isCustom ? date : ""}
+                  onChange={(e) => e.target.value && setDate(e.target.value)}
+                />
               </div>
-            </button>
-            <input
-              ref={customDateRef}
-              type="date"
-              className="pointer-events-none absolute h-px w-px opacity-0"
-              onChange={(e) => e.target.value && setDate(e.target.value)}
-            />
+            </div>
           </>
         )}
 
