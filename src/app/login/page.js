@@ -52,7 +52,7 @@ export default function LoginPage() {
           inputMode="tel"
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
-          placeholder="Mobile number"
+          placeholder="Phone number"
           required
           autoComplete="username"
           className="field"

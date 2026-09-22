@@ -107,7 +107,7 @@ export default function ProfileTab() {
               <div className="val">{me.name}</div>
             </div>
             <div className="detail-row">
-              <div className="lbl">Mobile number</div>
+              <div className="lbl">Phone number</div>
               <div className="val">{me.phone}</div>
             </div>
 
@@ -133,7 +133,7 @@ export default function ProfileTab() {
               onChange={(e) => setName(e.target.value)}
             />
 
-            <div className="field-label">Mobile number</div>
+            <div className="field-label">Phone number</div>
             <input
               className="field"
               type="tel"

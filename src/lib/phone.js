@@ -26,7 +26,7 @@ export function normalizePhone(input) {
 
 // Null when it is fine, otherwise the sentence to show the person.
 export function phoneProblem(normalized) {
-  if (!normalized) return "Enter your mobile number";
-  if (!/^\+?\d+$/.test(normalized)) return "A mobile number can only contain digits";
+  if (!normalized) return "Enter your phone number";
+  if (!/^\+?\d+$/.test(normalized)) return "A phone number can only contain digits";
   return null;
 }
