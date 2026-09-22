@@ -106,35 +106,43 @@ export default function ForceCloseSheet({ order, services, onCancel, onDone }) {
   return (
     <div className="flex flex-col gap-3">
       <div className="fieldset-note">
-        No machine recorded this job, so the figures below are yours. It is
-        billed and the customer gets the report either way.
+        No machine recorded this job, so the area and charge are yours to
+        state. It is billed and the customer gets the report either way.
       </div>
 
-      <div>
-        <div className="field-label">Service</div>
-        <select
-          className="field"
-          value={serviceId}
-          onChange={(e) => setServiceId(e.target.value)}
-        >
-          <option value="">Choose…</option>
-          {(services || []).map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name}
-            </option>
-          ))}
-        </select>
-      </div>
+      {/* The work type and the date are on the card directly above this. The
+          job was booked for them; asking again is the app forgetting what it
+          just showed. Both are only asked for when the order genuinely does
+          not have one. */}
+      {!matchingService && (
+        <div>
+          <div className="field-label">Service</div>
+          <select
+            className="field"
+            value={serviceId}
+            onChange={(e) => setServiceId(e.target.value)}
+          >
+            <option value="">Choose…</option>
+            {(services || []).map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
-      <div>
-        <div className="field-label">Date worked</div>
-        <input
-          className="field"
-          type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-        />
-      </div>
+      {!order.scheduled_date && !order.booking_date && (
+        <div>
+          <div className="field-label">Date worked</div>
+          <input
+            className="field"
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+          />
+        </div>
+      )}
 
       <div>
         <div className="field-label">Area worked ({areaUnit})</div>
