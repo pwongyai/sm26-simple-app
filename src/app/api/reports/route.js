@@ -210,63 +210,39 @@ export async function POST(request) {
       (b.machineName ? ` by ${b.machineName}` : "") +
       " — recorded via SM26";
 
-    // Planting is the one activity AgroAPI holds as a singleton:
-    //
-    //   400 NO_MORE_ONE_PLANTING_ACT_PER_CROPZONE
-    //       "No more than one planting activity per cropzone"
-    //
-    // and setting a cropzone's planting date CREATES that activity. So a
-    // farmer who entered "7 July" already has one, and the transplanter who
-    // actually finished on the 8th cannot add a second (2026-09-23).
-    //
-    // The record is therefore updated, not added. The work date wins: a date
-    // typed before the job is an estimate, this one is a record of a machine
-    // that was there, and everything downstream — days after planting,
-    // maturity prediction, NDVI read against crop stage — is only as good as
-    // that field.
-    //
-    // Looked up rather than driven off the error code: the code tells us a
-    // planting activity exists but not which one, and we need its id anyway.
-    let existingPlanting = null;
+    // AgroAPI keeps one planting activity per cropzone and will not accept a
+    // second, and updating the existing one is accepted and discarded. So if
+    // the field already has a planting record, this job adds nothing there.
+    // The report is still saved and billed; it simply does not claim a write
+    // that did not happen (2026-09-23).
+    let alreadyPlanted = false;
     if (activityType.canonical_name === "planting") {
       const existing = await agroFetch(`/cropzones/${b.cropzoneId}/activities`);
-      if (existing.ok) {
-        existingPlanting =
-          (existing.body || []).find(
-            (a) =>
-              a.activity_type?.canonical_name === "planting" ||
-              a.activity_type_id === activityType.id
-          ) || null;
-      }
+      alreadyPlanted =
+        existing.ok &&
+        (existing.body || []).some((a) => a.activity_type?.canonical_name === "planting");
     }
 
-    const written = existingPlanting
-      ? await agroFetch(
-          `/activities/${existingPlanting.id}?organization_id=${encodeURIComponent(orgId)}`,
-          {
-            method: "PATCH",
-            body: JSON.stringify({ start_date: `${startDate}T00:00:00Z`, note }),
-          }
-        )
-      : await agroFetch(
-          `/cropzones/${b.cropzoneId}/activities?organization_id=${encodeURIComponent(orgId)}`,
-          {
-            method: "POST",
-            body: JSON.stringify({
-              activity_type_id: activityType.id,
-              start_date: `${startDate}T00:00:00Z`,
-              note,
-            }),
-          }
-        );
-
-    if (!written.ok) {
-      return Response.json(
-        { error: "AgroAPI rejected the activity", detail: written.body },
-        { status: 502 }
+    if (!alreadyPlanted) {
+      const written = await agroFetch(
+        `/cropzones/${b.cropzoneId}/activities?organization_id=${encodeURIComponent(orgId)}`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            activity_type_id: activityType.id,
+            start_date: `${startDate}T00:00:00Z`,
+            note,
+          }),
+        }
       );
+      if (!written.ok) {
+        return Response.json(
+          { error: "AgroAPI rejected the activity", detail: written.body },
+          { status: 502 }
+        );
+      }
+      activityId = written.body?.id || null;
     }
-    activityId = written.body?.id || existingPlanting?.id || null;
   }
 
   // Match or backfill (version 2 §15.4). Which order this report fulfills,
