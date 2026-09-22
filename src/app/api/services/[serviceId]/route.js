@@ -1,4 +1,5 @@
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { agroCanonicalFor, isValidWorkType } from "@/lib/workTypes";
 import { requireAccess } from "@/lib/ownership";
 import { contractorOrgId } from "@/lib/contractor";
 
@@ -26,7 +27,16 @@ export async function PATCH(request, { params }) {
   const updates = {};
   if (body.name !== undefined) updates.name = body.name.trim();
   if (body.pricePerUnit !== undefined) updates.price_per_unit = Number(body.pricePerUnit) || 0;
-  if (body.activityCanonical !== undefined) updates.activity_canonical = body.activityCanonical;
+  // Changing the work type rewrites both bindings together — they are two
+  // readings of one choice and must never be set independently, or a service
+  // ends up telling AgroAPI one thing and ADAPT another.
+  if (body.adaptCode !== undefined) {
+    if (!isValidWorkType(body.adaptCode)) {
+      return Response.json({ error: "Pick what kind of work this is" }, { status: 400 });
+    }
+    updates.adapt_code = body.adaptCode;
+    updates.activity_canonical = agroCanonicalFor(body.adaptCode);
+  }
   // Available/Unavailable toggle (version 3) — disables without deleting, so
   // price history and past reports that used this service keep reading
   // correctly. Same underlying flag DELETE already used, just reachable

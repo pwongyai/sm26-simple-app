@@ -41,7 +41,7 @@ values ('1800000001', 'Mr. Trung', 'farmer', 'HN', null)
 on conflict (phone) do nothing;
 
 insert into public.app_users (phone, name, role, organization_id, contractor_agro_org_id)
-values ('1900000002', 'Mr. Thinh', 'contractor', 'HN',
+values ('1900000001', 'Mr. Thinh', 'contractor', 'HN',
         '59296315-2537-4184-9cc9-8d24db0eae0f')
 on conflict (phone) do nothing;
 

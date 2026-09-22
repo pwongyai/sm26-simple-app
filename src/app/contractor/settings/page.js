@@ -1,5 +1,7 @@
 "use client";
 
+
+import { groupedWorkTypes, workType } from "@/lib/workTypes";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { logout } from "@/lib/useSession";
@@ -402,7 +404,13 @@ function HomeBase({ profile, onChanged }) {
   );
 }
 
+// The work type is what the contractor picks; the AgroAPI activity type and the
+// ADAPT operation code are both derived from it server-side. Neither standard is
+// shown here — a contractor should not need to know two vocabularies to price a
+// job. Before 2026-09-22 this form sent a hardcoded "other", so every service
+// created in the app was filed in AgroAPI as an unclassified activity.
 function ServiceList({ services, unit, currency, onChanged }) {
+  const groups = groupedWorkTypes();
   const [editing, setEditing] = useState(false);
   const [drafts, setDrafts] = useState({});
   const [newDrafts, setNewDrafts] = useState([]);
@@ -411,7 +419,11 @@ function ServiceList({ services, unit, currency, onChanged }) {
   function startEdit() {
     const d = {};
     services.forEach((s) => {
-      d[s.id] = { price: String(Number(s.price_per_unit)), active: s.active };
+      d[s.id] = {
+        price: String(Number(s.price_per_unit)),
+        active: s.active,
+        adaptCode: s.adapt_code || "",
+      };
     });
     setDrafts(d);
     setNewDrafts([]);
@@ -423,7 +435,10 @@ function ServiceList({ services, unit, currency, onChanged }) {
   }
 
   function addDraftRow() {
-    setNewDrafts((rows) => [...rows, { clientId: `new-${rows.length}`, name: "", price: "" }]);
+    setNewDrafts((rows) => [
+      ...rows,
+      { clientId: `new-${rows.length}`, name: "", price: "", adaptCode: "" },
+    ]);
   }
 
   function setNewDraft(clientId, patch) {
@@ -442,20 +457,22 @@ function ServiceList({ services, unit, currency, onChanged }) {
         if (!d) return null;
         const priceChanged = Number(d.price) !== Number(s.price_per_unit);
         const activeChanged = d.active !== s.active;
-        if (!priceChanged && !activeChanged) return null;
+        const typeChanged = d.adaptCode && d.adaptCode !== (s.adapt_code || "");
+        if (!priceChanged && !activeChanged && !typeChanged) return null;
         return fetch(`/api/services/${s.id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             ...(priceChanged ? { pricePerUnit: d.price } : {}),
             ...(activeChanged ? { active: d.active } : {}),
+            ...(typeChanged ? { adaptCode: d.adaptCode } : {}),
           }),
         });
       })
     );
     await Promise.all(
       newDrafts
-        .filter((r) => r.name.trim())
+        .filter((r) => r.name.trim() && r.adaptCode)
         .map((r) =>
           fetch("/api/services", {
             method: "POST",
@@ -463,7 +480,7 @@ function ServiceList({ services, unit, currency, onChanged }) {
             body: JSON.stringify({
               name: r.name.trim(),
               pricePerUnit: r.price || 0,
-              activityCanonical: "other",
+              adaptCode: r.adaptCode,
             }),
           })
         )
@@ -492,8 +509,9 @@ function ServiceList({ services, unit, currency, onChanged }) {
           return (
             <div
               key={s.id}
-              className={`flex items-center gap-2 card p-2 ${active ? "" : "opacity-50"}`}
+              className={`card p-2 ${active ? "" : "opacity-50"}`}
             >
+              <div className="flex items-center gap-2">
               <span className="flex-1 text-sm">{s.name}</span>
               {editing ? (
                 <input
@@ -518,13 +536,43 @@ function ServiceList({ services, unit, currency, onChanged }) {
               >
                 {active ? "Available" : "Unavailable"}
               </button>
+              </div>
+
+              {/* What kind of work this is. Chosen once, here; it decides what
+                  AgroAPI records the job as and what the ADAPT export says. */}
+              <div className="mt-1 flex items-center gap-2">
+                {editing ? (
+                  <select
+                    value={draft?.adaptCode ?? ""}
+                    onChange={(e) => setDraft(s.id, { adaptCode: e.target.value })}
+                    disabled={!active}
+                    className="flex-1 rounded border border-[var(--rule)] px-2 py-1 text-xs"
+                  >
+                    <option value="">Kind of work…</option>
+                    {groups.map((g) => (
+                      <optgroup key={g.group} label={g.group}>
+                        {g.items.map((w) => (
+                          <option key={w.code} value={w.code}>
+                            {w.label}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ))}
+                  </select>
+                ) : (
+                  <span className="text-xs text-[var(--text-tert)]">
+                    {workType(s.adapt_code)?.label || "Kind of work not set"}
+                  </span>
+                )}
+              </div>
             </div>
           );
         })}
 
         {editing &&
           newDrafts.map((r) => (
-            <div key={r.clientId} className="flex items-center gap-2 card p-2">
+            <div key={r.clientId} className="card p-2">
+              <div className="flex items-center gap-2">
               <input
                 value={r.name}
                 onChange={(e) => setNewDraft(r.clientId, { name: e.target.value })}
@@ -547,6 +595,29 @@ function ServiceList({ services, unit, currency, onChanged }) {
               >
                 Remove
               </button>
+              </div>
+
+              {/* Required: a service with no work type cannot be recorded in
+                  AgroAPI or exported, so the API refuses it and the row is not
+                  sent rather than saved half-formed. */}
+              <div className="mt-1">
+                <select
+                  value={r.adaptCode}
+                  onChange={(e) => setNewDraft(r.clientId, { adaptCode: e.target.value })}
+                  className="w-full rounded border border-[var(--rule)] px-2 py-1 text-xs"
+                >
+                  <option value="">Kind of work… (required)</option>
+                  {groups.map((g) => (
+                    <optgroup key={g.group} label={g.group}>
+                      {g.items.map((w) => (
+                        <option key={w.code} value={w.code}>
+                          {w.label}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
+              </div>
             </div>
           ))}
       </div>

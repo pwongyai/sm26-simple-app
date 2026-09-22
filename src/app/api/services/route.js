@@ -1,4 +1,5 @@
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { agroCanonicalFor, isValidWorkType } from "@/lib/workTypes";
 import { requireAccess } from "@/lib/ownership";
 import { contractorOrgId, canUseContractor } from "@/lib/contractor";
 
@@ -57,9 +58,24 @@ export async function POST(request) {
     return Response.json({ error: "Contractors only" }, { status: 403 });
   }
 
-  const { name, pricePerUnit, activityCanonical } = await request.json();
+  const { name, pricePerUnit, adaptCode } = await request.json();
   if (!name?.trim()) {
     return Response.json({ error: "Name is required" }, { status: 400 });
+  }
+
+  // The work type is the contractor's ONE choice; the AgroAPI activity type is
+  // derived from it, never asked for separately.
+  //
+  // Until 2026-09-22 this route took `activityCanonical` and the Settings form
+  // hardcoded "other", so every service a contractor created was recorded in
+  // AgroAPI as an unclassified activity — a plowing job permanently filed as
+  // "other" in the system of record — and exported to ADAPT as UNKNOWN. The
+  // column existed, nothing ever set it meaningfully.
+  if (!isValidWorkType(adaptCode)) {
+    return Response.json(
+      { error: "Pick what kind of work this is" },
+      { status: 400 }
+    );
   }
 
   const { data, error } = await supabaseAdmin
@@ -74,7 +90,8 @@ export async function POST(request) {
       contractor_agro_org_id: contractorOrgId(user),
       name: name.trim(),
       price_per_unit: Number(pricePerUnit) || 0,
-      activity_canonical: activityCanonical || "other",
+      adapt_code: adaptCode,
+      activity_canonical: agroCanonicalFor(adaptCode),
     })
     .select()
     .single();
