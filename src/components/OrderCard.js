@@ -3,6 +3,7 @@
 import { areaOut } from "@/lib/units";
 import { useUnits } from "@/lib/useUnits";
 import { fmtDate } from "@/lib/date";
+import { fieldAndOwner } from "@/lib/labels";
 
 // One card layout everywhere an order appears — List, Calendar, Today's Work.
 // Version 2 §8.9: customer name leads (field name is a system construct
@@ -79,7 +80,7 @@ export default function OrderCard({ order, onClick, index }) {
           {index != null && (
             <span className="mr-1.5 text-[var(--text-tert)]">{index}.</span>
           )}
-          {order.farmer?.name || "—"}
+          {fieldAndOwner(order.field_name, order.farmer?.name)}
         </p>
         <p className="truncate text-sm leading-tight text-[var(--text-sec)]">
           {order.activity_type_name || "No work type"}

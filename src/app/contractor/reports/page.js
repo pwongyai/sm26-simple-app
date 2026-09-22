@@ -6,6 +6,7 @@ import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Map from "@/components/Map";
 import FrozenHeaderScroll from "@/components/FrozenHeaderScroll";
+import { fieldAndOwner } from "@/lib/labels";
 
 function fmtTime(iso) {
   if (!iso) return "—";
@@ -272,7 +273,7 @@ function ReportsTabInner() {
             <button key={r.id} className="report-card" onClick={() => openReport(r)}>
               <ReportThumb boundary={r.boundary} />
               <div className="txt">
-                <div className="name">{r.farmer?.name || "Unassigned"}</div>
+                <div className="name">{fieldAndOwner(r.field_name, r.farmer?.name || "Unassigned")}</div>
                 <div className="sub">
                   {r.service_name || r.work_type_name || "—"} · {fmtDate(r.started_at)}
                 </div>
