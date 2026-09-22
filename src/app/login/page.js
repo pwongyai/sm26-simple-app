@@ -46,7 +46,11 @@ export default function LoginPage() {
   const t = useT();
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-6">
+    // Anchored to the top, not vertically centred. Centring means the form
+    // sits at the middle of whatever the viewport currently is, and on iOS the
+    // viewport shrinks when the keyboard opens — so the phone and password
+    // boxes jumped up the moment you tapped them (2026-09-23).
+    <main className="mx-auto flex max-w-sm flex-col px-6 pt-32">
       <h1 className="mb-8 text-xl font-semibold">{t("Smart Machine")}</h1>
 
       <form onSubmit={submit} className="flex flex-col gap-3">
