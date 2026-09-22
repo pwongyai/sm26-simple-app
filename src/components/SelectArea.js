@@ -191,6 +191,9 @@ export default function SelectArea({ machine, points, day, since, until, initial
         since: since || points[0]?.time || new Date().toISOString(),
         until: until || new Date().toISOString(),
       });
+      // Tell the preview which job this is, so the report is for the work
+      // the contractor just matched rather than a guess from the machine.
+      if (match?.workOrderId) query.set("workOrderId", match.workOrderId);
       const res = await fetch(`/api/reports/preview?${query}`);
       const preview = await res.json();
       if (!res.ok) {

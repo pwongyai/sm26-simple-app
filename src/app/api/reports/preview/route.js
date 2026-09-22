@@ -55,6 +55,8 @@ export async function GET(request) {
   const sinceParam = searchParams.get("since");
   const untilParam = searchParams.get("until");
   const serviceIdParam = searchParams.get("serviceId");
+  // Which job this report answers, when the contractor matched one.
+  const workOrderIdParam = searchParams.get("workOrderId");
   // Set only when the contractor corrects the implement on Edit Details —
   // the physical implement was swapped in the field without ever updating
   // Settings' assignment, so this report alone needs a different width than
@@ -247,12 +249,40 @@ export async function GET(request) {
   // default and no first-in-list fallback either — left unselected so the
   // contractor sees a real "choose one" instead of a guessed-wrong service;
   // they can still pick one manually and generate a report either way.
+  // A matched job decides the work type. The contractor has just told us which
+  // job this is; guessing from the machine is only for when he has not.
+  //
+  // Without this, a tractor resolved to `land_preparation` and took the FIRST
+  // service with that name — so matching "2nd Plowing" produced a report for
+  // "1st Plowing", and matching "1st" could produce "2nd". The contractor's own
+  // answer was collected and then ignored (2026-09-23).
+  let matchedService = null;
+  if (workOrderIdParam) {
+    const { data: matchedOrder } = await supabaseAdmin
+      .from("work_orders")
+      .select("activity_type_name, activity_type_id")
+      .eq("id", workOrderIdParam)
+      .eq("contractor_org_id", contractorOrgId(user))
+      .maybeSingle();
+    if (matchedOrder) {
+      // The order's work type IS the service name: that is what the farmer
+      // chose from this contractor's own price list, and what Add Work Order
+      // writes. Falls through to the canonical match if a service was renamed
+      // after the job was booked.
+      matchedService =
+        services.find((s) => s.name === matchedOrder.activity_type_name) || null;
+    }
+  }
+
   const defaultService = defaultCanonical
     ? services.find((s) => s.activity_canonical === defaultCanonical)
     : null;
   const service = serviceIdParam
     ? services.find((s) => s.id === serviceIdParam) || services[0] || null
-    : defaultService || (machineDoesFieldwork ? services[0] : null) || null;
+    : matchedService ||
+      defaultService ||
+      (machineDoesFieldwork ? services[0] : null) ||
+      null;
 
   const [widthResolved, fuelResolved] = await Promise.all([
     resolveWidth({ machineId, points: track.points }),
