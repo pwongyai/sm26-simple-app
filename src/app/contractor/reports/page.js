@@ -356,7 +356,7 @@ function ViewReport({ report: r, onClose, onTogglePaid }) {
       </div>
 
       <div className="ov-body">
-        <Map boundary={r.boundary} track={r.track_points} height={220} />
+        <Map boundary={r.boundary} track={r.track_points} height={180} />
 
         <div className="spec-card">
           <div className="pilltabs">
@@ -644,7 +644,7 @@ function CreateReport({ onClose, onCreated, onViewExisting }) {
 
         {status === "reviewing" && !done && (
           <>
-            <Map boundary={chosen.boundary} track={chosen.trackPoints} height={220} />
+            <Map boundary={chosen.boundary} track={chosen.trackPoints} height={180} />
 
             {chosen.parts?.length > 1 && (
               <p className="rounded bg-black/5 p-2 text-xs text-[var(--text-sec)]">
