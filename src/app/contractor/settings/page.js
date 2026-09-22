@@ -2,6 +2,7 @@
 
 
 import { ADAPT_VERSION, groupedWorkTypes, workType } from "@/lib/workTypes";
+import { AREA_UNITS, CURRENCIES, areaUnit } from "@/lib/units";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { logout } from "@/lib/useSession";
@@ -92,6 +93,14 @@ export default function SettingsTab() {
       />
 
       <Language profile={profile} onChanged={() => { load(); flash("Language saved"); }} />
+
+      <CurrencyAndArea
+        settings={settings}
+        onChanged={() => {
+          load();
+          flash("Saved");
+        }}
+      />
 
       <LogOut />
     </>
@@ -697,6 +706,106 @@ function Language({ profile, onChanged }) {
       <p className="mt-1 text-[11px] text-[var(--text-tert)]">
         Sets your preference — the rest of the app stays in English for now.
       </p>
+    </section>
+  );
+}
+
+// What the community bills and measures in.
+//
+// Deliberately a COMMUNITY setting, not a contractor one (review item R4): one
+// community bills in one currency and measures in one unit, and a contractor
+// and a farmer looking at the same field must never disagree about what it
+// measures. So changing this changes what every farmer here sees too, which
+// the note below says out loud.
+//
+// Safe to change whenever: each work report freezes its own currency and unit
+// label at creation, so past reports keep reading in whatever was set when the
+// work was done.
+function CurrencyAndArea({ settings, onChanged }) {
+  const [editing, setEditing] = useState(false);
+  const [currency, setCurrency] = useState(settings.currency);
+  const [unit, setUnit] = useState(settings.areaUnit);
+  const [busy, setBusy] = useState(false);
+
+  function startEdit() {
+    setCurrency(settings.currency);
+    setUnit(settings.areaUnit);
+    setEditing(true);
+  }
+
+  async function save() {
+    setBusy(true);
+    await fetch("/api/settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ currency, areaUnit: unit }),
+    });
+    setBusy(false);
+    setEditing(false);
+    onChanged();
+  }
+
+  const chosen = areaUnit(unit);
+
+  if (!editing) {
+    return (
+      <section className="mb-6">
+        <SectionHeader title="Currency &amp; Area Unit" onEdit={startEdit} />
+        <div className="flex flex-col gap-1.5">
+          <ViewRow label="Currency" value={settings.currency} />
+          <ViewRow
+            label="Area unit"
+            value={
+              settings.areaUnitM2
+                ? `${settings.areaUnit} · ${Number(settings.areaUnitM2).toLocaleString()} m²`
+                : settings.areaUnit
+            }
+          />
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="mb-6">
+      <h2 className="mb-2 text-sm font-semibold">Currency &amp; Area Unit</h2>
+      <div className="fieldset-note">
+        Applies to everyone in this community, not just you. Reports already
+        written keep the currency and unit they were created with.
+      </div>
+
+      <label className="mb-1 block text-xs text-[var(--text-sec)]">Currency</label>
+      <select
+        value={currency}
+        onChange={(e) => setCurrency(e.target.value)}
+        className="mb-3 w-full rounded border border-[var(--rule)] px-2 py-2 text-sm"
+      >
+        {CURRENCIES.map((c) => (
+          <option key={c.code} value={c.code}>
+            {c.label} — {c.note}
+          </option>
+        ))}
+      </select>
+
+      <label className="mb-1 block text-xs text-[var(--text-sec)]">Area unit</label>
+      <select
+        value={unit}
+        onChange={(e) => setUnit(e.target.value)}
+        className="w-full rounded border border-[var(--rule)] px-2 py-2 text-sm"
+      >
+        {AREA_UNITS.map((u) => (
+          <option key={u.unit} value={u.unit}>
+            {u.unit} — {u.note}
+          </option>
+        ))}
+      </select>
+      {chosen && (
+        <p className="mt-1 text-[11px] text-[var(--text-tert)]">
+          1 {chosen.unit} = {chosen.m2.toLocaleString()} m²
+        </p>
+      )}
+
+      <EditActions busy={busy} onCancel={() => setEditing(false)} onSave={save} />
     </section>
   );
 }
