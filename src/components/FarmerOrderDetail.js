@@ -56,7 +56,7 @@ export default function FarmerOrderDetail({ order, onClose, onChanged }) {
     ["Farmer Name", report.farmer?.name || "Unassigned"],
     ["Work Type", report.service_name || report.work_type_name || "—"],
     ["Total Hours", report.hours != null ? `${report.hours} hr` : "—"],
-    ["Start Time", fmtTime(report.started_at)],
+    ["Start Time", report.agro_machine_id ? fmtTime(report.started_at) : "—"],
     ["Stop Time", fmtTime(report.ended_at)],
     ["Crop Area", `${report.field_area_units ?? "—"} ${report.unit_label || ""}`],
     ["Work Area", `${report.work_area_units ?? "—"} ${report.unit_label || ""}`],

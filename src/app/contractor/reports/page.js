@@ -320,7 +320,10 @@ function ViewReport({ report: r, onClose, onTogglePaid }) {
     ["Farmer Name", r.farmer?.name || "Unassigned"],
     ["Work Type", r.service_name || r.work_type_name || "—"],
     ["Total Hours", r.hours != null ? `${r.hours} hr` : "—"],
-    ["Start Time", fmtTime(r.started_at)],
+    // No machine, no clock. The start time came out as 07:00 on a report
+    // nobody timed — midnight UTC read in Hanoi — which looks like a
+    // measurement and is not one.
+    ["Start Time", r.agro_machine_id ? fmtTime(r.started_at) : "—"],
     ["Stop Time", fmtTime(r.ended_at)],
     ["Crop Area", `${r.field_area_units ?? "—"} ${r.unit_label || ""}`],
     ["Work Area", `${r.work_area_units ?? "—"} ${r.unit_label || ""}`],
