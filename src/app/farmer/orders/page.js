@@ -5,6 +5,7 @@ import { useOrders } from "@/lib/useOrders";
 import { markSeen } from "@/lib/store";
 import StatusBadge from "@/components/StatusBadge";
 import FarmerOrderDetail from "@/components/FarmerOrderDetail";
+import { fmtDate } from "@/lib/date";
 
 export default function FarmerOrdersTab() {
   const [orders, refresh] = useOrders();
@@ -45,7 +46,7 @@ export default function FarmerOrdersTab() {
                   </span>
                 )}
               </div>
-              <span className="text-xs text-[var(--text-tert)]">{o.scheduled_date}</span>
+              <span className="text-xs text-[var(--text-tert)]">{fmtDate(o.scheduled_date)}</span>
             </div>
             <p className="font-medium">{o.field_name}</p>
             <p className="text-[var(--text-sec)]">{o.activity_type_name}</p>

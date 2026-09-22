@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { logout } from "@/lib/useSession";
+import { fmtDate } from "@/lib/date";
 
 // Profile — version 3 §4/§11.6: the farmer's own details, who they're
 // connected to, and the way out. No language toggle yet; that's listed in the
@@ -259,7 +260,7 @@ export default function ProfileTab() {
         <div className="detail-row">
           <div className="lbl">Joined</div>
           <div className="val">
-            {me.joinedAt ? new Date(me.joinedAt).toLocaleDateString() : "—"}
+            {fmtDate(me.joinedAt)}
           </div>
         </div>
       </div>

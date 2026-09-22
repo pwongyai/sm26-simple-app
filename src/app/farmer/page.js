@@ -6,6 +6,7 @@ import RequestService from "@/components/RequestService";
 import AddFieldFlow from "@/components/AddFieldFlow";
 import FieldThumb from "@/components/FieldThumb";
 import { cropLabel } from "@/lib/crop";
+import { fmtDayMonth } from "@/lib/date";
 
 // My Fields — one list of every plot.
 //
@@ -16,9 +17,6 @@ import { cropLabel } from "@/lib/crop";
 // says where its crop stands, which is the useful part.
 
 
-function fmtDate(iso) {
-  return new Date(iso).toLocaleDateString([], { day: "numeric", month: "short" });
-}
 
 // Why this field sits where it does. "Unspecified" is AgroAPI's placeholder for
 // a planting whose crop nobody recorded — still a real crop in the ground.
@@ -112,7 +110,7 @@ export default function MyFieldsTab() {
                         place once there is a date on it. */}
                     {f.plantingDate && (
                       <p className="text-xs text-[var(--text-sec)]">
-                        Planted {fmtDate(f.plantingDate)}
+                        Planted {fmtDayMonth(f.plantingDate)}
                       </p>
                     )}
                     <p className="text-xs text-[var(--text-tert)]">{cropStatus(f)}</p>

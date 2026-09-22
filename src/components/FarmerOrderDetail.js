@@ -6,16 +6,13 @@ import { useEffect, useState } from "react";
 import { deleteOrder } from "@/lib/store";
 import StatusBadge from "@/components/StatusBadge";
 import Map from "@/components/Map";
+import { fmtDate } from "@/lib/date";
 
 function fmtTime(iso) {
   if (!iso) return "—";
   return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
-function fmtDate(iso) {
-  if (!iso) return "";
-  return new Date(iso).toLocaleDateString([], { day: "numeric", month: "short", year: "numeric" });
-}
 
 const OVERVIEW_TAB = "overview";
 const MACHINE_TAB = "machine";
@@ -224,12 +221,12 @@ export default function FarmerOrderDetail({ order, onClose, onChanged }) {
           </div>
           <div className="detail-row">
             <div className="lbl">Scheduled</div>
-            <div className="val">{order.scheduled_date || "No date"}</div>
+            <div className="val">{order.scheduled_date ? fmtDate(order.scheduled_date) : "No date"}</div>
           </div>
           <div className="detail-row">
             <div className="lbl">Requested</div>
             <div className="val">
-              {new Date(`${order.booking_date}T00:00:00`).toLocaleDateString()}
+              {fmtDate(order.booking_date)}
             </div>
           </div>
           {/* Shown to the farmer too: the note is usually about their field

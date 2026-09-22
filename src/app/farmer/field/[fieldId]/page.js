@@ -8,6 +8,7 @@ import Map from "@/components/Map";
 import { cropLabel } from "@/lib/crop";
 import ManageField from "@/components/ManageField";
 import RequestService from "@/components/RequestService";
+import { fmtDate, fmtDateTime } from "@/lib/date";
 
 // Field Detail — version 3 §11.17: Map / Weather / Activities as three tabs,
 // because one long scroll was too crowded. Everything here is real: the
@@ -39,22 +40,7 @@ const TABS = [
   { key: "activities", label: "Activities" },
 ];
 
-function fmtDate(iso) {
-  return new Date(iso).toLocaleDateString([], {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
 
-function fmtDateTime(iso) {
-  return new Date(iso).toLocaleString([], {
-    day: "numeric",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
 
 export default function FieldDetailPage({ params }) {
   const { areaUnit: unitLabel, areaUnitM2 } = useUnits();

@@ -55,7 +55,7 @@ export default function AddFieldFlow({ unit, unitM2, onClose, onCreated }) {
 
   const areaUnits = useMemo(() => {
     if (points.length < 3) return null;
-    return areaOut(polygonAreaM2(points), unitM2, 2);
+    return areaOut(polygonAreaM2(points), unitM2);
   }, [points, unitM2]);
 
   const matches = useMemo(() => {

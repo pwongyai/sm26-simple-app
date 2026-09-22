@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { polygonAreaM2 } from "@/lib/engine";
 import { cropLabel } from "@/lib/crop";
+import { fmtDate } from "@/lib/date";
 
 const DrawMap = dynamic(() => import("@/components/DrawMap"), {
   ssr: false,
@@ -65,7 +66,7 @@ export default function ManageField({
   }, [view, crops]);
 
   const areaUnits = useMemo(
-    () => (points.length >= 3 ? areaOut(polygonAreaM2(points), unitM2, 2) : null),
+    () => (points.length >= 3 ? areaOut(polygonAreaM2(points), unitM2) : null),
     [points, unitM2]
   );
 
@@ -160,7 +161,7 @@ export default function ManageField({
                 <b>Planting date</b>
                 <span>
                   {cropzone.planting_date
-                    ? new Date(cropzone.planting_date).toLocaleDateString()
+                    ? fmtDate(cropzone.planting_date)
                     : "Not set"}
                 </span>
               </div>

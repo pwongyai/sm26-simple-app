@@ -2,6 +2,7 @@
 
 import { areaOut } from "@/lib/units";
 import { useUnits } from "@/lib/useUnits";
+import { fmtDate } from "@/lib/date";
 
 // One card layout everywhere an order appears — List, Calendar, Today's Work.
 // Version 2 §8.9: customer name leads (field name is a system construct
@@ -85,10 +86,7 @@ export default function OrderCard({ order, onClick, index }) {
         </p>
         <p className="text-xs leading-tight text-[var(--text-tert)]">
           {order.scheduled_date
-            ? new Date(`${order.scheduled_date}T00:00:00`).toLocaleDateString([], {
-                day: "numeric",
-                month: "short",
-              })
+            ? fmtDate(order.scheduled_date)
             : "No date"}
         </p>
       </div>

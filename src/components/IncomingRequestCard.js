@@ -4,6 +4,7 @@ import { areaIn, areaOut } from "@/lib/units";
 import { useUnits } from "@/lib/useUnits";
 import { useState } from "react";
 import { updateOrder } from "@/lib/store";
+import { fmtDate } from "@/lib/date";
 
 // The richer per-request card version 3 uses inside Incoming Requests — Accept/
 // Decline (with an inline date adjust) happen right here, no detour through
@@ -44,7 +45,7 @@ export default function IncomingRequestCard({ order, onChanged }) {
       <p className="text-xs text-[var(--text-tert)]">
         Requested:{" "}
         {order.booking_date
-          ? new Date(`${order.booking_date}T00:00:00`).toLocaleDateString()
+          ? fmtDate(order.booking_date)
           : "—"}
       </p>
 

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { createOrder } from "@/lib/store";
 import { boundaryCentre } from "@/lib/engine";
 import FieldThumb from "@/components/FieldThumb";
+import { fmtDate } from "@/lib/date";
 
 // Request Contractor — five steps, in order:
 //   Field → Contractor → Service → Preferred Date → Review.
@@ -289,7 +290,7 @@ export default function RequestService({
               <div className="txt">
                 <b>
                   {isCustom
-                    ? `✓ ${new Date(`${date}T00:00:00`).toLocaleDateString()}`
+                    ? `✓ ${fmtDate(date)}`
                     : "📅 Choose another date"}
                 </b>
                 {!isCustom && <span>Not one of the days above? Pick any date.</span>}
@@ -327,7 +328,7 @@ export default function RequestService({
             <div className="detail-row">
               <div className="lbl">Preferred Date</div>
               <div className="val">
-                {date && new Date(`${date}T00:00:00`).toLocaleDateString()}
+                {date && fmtDate(date)}
               </div>
             </div>
           </div>

@@ -6,16 +6,13 @@ import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Map from "@/components/Map";
 import FrozenHeaderScroll from "@/components/FrozenHeaderScroll";
+import { fmtDate } from "@/lib/date";
 
 function fmtTime(iso) {
   if (!iso) return "—";
   return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
-function fmtDate(iso) {
-  if (!iso) return "";
-  return new Date(iso).toLocaleDateString([], { day: "numeric", month: "short", year: "numeric" });
-}
 
 // v3's ledger filters: This Month/Week/Today are rolling windows ending
 // today (not calendar boundaries) — matches `reportDateInRange` in
@@ -268,7 +265,7 @@ function ReportsTabInner() {
                   {r.work_type_name || r.service_name || "—"} · {fmtDate(r.started_at)}
                 </div>
                 <div className="sub">
-                  {Number(r.field_area_units ?? 0).toFixed(2)} {r.unit_label} · {r.percent_worked ?? 0}% work area
+                  {Number(r.field_area_units ?? 0).toFixed(1)} {r.unit_label} · {r.percent_worked ?? 0}% work area
                   {r.machine_name ? ` · ${r.machine_name}` : ""}
                 </div>
               </div>

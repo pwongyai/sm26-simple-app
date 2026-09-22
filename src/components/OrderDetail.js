@@ -5,6 +5,7 @@ import { useUnits } from "@/lib/useUnits";
 import { useState } from "react";
 import { updateOrder, deleteOrder, completeOrder } from "@/lib/store";
 import { daysLate } from "@/components/OrderCard";
+import { fmtDate } from "@/lib/date";
 
 // One shared detail screen, opened from every view — version 2 §8.1: no
 // per-tab detail screens, because automated and manual entries must never look
@@ -199,7 +200,7 @@ export default function OrderDetail({ order, services, onClose, onChanged }) {
             </div>
             <div className="detail-row">
               <div className="lbl">Scheduled</div>
-              <div className="val">{order.scheduled_date || "No date"}</div>
+              <div className="val">{order.scheduled_date ? fmtDate(order.scheduled_date) : "No date"}</div>
             </div>
             <div className="detail-row">
               <div className="lbl">Crop size</div>
@@ -224,7 +225,7 @@ export default function OrderDetail({ order, services, onClose, onChanged }) {
             <div className="detail-row">
               <div className="lbl">Written down</div>
               <div className="val">
-                {new Date(`${order.booking_date}T00:00:00`).toLocaleDateString()}
+                {fmtDate(order.booking_date)}
               </div>
             </div>
             {order.status === "completed" && order.agro_activity_id && (

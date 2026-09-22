@@ -219,7 +219,7 @@ export default function SelectArea({ machine, points, day, since, until, initial
 
   const areaRai =
     drawPoints.length >= 3
-      ? toUnits(polygonAreaM2(drawPoints.map((p) => [p.lng, p.lat])), areaUnitM2, 2)
+      ? toUnits(polygonAreaM2(drawPoints.map((p) => [p.lng, p.lat])), areaUnitM2)
       : null;
 
   const q = query.trim().toLowerCase();
