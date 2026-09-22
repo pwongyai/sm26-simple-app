@@ -83,3 +83,34 @@ export function groupedWorkTypes() {
     .map((group) => ({ group, items: WORK_TYPES.filter((w) => w.group === group) }))
     .filter((g) => g.items.length);
 }
+
+// Which machine kinds do fieldwork a report can be made for, and what a report
+// defaults to when the contractor has not chosen a service yet.
+//
+// Both were deleted with the old work-type list in "Ask what kind of work a
+// service is" (1094d58) while /api/reports/preview still imported them, which
+// broke the report preview outright — the screen nobody reached again until
+// the Huong Ngai walk (2026-09-23).
+export const MACHINE_KIND_DEFAULT_CANONICAL = {
+  tractor: "land_preparation",
+  harvester: "harvesting",
+  planter: "planting",
+};
+
+// A utility vehicle, grain dryer, quality analyzer or greenhouse controller
+// never does work a field report should be written for. Refused outright
+// rather than silently defaulting to an unrelated service.
+export const NO_FIELDWORK_KINDS = [
+  "utility_vehicle",
+  "grain_dryer",
+  "grain_quality_analyzer",
+  "green_house_controller",
+];
+
+export function doesFieldwork(kind) {
+  return !NO_FIELDWORK_KINDS.includes(kind);
+}
+
+export function defaultCanonicalForKind(kind) {
+  return MACHINE_KIND_DEFAULT_CANONICAL[kind] || null;
+}
