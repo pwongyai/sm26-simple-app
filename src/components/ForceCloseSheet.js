@@ -178,7 +178,7 @@ export default function ForceCloseSheet({ order, services, onCancel, onDone }) {
           disabled={busy || !service}
           onClick={submit}
         >
-          {busy ? "Closing…" : "Close & bill"}
+          {busy ? "Closing…" : "Force Close"}
         </button>
       </div>
     </div>

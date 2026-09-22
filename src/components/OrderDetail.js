@@ -111,7 +111,7 @@ export default function OrderDetail({ order, services, onClose, onChanged }) {
             <b>
               {late} {late === 1 ? "day" : "days"} late.
             </b>{" "}
-            If the job is done, close it below.
+            If the job is done, use Force Close below.
           </div>
         )}
 
@@ -291,7 +291,7 @@ export default function OrderDetail({ order, services, onClose, onChanged }) {
                 style={{ color: "var(--accent)" }}
                 onClick={() => setConfirmingForceClose(true)}
               >
-                Close without machine
+                Force Close
               </button>
             )}
             <button className="btn btn-primary" onClick={() => setEditing(true)}>
