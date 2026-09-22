@@ -80,22 +80,22 @@ export default function MyFieldsTab() {
   return (
     <>
       <div className="my-3 flex items-center justify-between gap-2">
-        <h1 className="text-base font-bold">{t(t("My Fields"))}</h1>
+        <h1 className="text-base font-bold">{t("My Fields")}</h1>
         <button
           className="pill"
           onClick={() => setRequesting(true)}
           disabled={fields.length === 0}
-        >{t(t("Request Contractor"))}</button>
+        >{t("Request Contractor")}</button>
       </div>
 
       {error && <p className="text-sm text-[var(--danger)]">{error}</p>}
-      {!data && !error && <p className="empty-msg">{t(t("Loading…"))}</p>}
+      {!data && !error && <p className="empty-msg">{t("Loading…")}</p>}
 
       {data && (
         <>
           <div className="flex flex-col gap-2">
             {fields.length === 0 && (
-              <p className="empty-msg">{t(t("No plots registered to you yet."))}</p>
+              <p className="empty-msg">{t("No plots registered to you yet.")}</p>
             )}
 
             {fields.map((f) => (
@@ -122,7 +122,7 @@ export default function MyFieldsTab() {
                 <Link
                   href={`/farmer/field/${f.cropzoneId || f.fieldId}`}
                   className="btn btn-outline mt-3 block w-full text-center"
-                >{t(t("View Field"))}</Link>
+                >{t("View Field")}</Link>
               </div>
             ))}
           </div>

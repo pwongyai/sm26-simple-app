@@ -9,6 +9,7 @@ import { cropLabel } from "@/lib/crop";
 import ManageField from "@/components/ManageField";
 import RequestService from "@/components/RequestService";
 import { fmtDate, fmtDateTime } from "@/lib/date";
+import { useT } from "@/lib/i18n";
 
 // Field Detail — version 3 §11.17: Map / Weather / Activities as three tabs,
 // because one long scroll was too crowded. Everything here is real: the
@@ -43,6 +44,7 @@ const TABS = [
 
 
 export default function FieldDetailPage({ params }) {
+  const t = useT();
   const { areaUnit: unitLabel, areaUnitM2 } = useUnits();
   const { fieldId: cropzoneId } = use(params);
   const router = useRouter();
@@ -80,7 +82,7 @@ export default function FieldDetailPage({ params }) {
         setCropzone(cz);
         setActivities(acts);
       } catch {
-        setError("Could not load this field from AgroAPI.");
+        setError(t("Could not load this field from AgroAPI."));
       }
     }
   }, [cropzoneId]);
@@ -112,7 +114,7 @@ export default function FieldDetailPage({ params }) {
         );
         setNdvi(await res.json());
       } catch {
-        setNdvi({ error: "Could not load NDVI." });
+        setNdvi({ error: t("Could not load NDVI.") });
       }
     },
     [cropzoneId, ndvi]
@@ -130,18 +132,14 @@ export default function FieldDetailPage({ params }) {
   }, [tab, forecast, cropzone, cropzoneId]);
 
   if (error) return <p className="text-sm text-[var(--danger)]">{error}</p>;
-  if (!cropzone) return <p className="empty-msg">Loading…</p>;
+  if (!cropzone) return <p className="empty-msg">{t("Loading…")}</p>;
   // A cropzone that's been archived or renewed is no longer yours to view; the
   // proxy returns a 404 body, which must not be rendered as a field.
   if (!cropzone.id) {
     return (
       <div className="mt-6">
-        <p className="empty-msg">
-          This crop is no longer active — it may have been archived or renewed.
-        </p>
-        <Link href="/farmer" className="btn btn-outline block text-center">
-          Back to My Fields
-        </Link>
+        <p className="empty-msg">{t("This crop is no longer active — it may have been archived or renewed.")}</p>
+        <Link href="/farmer" className="btn btn-outline block text-center">{t("Back to My Fields")}</Link>
       </div>
     );
   }
@@ -153,7 +151,7 @@ export default function FieldDetailPage({ params }) {
   const crop = cropLabel(cropzone.crop);
   // AgroAPI's own prediction, from its crop engine.
   const maturityDate = cropzone.predicted?.maturity_date || null;
-  const cropRecorded = crop !== "Crop not recorded";
+  const cropRecorded = crop !== t("Crop not recorded");
   const place = [cropzone.subdistrict, cropzone.district, cropzone.region]
     .filter(Boolean)
     .join(", ");
@@ -205,7 +203,7 @@ export default function FieldDetailPage({ params }) {
                   ? "—"
                   : !cropRecorded
                     ? "needs a crop — none recorded yet"
-                    : "No prediction yet"}
+                    : t("No prediction yet")}
               </span>
             )}
           </p>
@@ -213,13 +211,14 @@ export default function FieldDetailPage({ params }) {
       </div>
 
       <div className="pilltabs mb-3">
-        {TABS.map((t) => (
+        {/* `tb`, not `t` — the translator is already called `t` here. */}
+        {TABS.map((tb) => (
           <button
-            key={t.key}
-            className={tab === t.key ? "active" : ""}
-            onClick={() => setTab(t.key)}
+            key={tb.key}
+            className={tab === tb.key ? "active" : ""}
+            onClick={() => setTab(tb.key)}
           >
-            {t.label}
+            {t(tb.label)}
           </button>
         ))}
       </div>
@@ -232,18 +231,14 @@ export default function FieldDetailPage({ params }) {
             <button
               className={`pill ${layer === "normal" ? "pill-active" : ""}`}
               onClick={() => setLayer("normal")}
-            >
-              Normal
-            </button>
+            >{t("Normal")}</button>
             <button
               className={`pill ${layer === "ndvi" ? "pill-active" : ""}`}
               onClick={() => {
                 setLayer("ndvi");
                 loadNdvi();
               }}
-            >
-              NDVI
-            </button>
+            >{t("NDVI")}</button>
           </div>
 
           <Map
@@ -259,9 +254,7 @@ export default function FieldDetailPage({ params }) {
           {layer === "ndvi" && (
             <div className="mt-2">
               {ndvi?.loading && (
-                <p className="text-xs text-[var(--text-tert)]">
-                  Decoding satellite capture…
-                </p>
+                <p className="text-xs text-[var(--text-tert)]">{t("Decoding satellite capture…")}</p>
               )}
               {ndvi?.error && (
                 <p className="fieldset-note">{ndvi.error}</p>
@@ -291,17 +284,15 @@ export default function FieldDetailPage({ params }) {
                       (2026-09-22). The refresh still checks for a newer
                       capture; it is now the icon rather than a sentence. */}
                   <p className="mt-1 flex items-center justify-between text-xs text-[var(--text-sec)]">
-                    <span>
-                      Mean NDVI <b>{ndvi.meanNdvi}</b>
+                    <span>{t("Mean NDVI")}<b>{ndvi.meanNdvi}</b>
                     </span>
                   </p>
                   <p className="flex items-center justify-between text-[11px] text-[var(--text-tert)]">
-                    <span>
-                      Satellite captured <b>{fmtDate(ndvi.date)}</b>
+                    <span>{t("Satellite captured")}<b>{fmtDate(ndvi.date)}</b>
                     </span>
                     <button
                       onClick={() => loadNdvi(true)}
-                      aria-label="Check for a newer image"
+                      aria-label={t("Check for a newer image")}
                       className="px-1 text-sm"
                     >
                       ↻
@@ -320,7 +311,7 @@ export default function FieldDetailPage({ params }) {
 
       {tab === "weather" && (
         <div className="flex flex-col gap-3">
-          {!forecast && <p className="empty-msg">Loading weather…</p>}
+          {!forecast && <p className="empty-msg">{t("Loading weather…")}</p>}
 
           {/* Right now */}
           {forecast?.current && (
@@ -390,7 +381,7 @@ export default function FieldDetailPage({ params }) {
               last five years' range this period is most likely to fall in. */}
           {forecast?.seasonal?.length > 0 && (
             <div className="card p-3">
-              <p className="field-label">Seasonal outlook</p>
+              <p className="field-label">{t("Seasonal outlook")}</p>
               {forecast.seasonal.map((s) => (
                 <div
                   key={s.label}
@@ -431,7 +422,7 @@ export default function FieldDetailPage({ params }) {
           )}
 
           {forecast && !forecast.current && forecast.daily?.length === 0 && (
-            <p className="empty-msg">No weather available for this field.</p>
+            <p className="empty-msg">{t("No weather available for this field.")}</p>
           )}
         </div>
       )}
@@ -487,9 +478,9 @@ export default function FieldDetailPage({ params }) {
 
       {tab === "activities" && (
         <div className="flex flex-col gap-2">
-          {!activities && <p className="empty-msg">Loading…</p>}
+          {!activities && <p className="empty-msg">{t("Loading…")}</p>}
           {activities?.length === 0 && (
-            <p className="empty-msg">No work recorded on this field yet.</p>
+            <p className="empty-msg">{t("No work recorded on this field yet.")}</p>
           )}
           {activities?.map((a) => (
             <div key={a.id} className="card p-3">

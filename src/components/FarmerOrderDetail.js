@@ -98,13 +98,13 @@ export default function FarmerOrderDetail({ order, onClose, onChanged }) {
     return (
       <div className="overlay">
         <div className="ov-header">
-          <button className="ov-back" onClick={onClose} aria-label={t(t("Back"))}>
+          <button className="ov-back" onClick={onClose} aria-label={t("Back")}>
             ←
           </button>
-          <span className="ov-title">{t(t("Work Order"))}</span>
+          <span className="ov-title">{t("Work Order")}</span>
         </div>
         <div className="ov-body">
-          <p className="empty-msg">{t(t("Loading…"))}</p>
+          <p className="empty-msg">{t("Loading…")}</p>
         </div>
       </div>
     );
@@ -118,10 +118,10 @@ export default function FarmerOrderDetail({ order, onClose, onChanged }) {
     return (
       <div className="overlay">
         <div className="ov-header">
-          <button className="ov-back" onClick={onClose} aria-label={t(t("Back"))}>
+          <button className="ov-back" onClick={onClose} aria-label={t("Back")}>
             ←
           </button>
-          <span className="ov-title">{t(t("Review Work Report"))}</span>
+          <span className="ov-title">{t("Review Work Report")}</span>
         </div>
 
         <div className="ov-body">
@@ -132,11 +132,11 @@ export default function FarmerOrderDetail({ order, onClose, onChanged }) {
               <button
                 className={tab === OVERVIEW_TAB ? "active" : ""}
                 onClick={() => setTab(OVERVIEW_TAB)}
-              >{t(t("Overview"))}</button>
+              >{t("Overview")}</button>
               <button
                 className={tab === MACHINE_TAB ? "active" : ""}
                 onClick={() => setTab(MACHINE_TAB)}
-              >{t(t("Machine"))}</button>
+              >{t("Machine")}</button>
             </div>
             <div className="spec-grid">
               {(tab === OVERVIEW_TAB ? overviewFields : machineFields).map(([lbl, val]) => (
@@ -149,7 +149,7 @@ export default function FarmerOrderDetail({ order, onClose, onChanged }) {
           </div>
 
           <div className="flex items-center justify-between rounded-xl border border-[var(--rule)] bg-white p-3">
-            <span className="text-sm text-[var(--text-sec)]">{t(t("Total charge"))}</span>
+            <span className="text-sm text-[var(--text-sec)]">{t("Total charge")}</span>
             <span className="text-lg font-semibold">
               {fmtMoney(Number(report.service_charge), report.currency)}
             </span>
@@ -163,7 +163,7 @@ export default function FarmerOrderDetail({ order, onClose, onChanged }) {
         </div>
 
         <div className="ov-footer">
-          <button onClick={onClose} className="btn btn-primary w-full">{t(t("Close"))}</button>
+          <button onClick={onClose} className="btn btn-primary w-full">{t("Close")}</button>
         </div>
       </div>
     );
@@ -172,30 +172,30 @@ export default function FarmerOrderDetail({ order, onClose, onChanged }) {
   return (
     <div className="overlay">
       <div className="ov-header">
-        <button className="ov-back" onClick={onClose} aria-label={t(t("Back"))}>
+        <button className="ov-back" onClick={onClose} aria-label={t("Back")}>
           ←
         </button>
-        <span className="ov-title">{t(t("Work Order"))}</span>
+        <span className="ov-title">{t("Work Order")}</span>
       </div>
 
       <div className="ov-body">
         <div className="detail-card">
           <div className="detail-row">
-            <div className="lbl">{t(t("Status"))}</div>
+            <div className="lbl">{t("Status")}</div>
             <div className="val">
               <StatusBadge status={order.status} />
             </div>
           </div>
           <div className="detail-row">
-            <div className="lbl">{t(t("Field"))}</div>
+            <div className="lbl">{t("Field")}</div>
             <div className="val">{order.field_name || "—"}</div>
           </div>
           <div className="detail-row">
-            <div className="lbl">{t(t("Work type"))}</div>
+            <div className="lbl">{t("Work type")}</div>
             <div className="val">{order.activity_type_name || t("Not set")}</div>
           </div>
           <div className="detail-row">
-            <div className="lbl">{t(t("Crop size"))}</div>
+            <div className="lbl">{t("Crop size")}</div>
             <div className="val">
               {order.crop_size_m2 != null
                 ? `${areaOut(order.crop_size_m2, areaUnitM2)} ${areaUnit}`
@@ -203,11 +203,11 @@ export default function FarmerOrderDetail({ order, onClose, onChanged }) {
             </div>
           </div>
           <div className="detail-row">
-            <div className="lbl">{t(t("Scheduled"))}</div>
+            <div className="lbl">{t("Scheduled")}</div>
             <div className="val">{order.scheduled_date ? fmtDate(order.scheduled_date) : t("No date")}</div>
           </div>
           <div className="detail-row">
-            <div className="lbl">{t(t("Requested"))}</div>
+            <div className="lbl">{t("Requested")}</div>
             <div className="val">
               {fmtDate(order.booking_date)}
             </div>
@@ -217,7 +217,7 @@ export default function FarmerOrderDetail({ order, onClose, onChanged }) {
               guessing about their own job. */}
           {order.note && (
             <div className="detail-row">
-              <div className="lbl">{t(t("Note"))}</div>
+              <div className="lbl">{t("Note")}</div>
               <div className="val">{order.note}</div>
             </div>
           )}
@@ -258,7 +258,7 @@ export default function FarmerOrderDetail({ order, onClose, onChanged }) {
               className="btn btn-outline"
               style={{ color: "var(--danger)" }}
               onClick={() => setConfirmingCancel(true)}
-            >{t(t("Cancel request"))}</button>
+            >{t("Cancel request")}</button>
           )}
         </div>
       )}

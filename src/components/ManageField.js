@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import { polygonAreaM2 } from "@/lib/engine";
 import { cropLabel } from "@/lib/crop";
 import { fmtDate } from "@/lib/date";
+import { useT } from "@/lib/i18n";
 
 const DrawMap = dynamic(() => import("@/components/DrawMap"), {
   ssr: false,
@@ -13,9 +14,7 @@ const DrawMap = dynamic(() => import("@/components/DrawMap"), {
     <div
       className="flex items-center justify-center rounded-xl border border-[var(--rule)] bg-[var(--map-b)] text-xs text-[var(--text-tert)]"
       style={{ height: 340 }}
-    >
-      Loading satellite…
-    </div>
+    >Loading satellite…</div>
   ),
 });
 
@@ -40,6 +39,7 @@ export default function ManageField({
   onChanged,
   onRenewed,
 }) {
+  const t = useT();
   const fieldId = cropzone.field?.id;
 
   const [view, setView] = useState("menu");
@@ -104,7 +104,7 @@ export default function ManageField({
     setBusy(false);
     setConfirmRenew(false);
     if (!res.ok) {
-      setError(data.error || "Could not start a new season.");
+      setError(data.error || t("Could not start a new season."));
       return;
     }
     // Renewing creates a *different* cropzone, and the old one is now archived
@@ -119,11 +119,11 @@ export default function ManageField({
         <button
           className="ov-back"
           onClick={() => (view === "menu" ? onClose() : setView("menu"))}
-          aria-label="Back"
+          aria-label={t("Back")}
         >
           ←
         </button>
-        <span className="ov-title">{VIEWS[view]}</span>
+        <span className="ov-title">{t(VIEWS[view])}</span>
       </div>
 
       <div className="ov-body">
@@ -132,7 +132,7 @@ export default function ManageField({
             <button className="choice-card" onClick={() => setView("name")}>
               <div className="icon">✏️</div>
               <div className="txt">
-                <b>Field name</b>
+                <b>{t("Field name")}</b>
                 <span>{name}</span>
               </div>
             </button>
@@ -140,7 +140,7 @@ export default function ManageField({
             <button className="choice-card" onClick={() => setView("boundary")}>
               <div className="icon">🗺️</div>
               <div className="txt">
-                <b>Field boundary</b>
+                <b>{t("Field boundary")}</b>
                 <span>
                   {areaUnits ?? "—"} {unit} · {points.length} points
                 </span>
@@ -158,17 +158,17 @@ export default function ManageField({
             <button className="choice-card" onClick={() => setView("planting")}>
               <div className="icon">📅</div>
               <div className="txt">
-                <b>Planting date</b>
+                <b>{t("Planting date")}</b>
                 <span>
                   {cropzone.planting_date
                     ? fmtDate(cropzone.planting_date)
-                    : "Not set"}
+                    : t("Not set")}
                 </span>
               </div>
             </button>
 
             <div className="mt-2">
-              <div className="field-label">New season</div>
+              <div className="field-label">{t("New season")}</div>
               {/* Forty words explaining what the button does, above the
                   button. One line is enough: the only thing a farmer needs
                   reassuring about is whether the old season disappears. The
@@ -180,9 +180,7 @@ export default function ManageField({
                 className="btn btn-outline w-full"
                 onClick={() => setConfirmRenew(true)}
                 disabled={!cropzone.planting_date}
-              >
-                Start a new season
-              </button>
+              >{t("Start a new season")}</button>
               {!cropzone.planting_date && (
                 <p className="mt-1 text-[11px] text-[var(--text-tert)]">
                   Nothing planted yet, so there&apos;s no season to renew.
@@ -196,7 +194,7 @@ export default function ManageField({
 
         {view === "name" && (
           <div>
-            <div className="field-label">Field name</div>
+            <div className="field-label">{t("Field name")}</div>
             <input
               className="field"
               value={name}
@@ -208,9 +206,7 @@ export default function ManageField({
 
         {view === "boundary" && (
           <>
-            <div className="fieldset-note text-center">
-              Drag a point to move it, or tap the map to add one.
-            </div>
+            <div className="fieldset-note text-center">{t("Drag a point to move it, or tap the map to add one.")}</div>
             <DrawMap
               points={points}
               center={
@@ -254,7 +250,7 @@ export default function ManageField({
               onChange={(e) => setCropSearch(e.target.value)}
               placeholder="Search crops — rice, maize, cassava…"
             />
-            {!crops && <p className="empty-msg">Loading crops…</p>}
+            {!crops && <p className="empty-msg">{t("Loading crops…")}</p>}
             {matches.map((c) => (
               <button
                 key={c.species}
@@ -275,7 +271,7 @@ export default function ManageField({
 
         {view === "planting" && (
           <div>
-            <div className="field-label">Planting date</div>
+            <div className="field-label">{t("Planting date")}</div>
             <input
               className="field"
               type="date"
@@ -303,7 +299,7 @@ export default function ManageField({
                 <div className="txt">
                   <b>{v.variety}</b>
                   {v.variety === "generic" && (
-                    <span>No specific variety — no maturity prediction</span>
+                    <span>{t("No specific variety — no maturity prediction")}</span>
                   )}
                 </div>
               </button>
@@ -318,9 +314,7 @@ export default function ManageField({
 
       <div className="ov-footer">
         {view === "menu" && (
-          <button className="btn btn-outline" onClick={onClose}>
-            Done
-          </button>
+          <button className="btn btn-outline" onClick={onClose}>{t("Done")}</button>
         )}
         {view === "name" && (
           <button
@@ -328,7 +322,7 @@ export default function ManageField({
             disabled={busy || !name.trim()}
             onClick={() => patch({ name }, "name")}
           >
-            {busy ? "Saving…" : "Save name"}
+            {busy ? t("Saving…") : t("Save name")}
           </button>
         )}
         {view === "boundary" && (
@@ -337,7 +331,7 @@ export default function ManageField({
             disabled={busy || points.length < 3}
             onClick={() => patch({ boundary: [[...points, points[0]]] }, "boundary")}
           >
-            {busy ? "Saving…" : "Save boundary"}
+            {busy ? t("Saving…") : t("Save boundary")}
           </button>
         )}
         {view === "planting" && (
@@ -346,7 +340,7 @@ export default function ManageField({
             disabled={busy}
             onClick={() => patch({ plantingDate: plantingDate || null }, "planting date")}
           >
-            {busy ? "Saving…" : "Save planting date"}
+            {busy ? t("Saving…") : t("Save planting date")}
           </button>
         )}
       </div>
@@ -354,7 +348,7 @@ export default function ManageField({
       {confirmRenew && (
         <div className="fixed inset-0 z-[1200] flex items-center justify-center bg-black/40 p-6">
           <div className="w-full max-w-xs rounded-2xl bg-white p-5">
-            <p className="mb-1 font-bold">Start a new season?</p>
+            <p className="mb-1 font-bold">{t("Start a new season?")}</p>
             <p className="mb-4 text-xs text-[var(--text-sec)]">
               {cropLabel(cropzone.crop)} will be archived and a new crop opened on
               this field. You&apos;ll set the new planting date and variety
@@ -364,11 +358,9 @@ export default function ManageField({
               <button
                 className="btn btn-outline flex-1"
                 onClick={() => setConfirmRenew(false)}
-              >
-                Cancel
-              </button>
+              >{t("Cancel")}</button>
               <button className="btn btn-go flex-1" disabled={busy} onClick={renew}>
-                {busy ? "Working…" : "Renew"}
+                {busy ? t("Working…") : t("Renew")}
               </button>
             </div>
           </div>

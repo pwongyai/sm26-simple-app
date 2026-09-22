@@ -4,6 +4,7 @@ import { areaOut } from "@/lib/units";
 import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { polygonAreaM2 } from "@/lib/engine";
+import { useT } from "@/lib/i18n";
 
 // Leaflet needs the browser.
 const DrawMap = dynamic(() => import("@/components/DrawMap"), {
@@ -12,9 +13,7 @@ const DrawMap = dynamic(() => import("@/components/DrawMap"), {
     <div
       className="flex items-center justify-center rounded-xl border border-[var(--rule)] bg-[var(--map-b)] text-xs text-[var(--text-tert)]"
       style={{ height: 340 }}
-    >
-      Loading satellite…
-    </div>
+    >Loading satellite…</div>
   ),
 });
 
@@ -35,6 +34,7 @@ const STEPS = {
 };
 
 export default function AddFieldFlow({ unit, unitM2, onClose, onCreated }) {
+  const t = useT();
   const [step, setStep] = useState("draw");
   const [points, setPoints] = useState([]);
   const [name, setName] = useState("");
@@ -83,14 +83,14 @@ export default function AddFieldFlow({ unit, unitM2, onClose, onCreated }) {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || "Could not create the field.");
+        setError(data.error || t("Could not create the field."));
         setBusy(false);
         return;
       }
       onCreated();
       onClose();
     } catch {
-      setError("Could not create the field.");
+      setError(t("Could not create the field."));
       setBusy(false);
     }
   }
@@ -105,10 +105,10 @@ export default function AddFieldFlow({ unit, unitM2, onClose, onCreated }) {
   return (
     <div className="overlay">
       <div className="ov-header">
-        <button className="ov-back" onClick={back} aria-label="Back">
+        <button className="ov-back" onClick={back} aria-label={t("Back")}>
           ←
         </button>
-        <span className="ov-title">{STEPS[step]}</span>
+        <span className="ov-title">{t(STEPS[step])}</span>
       </div>
 
       <div className="ov-body">
@@ -116,8 +116,8 @@ export default function AddFieldFlow({ unit, unitM2, onClose, onCreated }) {
           <>
             <div className="fieldset-note text-center">
               {points.length === 0
-                ? "Move the map to find your field, then tap around its edge."
-                : "Keep tapping to add points. Drag a point to adjust it."}
+                ? t("Move the map to find your field, then tap around its edge.")
+                : t("Keep tapping to add points. Drag a point to adjust it.")}
             </div>
 
             <DrawMap
@@ -136,9 +136,7 @@ export default function AddFieldFlow({ unit, unitM2, onClose, onCreated }) {
               >
                 ↺ Undo
               </button>
-              <button className="pill" onClick={() => setPoints([])} disabled={!points.length}>
-                Clear
-              </button>
+              <button className="pill" onClick={() => setPoints([])} disabled={!points.length}>{t("Clear")}</button>
               {areaUnits && (
                 <span className="ml-auto text-sm font-bold">
                   {areaUnits} {unit}
@@ -152,13 +150,13 @@ export default function AddFieldFlow({ unit, unitM2, onClose, onCreated }) {
           <>
             <div className="detail-card">
               <div className="detail-row">
-                <div className="lbl">Field size</div>
+                <div className="lbl">{t("Field size")}</div>
                 <div className="val">
                   {areaUnits} {unit}
                 </div>
               </div>
               <div className="detail-row">
-                <div className="lbl">Boundary points</div>
+                <div className="lbl">{t("Boundary points")}</div>
                 <div className="val">{points.length}</div>
               </div>
             </div>
@@ -183,7 +181,7 @@ export default function AddFieldFlow({ unit, unitM2, onClose, onCreated }) {
               onChange={(e) => setCropSearch(e.target.value)}
               placeholder="Search crops — rice, maize, cassava…"
             />
-            {!crops && <p className="empty-msg">Loading crops…</p>}
+            {!crops && <p className="empty-msg">{t("Loading crops…")}</p>}
             {matches.map((c) => (
               <button
                 key={c.species}
@@ -231,7 +229,7 @@ export default function AddFieldFlow({ unit, unitM2, onClose, onCreated }) {
                 <div className="txt">
                   <b>{v.variety}</b>
                   {v.variety === "generic" && (
-                    <span>No specific variety — no maturity prediction</span>
+                    <span>{t("No specific variety — no maturity prediction")}</span>
                   )}
                 </div>
               </button>
@@ -241,7 +239,7 @@ export default function AddFieldFlow({ unit, unitM2, onClose, onCreated }) {
 
         {step === "date" && (
           <>
-            <div className="fieldset-note">When did you plant?</div>
+            <div className="fieldset-note">{t("When did you plant?")}</div>
             <input
               className="field text-center text-lg"
               type="date"
@@ -250,21 +248,21 @@ export default function AddFieldFlow({ unit, unitM2, onClose, onCreated }) {
             />
             <div className="detail-card">
               <div className="detail-row">
-                <div className="lbl">Field</div>
+                <div className="lbl">{t("Field")}</div>
                 <div className="val">{name}</div>
               </div>
               <div className="detail-row">
-                <div className="lbl">Size</div>
+                <div className="lbl">{t("Size")}</div>
                 <div className="val">
                   {areaUnits} {unit}
                 </div>
               </div>
               <div className="detail-row">
-                <div className="lbl">Crop</div>
+                <div className="lbl">{t("Crop")}</div>
                 <div className="val">
                   {species
                     ? `${species.species}${variety && variety.variety !== "generic" ? ` — ${variety.variety}` : ""}`
-                    : "Not recorded"}
+                    : t("Not recorded")}
                 </div>
               </div>
             </div>
@@ -282,7 +280,7 @@ export default function AddFieldFlow({ unit, unitM2, onClose, onCreated }) {
             style={points.length < 3 ? { opacity: 0.5 } : undefined}
             onClick={() => setStep("name")}
           >
-            {points.length < 3 ? "Tap the map to start drawing" : "Confirm Boundary"}
+            {points.length < 3 ? t("Tap the map to start drawing") : t("Confirm Boundary")}
           </button>
         )}
         {step === "name" && (
@@ -291,9 +289,7 @@ export default function AddFieldFlow({ unit, unitM2, onClose, onCreated }) {
             disabled={!name.trim()}
             style={!name.trim() ? { opacity: 0.5 } : undefined}
             onClick={() => setStep("crop")}
-          >
-            Next
-          </button>
+          >{t("Next")}</button>
         )}
         {step === "date" && (
           <>
@@ -308,7 +304,7 @@ export default function AddFieldFlow({ unit, unitM2, onClose, onCreated }) {
               I don&apos;t know yet
             </button>
             <button className="btn btn-go" disabled={busy} onClick={save}>
-              {busy ? "Creating…" : "Save Field"}
+              {busy ? t("Creating…") : t("Save Field")}
             </button>
           </>
         )}

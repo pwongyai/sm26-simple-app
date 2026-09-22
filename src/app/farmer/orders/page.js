@@ -23,9 +23,9 @@ export default function FarmerOrdersTab() {
 
   return (
     <>
-      <h1 className="mb-4 text-lg font-semibold">{t(t("Work Orders"))}</h1>
+      <h1 className="mb-4 text-lg font-semibold">{t("Work Orders")}</h1>
       {orders.length === 0 && (
-        <p className="text-sm text-[var(--text-sec)]">{t(t("No requests yet — go to Farm and request a machine order."))}</p>
+        <p className="text-sm text-[var(--text-sec)]">{t("No requests yet — go to Farm and request a machine order.")}</p>
       )}
       <ul className="flex flex-col gap-3">
         {orders.map((o) => (

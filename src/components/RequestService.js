@@ -5,6 +5,7 @@ import { createOrder } from "@/lib/store";
 import { boundaryCentre } from "@/lib/engine";
 import FieldThumb from "@/components/FieldThumb";
 import { fmtDate, fmtDayMonth } from "@/lib/date";
+import { useT } from "@/lib/i18n";
 
 // Request Contractor — five steps, in order:
 //   Field → Contractor → Service → Preferred Date → Review.
@@ -42,6 +43,7 @@ export default function RequestService({
   onClose,
   onSent,
 }) {
+  const t = useT();
   // Real forecast for the chosen field — fetched once a field is picked, since
   // weather is a property of the land, not of the app.
   const [forecast, setForecast] = useState([]);
@@ -137,11 +139,11 @@ export default function RequestService({
             if (i <= first) onClose();
             else setStep(order[i - 1]);
           }}
-          aria-label="Back"
+          aria-label={t("Back")}
         >
           ←
         </button>
-        <span className="ov-title">{STEP_TITLES[step]}</span>
+        <span className="ov-title">{t(STEP_TITLES[step])}</span>
       </div>
 
       <div className="ov-body">
@@ -167,7 +169,7 @@ export default function RequestService({
           ))}
 
         {step === "field" && fields.length === 0 && (
-          <p className="empty-msg">No fields registered to you yet.</p>
+          <p className="empty-msg">{t("No fields registered to you yet.")}</p>
         )}
 
         {step === "contractor" && (
@@ -177,9 +179,7 @@ export default function RequestService({
               works with.
             </div>
             {contractors.length === 0 && (
-              <p className="empty-msg">
-                No contractor is set up for your community yet.
-              </p>
+              <p className="empty-msg">{t("No contractor is set up for your community yet.")}</p>
             )}
             {contractors.map((c) => (
               <button
@@ -206,7 +206,7 @@ export default function RequestService({
             knows yet — and a service the contractor hasn't priced would show as
             "price not set", which tells a farmer nothing useful. */}
         {step === "service" && contractorServices === null && contractor && (
-          <p className="text-sm text-[var(--text-sec)]">Loading services…</p>
+          <p className="text-sm text-[var(--text-sec)]">{t("Loading services…")}</p>
         )}
         {step === "service" &&
           !(contractorServices === null && contractor) &&
@@ -238,9 +238,7 @@ export default function RequestService({
               for information only.
             </div>
             {forecast.length === 0 && (
-              <p className="text-xs text-[var(--text-tert)]">
-                No forecast for this field — pick any date below.
-              </p>
+              <p className="text-xs text-[var(--text-tert)]">{t("No forecast for this field — pick any date below.")}</p>
             )}
             {(forecast || []).map((d) => {
               const dateStr = d.date;
@@ -295,25 +293,25 @@ export default function RequestService({
         {step === "review" && (
           <div className="detail-card">
             <div className="detail-row">
-              <div className="lbl">Field</div>
+              <div className="lbl">{t("Field")}</div>
               <div className="val">{field?.name}</div>
             </div>
             <div className="detail-row">
-              <div className="lbl">Area</div>
+              <div className="lbl">{t("Area")}</div>
               <div className="val">
                 {field?.areaUnits ?? "—"} {unit}
               </div>
             </div>
             <div className="detail-row">
-              <div className="lbl">Contractor</div>
+              <div className="lbl">{t("Contractor")}</div>
               <div className="val">{contractor?.name ?? "—"}</div>
             </div>
             <div className="detail-row">
-              <div className="lbl">Service</div>
+              <div className="lbl">{t("Service")}</div>
               <div className="val">{service?.name}</div>
             </div>
             <div className="detail-row">
-              <div className="lbl">Preferred Date</div>
+              <div className="lbl">{t("Preferred Date")}</div>
               <div className="val">
                 {date && fmtDate(date)}
               </div>
@@ -329,9 +327,7 @@ export default function RequestService({
             disabled={!date}
             style={!date ? { opacity: 0.5 } : undefined}
             onClick={() => setStep("review")}
-          >
-            Next
-          </button>
+          >{t("Next")}</button>
         )}
         {step === "review" && (
           <button
@@ -339,7 +335,7 @@ export default function RequestService({
             disabled={busy}
             onClick={() => setConfirming(true)}
           >
-            {busy ? "Sending…" : "Send Request"}
+            {busy ? t("Sending…") : t("Send Request")}
           </button>
         )}
       </div>
@@ -347,7 +343,7 @@ export default function RequestService({
       {confirming && (
         <div className="fixed inset-0 z-[1200] flex items-center justify-center bg-black/40 p-6">
           <div className="w-full max-w-xs rounded-2xl bg-white p-5">
-            <p className="mb-1 font-bold">Send this request?</p>
+            <p className="mb-1 font-bold">{t("Send this request?")}</p>
             <p className="mb-4 text-xs text-[var(--text-sec)]">
               {service?.name} on {field?.name}. The contractor will confirm the
               date with you.
@@ -356,12 +352,8 @@ export default function RequestService({
               <button
                 className="btn btn-outline flex-1"
                 onClick={() => setConfirming(false)}
-              >
-                Cancel
-              </button>
-              <button className="btn btn-go flex-1" disabled={busy} onClick={send}>
-                Send
-              </button>
+              >{t("Cancel")}</button>
+              <button className="btn btn-go flex-1" disabled={busy} onClick={send}>{t("Send")}</button>
             </div>
           </div>
         </div>
