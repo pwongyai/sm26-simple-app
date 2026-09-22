@@ -16,6 +16,15 @@ export default function ProfileTab() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
+  // Password change. Kept in its own piece of state and its own request: it
+  // has a different failure mode from name/phone (the current password can be
+  // wrong) and must not make a name edit fail.
+  const [pwCurrent, setPwCurrent] = useState("");
+  const [pwNew, setPwNew] = useState("");
+  const [pwMsg, setPwMsg] = useState("");
+  const [pwError, setPwError] = useState("");
+  const [pwBusy, setPwBusy] = useState(false);
+
   const load = useCallback(() => {
     fetch("/api/me", { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
@@ -46,6 +55,26 @@ export default function ProfileTab() {
     setSaved("Saved");
     setTimeout(() => setSaved(""), 1500);
     load();
+  }
+
+  async function changePassword() {
+    setPwBusy(true);
+    setPwError("");
+    setPwMsg("");
+    const res = await fetch("/api/me/password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ currentPassword: pwCurrent, newPassword: pwNew }),
+    });
+    setPwBusy(false);
+    if (!res.ok) {
+      setPwError((await res.json()).error || "Could not change password.");
+      return;
+    }
+    setPwCurrent("");
+    setPwNew("");
+    setPwMsg("Password changed");
+    setTimeout(() => setPwMsg(""), 2000);
   }
 
   if (!me) return <p className="empty-msg">Loading…</p>;
@@ -87,6 +116,43 @@ export default function ProfileTab() {
           onClick={save}
         >
           {busy ? "Saving…" : "Save"}
+        </button>
+      </div>
+
+      <div className="card mb-4 p-4">
+        <div className="field-label">Password</div>
+
+        <input
+          className="field mb-3"
+          type="password"
+          placeholder="Current password"
+          autoComplete="current-password"
+          value={pwCurrent}
+          onChange={(e) => setPwCurrent(e.target.value)}
+        />
+        <input
+          className="field"
+          type="password"
+          placeholder="New password"
+          autoComplete="new-password"
+          value={pwNew}
+          onChange={(e) => setPwNew(e.target.value)}
+        />
+        <p className="mt-1 text-[11px] text-[var(--text-tert)]">
+          At least 6 characters.
+        </p>
+
+        {pwError && <p className="mt-2 text-sm text-[var(--danger)]">{pwError}</p>}
+        {pwMsg && (
+          <p className="mt-2 text-sm text-[var(--green-dark)]">{pwMsg}</p>
+        )}
+
+        <button
+          className="btn mt-3 w-full"
+          disabled={pwBusy || !pwCurrent || !pwNew}
+          onClick={changePassword}
+        >
+          {pwBusy ? "Changing…" : "Change Password"}
         </button>
       </div>
 
