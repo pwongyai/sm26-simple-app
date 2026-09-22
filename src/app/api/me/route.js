@@ -2,6 +2,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireAccess } from "@/lib/ownership";
 import { contractorOrgId } from "@/lib/contractor";
 import { agroFetch } from "@/lib/agroapi";
+import { normalizePhone, phoneProblem } from "@/lib/phone";
 
 // The signed-in account, for the Profile screen.
 export async function GET() {
@@ -49,25 +50,9 @@ export async function PATCH(request) {
   // be a number they can actually type at the sign-in screen. Spaces, dashes
   // and a leading +, which are how people write a phone down, are stripped
   // rather than refused; anything left over is not a phone.
-  const phone = (body.phone || "").replace(/[\s\-()+]/g, "");
-
-  // Say which thing is wrong. One combined message told someone who typed
-  // "12345" that the number had to be digits only — which it was.
-  if (!phone) {
-    return Response.json({ error: "Enter your mobile number" }, { status: 400 });
-  }
-  if (!/^\d+$/.test(phone)) {
-    return Response.json(
-      { error: "A mobile number can only contain digits" },
-      { status: 400 }
-    );
-  }
-  if (phone.length < 8 || phone.length > 15) {
-    return Response.json(
-      { error: "That does not look like a mobile number" },
-      { status: 400 }
-    );
-  }
+  const phone = normalizePhone(body.phone);
+  const problem = phoneProblem(phone);
+  if (problem) return Response.json({ error: problem }, { status: 400 });
 
   // Checked rather than guessed. The unique index on app_users.phone caught
   // this before, but only as a 500 that said the number "may" be in use, which

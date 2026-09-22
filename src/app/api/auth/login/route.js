@@ -1,6 +1,7 @@
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { setSession, USER_SELECT } from "@/lib/session";
 import { verifyPassword } from "@/lib/password";
+import { normalizePhone } from "@/lib/phone";
 
 // Sign in with a phone number and a password.
 //
@@ -18,7 +19,7 @@ import { verifyPassword } from "@/lib/password";
 export async function POST(request) {
   const { phone, password } = await request.json();
 
-  const cleanPhone = (phone || "").replace(/[^0-9+]/g, "");
+  const cleanPhone = normalizePhone(phone);
   if (!cleanPhone) {
     return Response.json({ error: "Phone number is required" }, { status: 400 });
   }
