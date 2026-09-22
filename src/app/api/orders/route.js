@@ -106,7 +106,10 @@ export async function POST(request) {
       field_name: body.fieldName || null,
       activity_type_id: body.activityTypeId || null,
       activity_type_name: body.activityTypeName || null,
-      crop_size_rai: body.cropSizeRai ?? null,
+      // Square metres, always. The old column was named for rai and held
+      // whatever unit the community used, which is how a Vietnamese field
+      // came to be stored as a rai figure in a sào community.
+      crop_size_m2: body.cropSizeM2 ?? null,
       location_lat: body.lat ?? null,
       location_lng: body.lng ?? null,
       scheduled_date: body.scheduledDate || null,

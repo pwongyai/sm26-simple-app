@@ -1,5 +1,6 @@
 "use client";
 
+import { useUnits } from "@/lib/useUnits";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Map from "@/components/Map";
@@ -435,7 +436,9 @@ function ViewReport({ report: r, onClose, onTogglePaid }) {
 function CreateReport({ onClose, onCreated, onViewExisting }) {
   const [status, setStatus] = useState("loading"); // loading | notfound | reviewing
   const [chosen, setChosen] = useState(null);
-  const [unit, setUnit] = useState("rai");
+  // Seeded from the community rather than assumed to be Thailand.
+  const { areaUnit: communityUnit } = useUnits();
+  const [unit, setUnit] = useState(communityUnit);
   const [currency, setCurrency] = useState("THB");
   const [services, setServices] = useState([]);
   const [serviceId, setServiceId] = useState("");

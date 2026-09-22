@@ -1,5 +1,7 @@
 "use client";
 
+import { areaIn, areaOut } from "@/lib/units";
+import { useUnits } from "@/lib/useUnits";
 import { useState } from "react";
 import { updateOrder, deleteOrder, completeOrder } from "@/lib/store";
 import { daysLate } from "@/components/OrderCard";
@@ -16,7 +18,11 @@ export default function OrderDetail({ order, services, onClose, onChanged }) {
 
   const [date, setDate] = useState(order.scheduled_date || "");
   const [workType, setWorkType] = useState(order.activity_type_name || "");
-  const [rai, setRai] = useState(order.crop_size_rai ?? "");
+  const { areaUnit, areaUnitM2 } = useUnits();
+  // Typed and shown in the reader's unit; stored as m².
+  const [rai, setRai] = useState(
+    order.crop_size_m2 != null ? String(areaOut(order.crop_size_m2, areaUnitM2)) : ""
+  );
   const [note, setNote] = useState(order.note || "");
 
   const late = daysLate(order);
@@ -27,7 +33,7 @@ export default function OrderDetail({ order, services, onClose, onChanged }) {
     await updateOrder(order.id, {
       scheduledDate: date || null,
       workType: workType ? { id: null, name: workType } : null,
-      cropSizeRai: rai === "" ? null : Number(rai),
+      cropSizeM2: rai === "" ? null : areaIn(rai, areaUnitM2),
       note: note.trim() || null,
     });
     setBusy(false);
@@ -198,8 +204,8 @@ export default function OrderDetail({ order, services, onClose, onChanged }) {
             <div className="detail-row">
               <div className="lbl">Crop size</div>
               <div className="val">
-                {order.crop_size_rai != null
-                  ? `${Number(order.crop_size_rai).toFixed(1)} rai`
+                {order.crop_size_m2 != null
+                  ? `${areaOut(order.crop_size_m2, areaUnitM2)} ${areaUnit}`
                   : "Unknown"}
               </div>
             </div>

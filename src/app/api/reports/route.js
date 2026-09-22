@@ -198,7 +198,7 @@ export async function POST(request) {
     // let a report for one field be billed against another field's order (a
     // real case: a Test Plot East report attached to RK0541). It matters more
     // than a mislabelled row, because a successful match writes BACK to the
-    // order: crop_size_rai becomes the measured area and scheduled_date
+    // order: crop_size_m2 becomes the measured area and scheduled_date
     // becomes the session date, so a wrong match silently rewrites an
     // unrelated job.
     //
@@ -280,7 +280,8 @@ export async function POST(request) {
         completed_at: new Date().toISOString(),
         agro_activity_id: activityId,
         // Reality overwrites the plan: the measured area replaces the estimate.
-        crop_size_rai: b.workAreaUnits ?? null,
+        // In m², the canonical form — the report carries the display figure.
+        crop_size_m2: b.workAreaM2 ?? null,
         scheduled_date: String(b.startedAt).slice(0, 10),
         unseen_by_farmer: true,
       })
@@ -297,7 +298,7 @@ export async function POST(request) {
         field_name: b.fieldName || null,
         activity_type_id: activityType?.id || null,
         activity_type_name: activityType?.name || null,
-        crop_size_rai: b.workAreaUnits ?? null,
+        crop_size_m2: b.workAreaM2 ?? null,
         scheduled_date: String(b.startedAt).slice(0, 10),
         booking_date: String(b.startedAt).slice(0, 10),
         source: "backfilled",

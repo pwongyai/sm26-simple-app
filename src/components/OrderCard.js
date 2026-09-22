@@ -1,5 +1,8 @@
 "use client";
 
+import { areaOut } from "@/lib/units";
+import { useUnits } from "@/lib/useUnits";
+
 // One card layout everywhere an order appears — List, Calendar, Today's Work.
 // Version 2 §8.9: customer name leads (field name is a system construct
 // farmers and contractors don't track), crop size gets the prominent number,
@@ -60,6 +63,7 @@ function Badge({ order }) {
 }
 
 export default function OrderCard({ order, onClick, index }) {
+  const { areaUnit, areaUnitM2 } = useUnits();
   const late = daysLate(order);
 
   return (
@@ -91,10 +95,10 @@ export default function OrderCard({ order, onClick, index }) {
 
       <div className="flex shrink-0 flex-col items-end gap-1">
         <Badge order={order} />
-        {order.crop_size_rai != null && (
+        {order.crop_size_m2 != null && (
           <p className="whitespace-nowrap text-2xl font-bold leading-none">
-            {Number(order.crop_size_rai).toFixed(1)}
-            <span className="ml-1 text-xs font-normal text-[var(--text-sec)]">rai</span>
+            {areaOut(order.crop_size_m2, areaUnitM2)}
+            <span className="ml-1 text-xs font-normal text-[var(--text-sec)]">{areaUnit}</span>
           </p>
         )}
       </div>

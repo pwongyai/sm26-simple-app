@@ -53,7 +53,7 @@ export default function MyFieldsTab() {
           (s || []).map((x) => ({
             id: x.id,
             name: x.name,
-            price: Number(x.price_per_unit),
+            price: Number(x.price_per_m2_thb),
           }))
         )
       )

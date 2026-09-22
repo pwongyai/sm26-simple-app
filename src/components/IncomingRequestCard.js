@@ -1,5 +1,7 @@
 "use client";
 
+import { areaIn, areaOut } from "@/lib/units";
+import { useUnits } from "@/lib/useUnits";
 import { useState } from "react";
 import { updateOrder } from "@/lib/store";
 
@@ -9,6 +11,7 @@ import { updateOrder } from "@/lib/store";
 // to match the real sequence: see the request, call the farmer to confirm
 // it, adjust the date if the call turned up a different one, then decide.
 export default function IncomingRequestCard({ order, onChanged }) {
+  const { areaUnit, areaUnitM2 } = useUnits();
   const [date, setDate] = useState(order.scheduled_date || "");
   const [busy, setBusy] = useState(false);
 
@@ -36,7 +39,7 @@ export default function IncomingRequestCard({ order, onChanged }) {
       </div>
       <p className="text-[var(--text-sec)]">
         {order.activity_type_name || "No work type"}
-        {order.crop_size_rai != null && ` · ${Number(order.crop_size_rai).toFixed(1)} rai`}
+        {order.crop_size_m2 != null && ` · ${areaOut(order.crop_size_m2, areaUnitM2)} ${areaUnit}`}
       </p>
       <p className="text-xs text-[var(--text-tert)]">
         Requested:{" "}

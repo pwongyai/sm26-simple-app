@@ -1,3 +1,4 @@
+import { priceOut } from "@/lib/units";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireAccess } from "@/lib/ownership";
 import { agroFetch } from "@/lib/agroapi";
@@ -264,7 +265,9 @@ export async function GET(request) {
 
   const work = computeWork({ points: track.points, boundary, widthM });
   const unitM2 = Number(user.organization.area_unit_m2);
-  const price = service ? Number(service.price_per_unit) : null;
+  const currency = user.organization.currency;
+  // Stored canonically; the preview quotes in the community's own terms.
+  const price = service ? priceOut(service.price_per_m2_thb, unitM2, currency) : null;
   const emissionKgPerL = emissionKgPerLForFuelType(fuelResolved.fuelType);
   const fuelL =
     fuelLPerKm != null && work ? Number(((work.insideDistanceM / 1000) * fuelLPerKm).toFixed(2)) : null;
@@ -282,7 +285,7 @@ export async function GET(request) {
     services: services.map((s) => ({
       id: s.id,
       name: s.name,
-      price: Number(s.price_per_unit),
+      price: priceOut(s.price_per_m2_thb, unitM2, currency),
       activityCanonical: s.activity_canonical,
     })),
     widthM,
@@ -296,7 +299,7 @@ export async function GET(request) {
     emissionKgPerL,
     emissionsKg,
     unit: user.organization.area_unit,
-    currency: user.organization.currency,
+    currency,
     workAreaUnits: work ? toUnits(work.workAreaM2, unitM2) : null,
     fieldAreaUnits: work ? toUnits(work.fieldAreaM2, unitM2) : null,
     estimatedCharge: work ? serviceCharge({ workAreaM2: work.workAreaM2, unitM2, pricePerUnit: price }) : null,

@@ -2,14 +2,7 @@
 
 
 import { ADAPT_VERSION, groupedWorkTypes, workType } from "@/lib/workTypes";
-import {
-  AREA_UNITS,
-  CURRENCIES,
-  areaUnit,
-  convertMoney,
-  convertPricePerUnit,
-  roundMoney,
-} from "@/lib/units";
+import { AREA_UNITS, CURRENCIES, areaUnit, priceOut, roundMoney } from "@/lib/units";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { logout } from "@/lib/useSession";
@@ -93,6 +86,7 @@ export default function SettingsTab() {
         services={services}
         unit={settings.areaUnit}
         currency={settings.currency}
+        settings={settings}
         onChanged={() => {
           load();
           flash("Saved");
@@ -103,7 +97,6 @@ export default function SettingsTab() {
 
       <CurrencyAndArea
         settings={settings}
-        services={services}
         onChanged={() => {
           load();
           flash("Saved");
@@ -426,7 +419,7 @@ function HomeBase({ profile, onChanged }) {
 // shown here — a contractor should not need to know two vocabularies to price a
 // job. Before 2026-09-22 this form sent a hardcoded "other", so every service
 // created in the app was filed in AgroAPI as an unclassified activity.
-function ServiceList({ services, unit, currency, onChanged }) {
+function ServiceList({ services, unit, currency, settings, onChanged }) {
   const groups = groupedWorkTypes();
   const [editing, setEditing] = useState(false);
   const [drafts, setDrafts] = useState({});
@@ -437,7 +430,7 @@ function ServiceList({ services, unit, currency, onChanged }) {
     const d = {};
     services.forEach((s) => {
       d[s.id] = {
-        price: String(Number(s.price_per_unit)),
+        price: String(priceOut(s.price_per_m2_thb, settings.areaUnitM2, settings.currency)),
         active: s.active,
         adaptCode: s.adapt_code || "",
       };
@@ -472,7 +465,8 @@ function ServiceList({ services, unit, currency, onChanged }) {
       services.map((s) => {
         const d = drafts[s.id];
         if (!d) return null;
-        const priceChanged = Number(d.price) !== Number(s.price_per_unit);
+        const shown = priceOut(s.price_per_m2_thb, settings.areaUnitM2, settings.currency);
+        const priceChanged = Number(d.price) !== Number(shown);
         const activeChanged = d.active !== s.active;
         const typeChanged = d.adaptCode && d.adaptCode !== (s.adapt_code || "");
         if (!priceChanged && !activeChanged && !typeChanged) return null;
@@ -539,7 +533,12 @@ function ServiceList({ services, unit, currency, onChanged }) {
                   className="w-24 rounded border border-[var(--rule)] px-2 py-1 text-right text-sm"
                 />
               ) : (
-                <span className="w-24 text-right text-sm">{Number(s.price_per_unit)}</span>
+                <span className="w-24 text-right text-sm">
+                  {roundMoney(
+                    priceOut(s.price_per_m2_thb, settings.areaUnitM2, settings.currency),
+                    settings.currency
+                  ).toLocaleString()}
+                </span>
               )}
               <span className="w-16 text-xs text-[var(--text-tert)]">
                 {currency}/{unit}
@@ -729,7 +728,7 @@ function Language({ profile, onChanged }) {
 // Safe to change whenever: each work report freezes its own currency and unit
 // label at creation, so past reports keep reading in whatever was set when the
 // work was done.
-function CurrencyAndArea({ settings, services, onChanged }) {
+function CurrencyAndArea({ settings, onChanged }) {
   const [editing, setEditing] = useState(false);
   const [currency, setCurrency] = useState(settings.currency);
   const [unit, setUnit] = useState(settings.areaUnit);
@@ -754,21 +753,8 @@ function CurrencyAndArea({ settings, services, onChanged }) {
   }
 
   const chosen = areaUnit(unit);
-  const from = { currency: settings.currency, m2: Number(settings.areaUnitM2) || null };
-  const willConvert =
-    (currency !== from.currency || (chosen && chosen.m2 !== from.m2)) && from.m2;
-
-  // What this actually does to the prices on file, shown before it happens.
-  // The 800 is a hardcoded rate; a constant buried in a library is invisible at
-  // the moment it matters, so it is stated on screen next to the numbers it
-  // changes.
-  function preview(price) {
-    let v = Number(price) || 0;
-    if (chosen && from.m2) v = convertPricePerUnit(v, from.m2, chosen.m2);
-    if (currency !== from.currency) v = convertMoney(v, from.currency, currency);
-    return roundMoney(v, currency);
-  }
-
+  // Nothing is migrated when this changes: prices are stored as THB per m²
+  // and simply render differently afterwards.
   if (!editing) {
     return (
       <section className="mb-6">
@@ -825,28 +811,6 @@ function CurrencyAndArea({ settings, services, onChanged }) {
         <p className="mt-1 text-[11px] text-[var(--text-tert)]">
           1 {chosen.unit} = {chosen.m2.toLocaleString()} m²
         </p>
-      )}
-
-      {willConvert && (
-        <div className="mt-3 rounded border border-[var(--rule)] p-2">
-          <p className="text-[11px] text-[var(--text-sec)]">
-            Existing prices are re-expressed so they are worth the same
-            {currency !== from.currency ? " (1 THB = 800 VND)" : ""}. Reports
-            already written are not changed.
-          </p>
-          <div className="mt-1 flex flex-col gap-0.5">
-            {services.map((sv) => (
-              <div key={sv.id} className="flex justify-between text-[11px]">
-                <span className="text-[var(--text-tert)]">{sv.name}</span>
-                <span>
-                  {Number(sv.price_per_unit).toLocaleString()} {from.currency}/
-                  {settings.areaUnit} → {preview(sv.price_per_unit).toLocaleString()}{" "}
-                  {currency}/{unit}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
       )}
 
       <EditActions busy={busy} onCancel={() => setEditing(false)} onSave={save} />

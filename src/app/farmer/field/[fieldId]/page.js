@@ -1,5 +1,6 @@
 "use client";
 
+import { toUnits, useUnits } from "@/lib/useUnits";
 import { use, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -56,6 +57,7 @@ function fmtDateTime(iso) {
 }
 
 export default function FieldDetailPage({ params }) {
+  const { areaUnit: unitLabel, areaUnitM2 } = useUnits();
   const { fieldId: cropzoneId } = use(params);
   const router = useRouter();
 
@@ -106,7 +108,7 @@ export default function FieldDetailPage({ params }) {
       .then((r) => (r.ok ? r.json() : []))
       .then((s) =>
         setServices(
-          (s || []).map((x) => ({ id: x.id, name: x.name, price: Number(x.price_per_unit) }))
+          (s || []).map((x) => ({ id: x.id, name: x.name, price: Number(x.price_per_m2_thb) }))
         )
       )
       .catch(() => {});
@@ -159,7 +161,9 @@ export default function FieldDetailPage({ params }) {
   }
 
   const boundary = cropzone.location?.boundary?.coordinates;
-  const areaRai = (cropzone.area / 1600).toFixed(1);
+  // The community's unit, not Thailand's. This divided by a hardcoded 1600
+  // until 2026-09-22, so a Vietnamese field measured in sào displayed as rai.
+  const areaRai = toUnits(cropzone.area, areaUnitM2);
   const crop = cropLabel(cropzone.crop);
   // AgroAPI's own prediction, from its crop engine.
   const maturityDate = cropzone.predicted?.maturity_date || null;
@@ -454,7 +458,10 @@ export default function FieldDetailPage({ params }) {
               fieldId: cropzone.field?.id,
               cropzoneId: cropzone.id,
               name: cropzone.field?.name || cropzone.name,
-              areaUnits: Number((cropzone.area / 1600).toFixed(1)),
+              areaUnits: Number(toUnits(cropzone.area, areaUnitM2)),
+              // Canonical. areaUnits above is only for display on the request
+              // screen; what gets stored on the order is this.
+              areaM2: cropzone.area,
               crop: cropzone.crop?.name,
               // Required, not decorative: RequestService stamps the order with
               // this field's centre so Today's Work can sort by distance from
@@ -465,7 +472,7 @@ export default function FieldDetailPage({ params }) {
             },
           ]}
           services={services}
-          unit="rai"
+          unit={unitLabel}
           presetFieldId={cropzone.id}
           onClose={() => setRequesting(false)}
           onSent={load}
@@ -475,8 +482,8 @@ export default function FieldDetailPage({ params }) {
       {managing && (
         <ManageField
           cropzone={cropzone}
-          unit="rai"
-          unitM2={1600}
+          unit={unitLabel}
+          unitM2={areaUnitM2}
           onClose={() => setManaging(false)}
           onRenewed={(newCropzoneId) => {
             setManaging(false);

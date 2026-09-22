@@ -1,5 +1,7 @@
 "use client";
 
+import { areaIn, areaOut } from "@/lib/units";
+import { useUnits } from "@/lib/useUnits";
 import { useEffect, useState } from "react";
 import { deleteOrder } from "@/lib/store";
 import StatusBadge from "@/components/StatusBadge";
@@ -37,6 +39,7 @@ const MACHINE_TAB = "machine";
 // contractor's bookkeeping, not the farmer's) — the farmer just sees the
 // charge.
 export default function FarmerOrderDetail({ order, onClose, onChanged }) {
+  const { areaUnit, areaUnitM2 } = useUnits();
   const [busy, setBusy] = useState(false);
   const [confirmingCancel, setConfirmingCancel] = useState(false);
   const [error, setError] = useState("");
@@ -219,8 +222,8 @@ export default function FarmerOrderDetail({ order, onClose, onChanged }) {
           <div className="detail-row">
             <div className="lbl">Crop size</div>
             <div className="val">
-              {order.crop_size_rai != null
-                ? `${Number(order.crop_size_rai).toFixed(1)} rai`
+              {order.crop_size_m2 != null
+                ? `${areaOut(order.crop_size_m2, areaUnitM2)} ${areaUnit}`
                 : "Unknown"}
             </div>
           </div>

@@ -1,5 +1,7 @@
 "use client";
 
+import { areaOut } from "@/lib/units";
+import { toUnits, useUnits } from "@/lib/useUnits";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Map from "@/components/Map";
@@ -14,6 +16,7 @@ import { FULL_PAGE_MAP_HEIGHT } from "@/lib/mapHeight";
 // "auto-detect" toggle is left out — it was explicitly a placeholder for a
 // future real model, not something drawing a fake box would improve on.
 export default function SelectArea({ machine, points, day, since, until, initialView, onClose }) {
+  const { areaUnit: unitLabel, areaUnitM2 } = useUnits();
   const router = useRouter();
   const [fields, setFields] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -216,7 +219,7 @@ export default function SelectArea({ machine, points, day, since, until, initial
 
   const areaRai =
     drawPoints.length >= 3
-      ? (polygonAreaM2(drawPoints.map((p) => [p.lng, p.lat])) / 1600).toFixed(2)
+      ? toUnits(polygonAreaM2(drawPoints.map((p) => [p.lng, p.lat])), areaUnitM2, 2)
       : null;
 
   const q = query.trim().toLowerCase();
@@ -512,7 +515,8 @@ export default function SelectArea({ machine, points, day, since, until, initial
                           })
                         : "No date"}
                       {" · "}
-                      {o.crop_size_rai ?? "?"} rai · {o.status}
+                      {o.crop_size_m2 != null ? areaOut(o.crop_size_m2, areaUnitM2) : "?"}{" "}
+                      {unitLabel} · {o.status}
                     </span>
                   </div>
                 </button>

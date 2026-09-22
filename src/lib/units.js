@@ -42,51 +42,60 @@ export function isValidAreaUnit(unit) {
   return AREA_UNITS.some((u) => u.unit === unit);
 }
 
-// Converting stored values when a community changes its settings.
+// Canonical storage, rendered per reader.
 //
-// THE BOUNDARY THAT MATTERS: only LIVE settings convert. Frozen history never
-// does — every work_reports row carries its own `currency` and `unit_label`
-// captured at the moment the work was billed, so a past report keeps reading
-// exactly as the farmer was charged. Converting one would rewrite what someone
-// actually paid, which is not a display preference, it is falsifying a record.
+// Areas are stored in m² and prices in THB per m². Nothing stored depends on
+// who is looking at it; the unit and currency are applied on the way out and
+// undone on the way in. This replaced a migrate-the-data-on-change approach
+// that mutated stored values whenever a community switched units — which drifted
+// on round trips and, worse, could not fix a value that was already wrong.
 //
-//   convert        services.price_per_unit, work_orders.crop_size_rai
-//   never touch    work_reports.* — price_per_unit, service_charge,
-//                  field_area_units, work_area_units
-//
-// The rate is a fixed conversion applied once, at the moment of switching, not
-// a live exchange rate. It will drift from the market; that is accepted. Round
-// trips do not land back exactly (VND carries no decimals in practice), so
-// switching back and forth compounds rounding — noted rather than solved,
-// because a community changes this approximately never.
-export const THB_PER_VND = 1 / 800; // 1 THB = 800 VND
+// THB is the base currency by project decision (2026-09-22). If 1 THB = 800 VND
+// ever changes, every VND price on screen changes with it; past reports do not,
+// because they freeze their own currency and amount when the work is billed.
+export const VND_PER_THB = 800;
 
-export function convertMoney(amount, fromCurrency, toCurrency) {
+export function thbTo(amountThb, currency) {
+  const n = Number(amountThb);
+  if (!Number.isFinite(n)) return n;
+  return currency === "VND" ? n * VND_PER_THB : n;
+}
+
+export function toThb(amount, currency) {
   const n = Number(amount);
-  if (!Number.isFinite(n) || fromCurrency === toCurrency) return n;
-  if (fromCurrency === "THB" && toCurrency === "VND") return n * 800;
-  if (fromCurrency === "VND" && toCurrency === "THB") return n / 800;
-  return n;
+  if (!Number.isFinite(n)) return n;
+  return currency === "VND" ? n / VND_PER_THB : n;
 }
 
-// A PRICE is per unit of area, so it moves opposite to an area measurement.
-// 700 THB per rai (1,600 m²) is 157.5 THB per sào (360 m²) — the same money
-// for the same ground. Getting this backwards silently multiplies every bill.
-export function convertPricePerUnit(price, fromM2, toM2) {
-  const n = Number(price);
-  if (!Number.isFinite(n) || !fromM2 || !toM2 || fromM2 === toM2) return n;
-  return n * (toM2 / fromM2);
+// THB/m² -> what the reader sees: their currency, per their area unit.
+export function priceOut(thbPerM2, areaUnitM2, currency) {
+  const n = Number(thbPerM2);
+  if (!Number.isFinite(n)) return null;
+  return thbTo(n * (Number(areaUnitM2) || 1), currency);
 }
 
-// An AREA measurement moves with the unit: 10.1 rai is 44.9 sào.
-export function convertArea(area, fromM2, toM2) {
-  const n = Number(area);
-  if (!Number.isFinite(n) || !fromM2 || !toM2 || fromM2 === toM2) return n;
-  return n * (fromM2 / toM2);
+// What the reader typed -> THB/m². Full precision kept: rounding here is what
+// makes a price fail to render back as the number the contractor entered.
+export function priceIn(displayPrice, areaUnitM2, currency) {
+  const n = Number(displayPrice);
+  if (!Number.isFinite(n)) return 0;
+  return toThb(n, currency) / (Number(areaUnitM2) || 1);
 }
 
-// Money is rounded to what the currency actually uses: VND has no subunit in
-// practice, THB has satang but prices here are whole baht.
+// m² -> the reader's unit, and back.
+export function areaOut(areaM2, areaUnitM2, digits = 1) {
+  const n = Number(areaM2);
+  if (!Number.isFinite(n)) return null;
+  return Number((n / (Number(areaUnitM2) || 1)).toFixed(digits));
+}
+
+export function areaIn(displayArea, areaUnitM2) {
+  const n = Number(displayArea);
+  if (!Number.isFinite(n)) return null;
+  return Math.round(n * (Number(areaUnitM2) || 1));
+}
+
+// Money as a reader expects to see it: VND has no subunit in practice.
 export function roundMoney(amount, currency) {
   const n = Number(amount);
   if (!Number.isFinite(n)) return n;

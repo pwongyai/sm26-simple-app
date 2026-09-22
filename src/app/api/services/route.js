@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { agroCanonicalFor, isValidWorkType } from "@/lib/workTypes";
+import { priceIn } from "@/lib/units";
 import { requireAccess } from "@/lib/ownership";
 import { contractorOrgId, canUseContractor } from "@/lib/contractor";
 
@@ -89,7 +90,15 @@ export async function POST(request) {
       // (2026-08-23).
       contractor_agro_org_id: contractorOrgId(user),
       name: name.trim(),
-      price_per_unit: Number(pricePerUnit) || 0,
+      // The contractor types a price in their own currency, per their own area
+      // unit. What is stored is THB per m² — canonical, independent of who is
+      // looking. Converted here rather than in the browser because the server
+      // already knows the community's settings and cannot be lied to about them.
+      price_per_m2_thb: priceIn(
+        pricePerUnit,
+        user.organization.area_unit_m2,
+        user.organization.currency
+      ),
       adapt_code: adaptCode,
       activity_canonical: agroCanonicalFor(adaptCode),
     })

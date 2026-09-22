@@ -122,7 +122,7 @@ export default function RequestService({
       contractorOrgId: contractor?.id || null,
       activityTypeName: service.name,
       scheduledDate: date,
-      cropSizeRai: field.areaUnits,
+      cropSizeM2: field.areaM2 ?? null,
       lat: centre ? centre[1] : null,
       lng: centre ? centre[0] : null,
     });

@@ -1,5 +1,7 @@
 "use client";
 
+import { areaIn } from "@/lib/units";
+import { useUnits } from "@/lib/useUnits";
 import { useEffect, useState } from "react";
 import { createOrder } from "@/lib/store";
 import Map from "@/components/Map";
@@ -12,6 +14,7 @@ import Map from "@/components/Map";
 // customer or offers to create one from whatever was typed; the rest of the
 // form only then unfolds. Location is three options and never blocks saving.
 export default function AddOrderForm({ services, onClose, onCreated }) {
+  const { areaUnitM2 } = useUnits();
   // 'search' → 'selected' | 'new'
   const [step, setStep] = useState("search");
   const [query, setQuery] = useState("");
@@ -78,7 +81,7 @@ export default function AddOrderForm({ services, onClose, onCreated }) {
         farmerId,
         activityTypeName: service?.name || null,
         scheduledDate: scheduled || null,
-        cropSizeRai: cropSize === "" ? null : Number(cropSize),
+        cropSizeM2: cropSize === "" ? null : areaIn(cropSize, areaUnitM2),
         note: note.trim() || null,
         lat: locationType === "pin" && pin ? pin.lat : null,
         lng: locationType === "pin" && pin ? pin.lng : null,

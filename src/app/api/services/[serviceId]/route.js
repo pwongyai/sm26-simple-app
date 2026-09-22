@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { agroCanonicalFor, isValidWorkType } from "@/lib/workTypes";
+import { priceIn } from "@/lib/units";
 import { requireAccess } from "@/lib/ownership";
 import { contractorOrgId } from "@/lib/contractor";
 
@@ -26,7 +27,14 @@ export async function PATCH(request, { params }) {
   const body = await request.json();
   const updates = {};
   if (body.name !== undefined) updates.name = body.name.trim();
-  if (body.pricePerUnit !== undefined) updates.price_per_unit = Number(body.pricePerUnit) || 0;
+  // Typed in the contractor's currency and area unit; stored as THB per m².
+  if (body.pricePerUnit !== undefined) {
+    updates.price_per_m2_thb = priceIn(
+      body.pricePerUnit,
+      user.organization.area_unit_m2,
+      user.organization.currency
+    );
+  }
   // Changing the work type rewrites both bindings together — they are two
   // readings of one choice and must never be set independently, or a service
   // ends up telling AgroAPI one thing and ADAPT another.

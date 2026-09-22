@@ -123,7 +123,7 @@ export async function POST(request) {
         contractor_agro_org_id: contractorOrgId,
         name,
         activity_canonical: canonical,
-        price_per_unit: 0,
+        price_per_m2_thb: 0,
         sort_order: (i + 1) * 10,
       }))
     );
