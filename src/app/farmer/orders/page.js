@@ -6,8 +6,10 @@ import { markSeen } from "@/lib/store";
 import StatusBadge from "@/components/StatusBadge";
 import FarmerOrderDetail from "@/components/FarmerOrderDetail";
 import { fmtDate } from "@/lib/date";
+import { useT } from "@/lib/i18n";
 
 export default function FarmerOrdersTab() {
+  const t = useT();
   const [orders, refresh] = useOrders();
   const [selected, setSelected] = useState(null);
 
@@ -21,11 +23,9 @@ export default function FarmerOrdersTab() {
 
   return (
     <>
-      <h1 className="mb-4 text-lg font-semibold">Work Orders</h1>
+      <h1 className="mb-4 text-lg font-semibold">{t(t("Work Orders"))}</h1>
       {orders.length === 0 && (
-        <p className="text-sm text-[var(--text-sec)]">
-          No requests yet — go to Farm and request a machine order.
-        </p>
+        <p className="text-sm text-[var(--text-sec)]">{t(t("No requests yet — go to Farm and request a machine order."))}</p>
       )}
       <ul className="flex flex-col gap-3">
         {orders.map((o) => (
@@ -41,9 +41,7 @@ export default function FarmerOrdersTab() {
               <div className="flex items-center gap-1.5">
                 <StatusBadge status={o.status} />
                 {o.has_report && (
-                  <span className="rounded px-2 py-0.5 text-xs font-medium bg-[var(--purple-light)] text-[var(--purple)]">
-                    Work Report
-                  </span>
+                  <span className="rounded px-2 py-0.5 text-xs font-medium bg-[var(--purple-light)] text-[var(--purple)]">{t("Work Report")}</span>
                 )}
               </div>
               <span className="text-xs text-[var(--text-tert)]">{fmtDate(o.scheduled_date)}</span>

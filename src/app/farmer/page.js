@@ -7,6 +7,7 @@ import AddFieldFlow from "@/components/AddFieldFlow";
 import FieldThumb from "@/components/FieldThumb";
 import { cropLabel } from "@/lib/crop";
 import { fmtDayMonth } from "@/lib/date";
+import { useT } from "@/lib/i18n";
 
 // My Fields — one list of every plot.
 //
@@ -20,19 +21,23 @@ import { fmtDayMonth } from "@/lib/date";
 
 // Why this field sits where it does. "Unspecified" is AgroAPI's placeholder for
 // a planting whose crop nobody recorded — still a real crop in the ground.
-function cropStatus(f) {
+// `t` is passed in rather than taken from a hook: this is a plain helper
+// called during render, and calling useT() here changed the hook order of
+// the component that calls it.
+function cropStatus(f, t) {
   const crop = cropLabel({ name: f.crop, variety: f.cropVariety });
   if (f.hasActiveCrop) {
     return f.daysAfterPlanting != null
       ? `${crop} · day ${f.daysAfterPlanting}`
       : crop;
   }
-  if (f.harvestingDate) return "Harvested";
-  if (f.endDate && new Date(f.endDate) < new Date()) return "Season ended";
-  return "Not planted yet";
+  if (f.harvestingDate) return t("Harvested");
+  if (f.endDate && new Date(f.endDate) < new Date()) return t("Season ended");
+  return t("Not planted yet");
 }
 
 export default function MyFieldsTab() {
+  const t = useT();
   const [data, setData] = useState(null);
   const [services, setServices] = useState([]);
   const [requesting, setRequesting] = useState(false);
@@ -43,7 +48,7 @@ export default function MyFieldsTab() {
     fetch("/api/my/fields", { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : Promise.reject()))
       .then(setData)
-      .catch(() => setError("Could not load your fields."));
+      .catch(() => setError(t("Could not load your fields.")));
     fetch("/api/services")
       .then((r) => (r.ok ? r.json() : []))
       .then((s) =>
@@ -75,24 +80,22 @@ export default function MyFieldsTab() {
   return (
     <>
       <div className="my-3 flex items-center justify-between gap-2">
-        <h1 className="text-base font-bold">My Fields</h1>
+        <h1 className="text-base font-bold">{t(t("My Fields"))}</h1>
         <button
           className="pill"
           onClick={() => setRequesting(true)}
           disabled={fields.length === 0}
-        >
-          Request Contractor
-        </button>
+        >{t(t("Request Contractor"))}</button>
       </div>
 
       {error && <p className="text-sm text-[var(--danger)]">{error}</p>}
-      {!data && !error && <p className="empty-msg">Loading…</p>}
+      {!data && !error && <p className="empty-msg">{t(t("Loading…"))}</p>}
 
       {data && (
         <>
           <div className="flex flex-col gap-2">
             {fields.length === 0 && (
-              <p className="empty-msg">No plots registered to you yet.</p>
+              <p className="empty-msg">{t(t("No plots registered to you yet."))}</p>
             )}
 
             {fields.map((f) => (
@@ -104,7 +107,7 @@ export default function MyFieldsTab() {
                     <p className="text-xs text-[var(--text-sec)]">
                       {f.areaUnits ?? "—"} {unit}
                     </p>
-                    {/* An empty field said "Not planted yet" and then "No
+                    {/* An empty field said t("Not planted yet") and then "No
                         Active Crop" underneath it — the same fact, twice, and
                         two strings to translate. The date line only earns its
                         place once there is a date on it. */}
@@ -113,15 +116,13 @@ export default function MyFieldsTab() {
                         Planted {fmtDayMonth(f.plantingDate)}
                       </p>
                     )}
-                    <p className="text-xs text-[var(--text-tert)]">{cropStatus(f)}</p>
+                    <p className="text-xs text-[var(--text-tert)]">{cropStatus(f, t)}</p>
                   </div>
                 </div>
                 <Link
                   href={`/farmer/field/${f.cropzoneId || f.fieldId}`}
                   className="btn btn-outline mt-3 block w-full text-center"
-                >
-                  View Field
-                </Link>
+                >{t(t("View Field"))}</Link>
               </div>
             ))}
           </div>

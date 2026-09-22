@@ -5,11 +5,13 @@ import { useRouter } from "next/navigation";
 import { logout } from "@/lib/useSession";
 import { fmtDate } from "@/lib/date";
 import LanguagePicker from "@/components/LanguagePicker";
+import { useT } from "@/lib/i18n";
 
 // Profile — version 3 §4/§11.6: the farmer's own details, who they're
 // connected to, and the way out. No language toggle yet; that's listed in the
 // screen inventory rather than faked as a setting that does nothing.
 export default function ProfileTab() {
+  const t = useT();
   const router = useRouter();
   const [me, setMe] = useState(null);
   const [name, setName] = useState("");
@@ -42,7 +44,7 @@ export default function ProfileTab() {
         setName(d.name || "");
         setPhone(d.phone || "");
       })
-      .catch(() => setError("Could not load your profile."));
+      .catch(() => setError(t("Could not load your profile.")));
   }, []);
 
   useEffect(load, [load]);
@@ -57,11 +59,11 @@ export default function ProfileTab() {
     });
     setBusy(false);
     if (!res.ok) {
-      setError((await res.json()).error || "Could not save.");
+      setError((await res.json()).error || t("Could not save."));
       return;
     }
     setEditing(false);
-    setSaved("Saved");
+    setSaved(t("Saved"));
     setTimeout(() => setSaved(""), 1500);
     load();
   }
@@ -77,23 +79,23 @@ export default function ProfileTab() {
     });
     setPwBusy(false);
     if (!res.ok) {
-      setPwError((await res.json()).error || "Could not change password.");
+      setPwError((await res.json()).error || t("Could not change password."));
       return;
     }
     setPwCurrent("");
     setPwNew("");
-    setPwMsg("Password changed");
+    setPwMsg(t("Password changed"));
     setTimeout(() => {
       setPwMsg("");
       setPwOpen(false);
     }, 1500);
   }
 
-  if (!me) return <p className="empty-msg">Loading…</p>;
+  if (!me) return <p className="empty-msg">{t(t("Loading…"))}</p>;
 
   return (
     <>
-      <h1 className="my-3 text-base font-bold">Profile</h1>
+      <h1 className="my-3 text-base font-bold">{t(t("Profile"))}</h1>
 
       {saved && (
         <p className="mb-3 rounded-xl bg-[var(--green-light)] p-2 text-xs text-[var(--green-dark)]">
@@ -105,11 +107,11 @@ export default function ProfileTab() {
         {!editing ? (
           <>
             <div className="detail-row">
-              <div className="lbl">Your name</div>
+              <div className="lbl">{t(t("Your name"))}</div>
               <div className="val">{me.name}</div>
             </div>
             <div className="detail-row">
-              <div className="lbl">Phone number</div>
+              <div className="lbl">{t(t("Phone number"))}</div>
               <div className="val">{me.phone}</div>
             </div>
 
@@ -122,29 +124,27 @@ export default function ProfileTab() {
                 setEditing(true);
               }}
             >
-              <span className="text-sm font-medium">Edit</span>
+              <span className="text-sm font-medium">{t(t("Edit"))}</span>
               <span className="text-[var(--text-tert)]">›</span>
             </button>
           </>
         ) : (
           <>
-            <div className="field-label">Your name</div>
+            <div className="field-label">{t(t("Your name"))}</div>
             <input
               className="field mb-3"
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
 
-            <div className="field-label">Phone number</div>
+            <div className="field-label">{t(t("Phone number"))}</div>
             <input
               className="field"
               type="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
             />
-            <p className="mt-1 text-[11px] text-[var(--text-tert)]">
-              This is how you sign in — changing it changes your login.
-            </p>
+            <p className="mt-1 text-[11px] text-[var(--text-tert)]">{t(t("This is how you sign in — changing it changes your login."))}</p>
 
             {error && <p className="mt-2 text-sm text-[var(--danger)]">{error}</p>}
 
@@ -155,15 +155,13 @@ export default function ProfileTab() {
                   setEditing(false);
                   setError("");
                 }}
-              >
-                Cancel
-              </button>
+              >{t(t("Cancel"))}</button>
               <button
                 className="btn btn-primary flex-1"
                 disabled={busy}
                 onClick={save}
               >
-                {busy ? "Saving…" : "Save"}
+                {busy ? t("Saving…") : t("Save")}
               </button>
             </div>
           </>
@@ -176,17 +174,17 @@ export default function ProfileTab() {
             className="flex w-full items-center justify-between text-left"
             onClick={() => setPwOpen(true)}
           >
-            <span className="text-sm font-medium">Change Password</span>
+            <span className="text-sm font-medium">{t(t("Change Password"))}</span>
             <span className="text-[var(--text-tert)]">›</span>
           </button>
         ) : (
           <>
-            <div className="field-label">Change Password</div>
+            <div className="field-label">{t(t("Change Password"))}</div>
 
             <input
               className="field mb-3"
               type="password"
-              placeholder="Current password"
+              placeholder={t(t("Current password"))}
               autoComplete="current-password"
               value={pwCurrent}
               onChange={(e) => setPwCurrent(e.target.value)}
@@ -194,14 +192,12 @@ export default function ProfileTab() {
             <input
               className="field"
               type="password"
-              placeholder="New password"
+              placeholder={t(t("New password"))}
               autoComplete="new-password"
               value={pwNew}
               onChange={(e) => setPwNew(e.target.value)}
             />
-            <p className="mt-1 text-[11px] text-[var(--text-tert)]">
-              At least 6 characters.
-            </p>
+            <p className="mt-1 text-[11px] text-[var(--text-tert)]">{t(t("At least 6 characters."))}</p>
 
             {pwError && (
               <p className="mt-2 text-sm text-[var(--danger)]">{pwError}</p>
@@ -219,42 +215,40 @@ export default function ProfileTab() {
                   setPwNew("");
                   setPwError("");
                 }}
-              >
-                Cancel
-              </button>
+              >{t(t("Cancel"))}</button>
               <button
                 className="btn btn-primary flex-1"
                 disabled={pwBusy || !pwCurrent || !pwNew}
                 onClick={changePassword}
               >
-                {pwBusy ? "Saving…" : "Save"}
+                {pwBusy ? t("Saving…") : t("Save")}
               </button>
             </div>
           </>
         )}
       </div>
 
-      <p className="field-label">Language</p>
+      <p className="field-label">{t(t("Language"))}</p>
       <div className="mb-4">
         <LanguagePicker />
       </div>
 
-      <p className="field-label">Organization</p>
+      <p className="field-label">{t(t("Organization"))}</p>
       <div className="detail-card mb-4">
         <div className="detail-row">
-          <div className="lbl">Community</div>
+          <div className="lbl">{t(t("Community"))}</div>
           <div className="val">{me.organization}</div>
         </div>
         <div className="detail-row">
-          <div className="lbl">Contractor</div>
+          <div className="lbl">{t(t("Contractor"))}</div>
           <div className="val">{me.contractor || "—"}</div>
         </div>
         <div className="detail-row">
-          <div className="lbl">Currency</div>
+          <div className="lbl">{t(t("Currency"))}</div>
           <div className="val">{me.currency || "—"}</div>
         </div>
         <div className="detail-row">
-          <div className="lbl">Area unit</div>
+          <div className="lbl">{t(t("Area unit"))}</div>
           <div className="val">
             {me.areaUnit
               ? me.areaUnitM2
@@ -264,7 +258,7 @@ export default function ProfileTab() {
           </div>
         </div>
         <div className="detail-row">
-          <div className="lbl">Joined</div>
+          <div className="lbl">{t(t("Joined"))}</div>
           <div className="val">
             {fmtDate(me.joinedAt)}
           </div>
@@ -282,9 +276,7 @@ export default function ProfileTab() {
           await logout();
           router.push("/login");
         }}
-      >
-        Log Out
-      </button>
+      >{t(t("Log Out"))}</button>
     </>
   );
 }

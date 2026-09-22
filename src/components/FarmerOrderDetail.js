@@ -7,6 +7,7 @@ import { deleteOrder } from "@/lib/store";
 import StatusBadge from "@/components/StatusBadge";
 import Map from "@/components/Map";
 import { fmtDate, fmtTime } from "@/lib/date";
+import { useT } from "@/lib/i18n";
 
 
 
@@ -27,13 +28,14 @@ const MACHINE_TAB = "machine";
 // contractor's bookkeeping, not the farmer's) — the farmer just sees the
 // charge.
 export default function FarmerOrderDetail({ order, onClose, onChanged }) {
+  const t = useT();
   const { areaUnit, areaUnitM2 } = useUnits();
   const [busy, setBusy] = useState(false);
   const [confirmingCancel, setConfirmingCancel] = useState(false);
   const [error, setError] = useState("");
   const [report, setReport] = useState(null);
   // A completed order needs one round trip before we know whether a report
-  // exists — without this, the plain "Work Order" view renders first and
+  // exists — without this, the plain t("Work Order") view renders first and
   // then gets replaced the instant the fetch resolves, which reads as the
   // screen loading twice. Gate on this instead of on `report` itself so a
   // completed order without a report (see below) still resolves cleanly to
@@ -53,30 +55,30 @@ export default function FarmerOrderDetail({ order, onClose, onChanged }) {
   }, [order.id, order.status]);
 
   const overviewFields = report && [
-    ["Farmer Name", report.farmer?.name || "Unassigned"],
-    ["Work Type", report.service_name || report.work_type_name || "—"],
-    ["Total Hours", report.hours != null ? `${report.hours} hr` : "—"],
-    ["Start Time", report.agro_machine_id ? fmtTime(report.started_at) : "—"],
-    ["Stop Time", fmtTime(report.ended_at)],
-    ["Crop Area", `${report.field_area_units ?? "—"} ${report.unit_label || ""}`],
-    ["Work Area", `${report.work_area_units ?? "—"} ${report.unit_label || ""}`],
+    [t("Farmer Name"), report.farmer?.name || t("Unassigned")],
+    [t("Work Type"), report.service_name || report.work_type_name || "—"],
+    [t("Total Hours"), report.hours != null ? `${report.hours} hr` : "—"],
+    [t("Start Time"), report.agro_machine_id ? fmtTime(report.started_at) : "—"],
+    [t("Stop Time"), fmtTime(report.ended_at)],
+    [t("Crop Area"), `${report.field_area_units ?? "—"} ${report.unit_label || ""}`],
+    [t("Work Area"), `${report.work_area_units ?? "—"} ${report.unit_label || ""}`],
     ["% Work Area", `${report.percent_worked ?? "—"}%`],
   ];
 
   const machineFields = report && [
-    ["Machine Name", report.machine_name || "—"],
-    ["Implement Width", report.width_m ? `${report.width_m} m` : "—"],
+    [t("Machine Name"), report.machine_name || "—"],
+    [t("Implement Width"), report.width_m ? `${report.width_m} m` : "—"],
     [
       // Inside the farmer's own field — the machine's wider travel that day is
       // none of this report's business, and showing it invited the question
       // "am I being charged for that?" (2026-08-23).
-      "Total Distance",
+      t("Total Distance"),
       report.inside_distance_m != null
         ? `${(report.inside_distance_m / 1000).toFixed(2)} km`
         : "—",
     ],
-    ["Fuel Consumption", report.fuel_l != null ? `${report.fuel_l} L` : "—"],
-    ["Emissions", report.emissions_kg != null ? `${report.emissions_kg} kg CO₂` : "—"],
+    [t("Fuel Consumption"), report.fuel_l != null ? `${report.fuel_l} L` : "—"],
+    [t("Emissions"), report.emissions_kg != null ? `${report.emissions_kg} kg CO₂` : "—"],
   ];
 
   async function cancel() {
@@ -87,7 +89,7 @@ export default function FarmerOrderDetail({ order, onClose, onChanged }) {
       onChanged();
       onClose();
     } catch {
-      setError("Could not cancel this request.");
+      setError(t("Could not cancel this request."));
       setBusy(false);
     }
   }
@@ -96,13 +98,13 @@ export default function FarmerOrderDetail({ order, onClose, onChanged }) {
     return (
       <div className="overlay">
         <div className="ov-header">
-          <button className="ov-back" onClick={onClose} aria-label="Back">
+          <button className="ov-back" onClick={onClose} aria-label={t(t("Back"))}>
             ←
           </button>
-          <span className="ov-title">Work Order</span>
+          <span className="ov-title">{t(t("Work Order"))}</span>
         </div>
         <div className="ov-body">
-          <p className="empty-msg">Loading…</p>
+          <p className="empty-msg">{t(t("Loading…"))}</p>
         </div>
       </div>
     );
@@ -116,10 +118,10 @@ export default function FarmerOrderDetail({ order, onClose, onChanged }) {
     return (
       <div className="overlay">
         <div className="ov-header">
-          <button className="ov-back" onClick={onClose} aria-label="Back">
+          <button className="ov-back" onClick={onClose} aria-label={t(t("Back"))}>
             ←
           </button>
-          <span className="ov-title">Review Work Report</span>
+          <span className="ov-title">{t(t("Review Work Report"))}</span>
         </div>
 
         <div className="ov-body">
@@ -130,15 +132,11 @@ export default function FarmerOrderDetail({ order, onClose, onChanged }) {
               <button
                 className={tab === OVERVIEW_TAB ? "active" : ""}
                 onClick={() => setTab(OVERVIEW_TAB)}
-              >
-                Overview
-              </button>
+              >{t(t("Overview"))}</button>
               <button
                 className={tab === MACHINE_TAB ? "active" : ""}
                 onClick={() => setTab(MACHINE_TAB)}
-              >
-                Machine
-              </button>
+              >{t(t("Machine"))}</button>
             </div>
             <div className="spec-grid">
               {(tab === OVERVIEW_TAB ? overviewFields : machineFields).map(([lbl, val]) => (
@@ -151,7 +149,7 @@ export default function FarmerOrderDetail({ order, onClose, onChanged }) {
           </div>
 
           <div className="flex items-center justify-between rounded-xl border border-[var(--rule)] bg-white p-3">
-            <span className="text-sm text-[var(--text-sec)]">Total charge</span>
+            <span className="text-sm text-[var(--text-sec)]">{t(t("Total charge"))}</span>
             <span className="text-lg font-semibold">
               {fmtMoney(Number(report.service_charge), report.currency)}
             </span>
@@ -165,9 +163,7 @@ export default function FarmerOrderDetail({ order, onClose, onChanged }) {
         </div>
 
         <div className="ov-footer">
-          <button onClick={onClose} className="btn btn-primary w-full">
-            Close
-          </button>
+          <button onClick={onClose} className="btn btn-primary w-full">{t(t("Close"))}</button>
         </div>
       </div>
     );
@@ -176,42 +172,42 @@ export default function FarmerOrderDetail({ order, onClose, onChanged }) {
   return (
     <div className="overlay">
       <div className="ov-header">
-        <button className="ov-back" onClick={onClose} aria-label="Back">
+        <button className="ov-back" onClick={onClose} aria-label={t(t("Back"))}>
           ←
         </button>
-        <span className="ov-title">Work Order</span>
+        <span className="ov-title">{t(t("Work Order"))}</span>
       </div>
 
       <div className="ov-body">
         <div className="detail-card">
           <div className="detail-row">
-            <div className="lbl">Status</div>
+            <div className="lbl">{t(t("Status"))}</div>
             <div className="val">
               <StatusBadge status={order.status} />
             </div>
           </div>
           <div className="detail-row">
-            <div className="lbl">Field</div>
+            <div className="lbl">{t(t("Field"))}</div>
             <div className="val">{order.field_name || "—"}</div>
           </div>
           <div className="detail-row">
-            <div className="lbl">Work type</div>
-            <div className="val">{order.activity_type_name || "Not set"}</div>
+            <div className="lbl">{t(t("Work type"))}</div>
+            <div className="val">{order.activity_type_name || t("Not set")}</div>
           </div>
           <div className="detail-row">
-            <div className="lbl">Crop size</div>
+            <div className="lbl">{t(t("Crop size"))}</div>
             <div className="val">
               {order.crop_size_m2 != null
                 ? `${areaOut(order.crop_size_m2, areaUnitM2)} ${areaUnit}`
-                : "Unknown"}
+                : t("Unknown")}
             </div>
           </div>
           <div className="detail-row">
-            <div className="lbl">Scheduled</div>
-            <div className="val">{order.scheduled_date ? fmtDate(order.scheduled_date) : "No date"}</div>
+            <div className="lbl">{t(t("Scheduled"))}</div>
+            <div className="val">{order.scheduled_date ? fmtDate(order.scheduled_date) : t("No date")}</div>
           </div>
           <div className="detail-row">
-            <div className="lbl">Requested</div>
+            <div className="lbl">{t(t("Requested"))}</div>
             <div className="val">
               {fmtDate(order.booking_date)}
             </div>
@@ -221,7 +217,7 @@ export default function FarmerOrderDetail({ order, onClose, onChanged }) {
               guessing about their own job. */}
           {order.note && (
             <div className="detail-row">
-              <div className="lbl">Note</div>
+              <div className="lbl">{t(t("Note"))}</div>
               <div className="val">{order.note}</div>
             </div>
           )}
@@ -255,16 +251,14 @@ export default function FarmerOrderDetail({ order, onClose, onChanged }) {
               disabled={busy}
               onClick={cancel}
             >
-              {busy ? "Cancelling…" : "Really cancel?"}
+              {busy ? t("Cancelling…") : t("Really cancel?")}
             </button>
           ) : (
             <button
               className="btn btn-outline"
               style={{ color: "var(--danger)" }}
               onClick={() => setConfirmingCancel(true)}
-            >
-              Cancel request
-            </button>
+            >{t(t("Cancel request"))}</button>
           )}
         </div>
       )}
