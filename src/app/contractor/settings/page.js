@@ -21,7 +21,16 @@ import Map from "@/components/Map";
 // and Cancel/Save — nothing writes to the DB until Save is actually
 // pressed. Language and Log Out stay immediate-apply (a single tap picking
 // one of two states, not free-text data worth a review step).
+// Two tabs, because one Settings page had grown to seven sections and the two
+// a contractor actually returns to — where he starts from, and what he charges
+// — were buried under the ones he sets once (2026-09-23).
+const SETTINGS_VIEWS = [
+  { key: "general", label: "General" },
+  { key: "services", label: "Services" },
+];
+
 export default function SettingsTab() {
+  const [view, setView] = useState("general");
   const [settings, setSettings] = useState(null);
   const [profile, setProfile] = useState(null);
   const [services, setServices] = useState([]);
@@ -55,56 +64,76 @@ export default function SettingsTab() {
     <>
       <h1 className="mb-5 text-lg font-semibold">Settings</h1>
 
+      <div className="subtabs mb-4">
+        {SETTINGS_VIEWS.map((v) => (
+          <button
+            key={v.key}
+            className={`subtab-btn ${view === v.key ? "active" : ""}`}
+            onClick={() => setView(v.key)}
+          >
+            {v.label}
+          </button>
+        ))}
+      </div>
+
       {saved && (
         <p className="mb-3 rounded bg-emerald-50 p-2 text-xs text-emerald-800">{saved}</p>
       )}
 
-      <ContractorProfile
-        profile={profile}
-        organization={settings.organization}
-        onChanged={() => {
-          load();
-          flash("Settings saved");
-        }}
-      />
+      {view === "services" && (
+        <>
+          <HomeBase
+            profile={profile}
+            onChanged={() => {
+              load();
+              flash("Home base saved");
+            }}
+          />
 
-      <FarmOrganization
-        onChanged={() => {
-          load();
-          flash("Community switched");
-        }}
-      />
+          <ServiceList
+            services={services}
+            unit={settings.areaUnit}
+            currency={settings.currency}
+            settings={settings}
+            onChanged={() => {
+              load();
+              flash("Saved");
+            }}
+          />
+        </>
+      )}
 
-      <HomeBase
-        profile={profile}
-        onChanged={() => {
-          load();
-          flash("Home base saved");
-        }}
-      />
+      {view === "general" && (
+        <>
+          <ContractorProfile
+            profile={profile}
+            organization={settings.organization}
+            onChanged={() => {
+              load();
+              flash("Settings saved");
+            }}
+          />
 
-      <ServiceList
-        services={services}
-        unit={settings.areaUnit}
-        currency={settings.currency}
-        settings={settings}
-        onChanged={() => {
-          load();
-          flash("Saved");
-        }}
-      />
+          <FarmOrganization
+            onChanged={() => {
+              load();
+              flash("Community switched");
+            }}
+          />
 
-      <Language profile={profile} onChanged={() => { load(); flash("Language saved"); }} />
+          <Language profile={profile} onChanged={() => { load(); flash("Language saved"); }} />
 
-      <CurrencyAndArea
-        settings={settings}
-        onChanged={() => {
-          load();
-          flash("Saved");
-        }}
-      />
+          <CurrencyAndArea
+            settings={settings}
+            onChanged={() => {
+              load();
+              flash("Saved");
+            }}
+          />
 
-      <LogOut />
+          <LogOut />
+        </>
+      )}
     </>
   );
 }
