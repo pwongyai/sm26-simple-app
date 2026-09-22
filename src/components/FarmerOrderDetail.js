@@ -166,11 +166,6 @@ export default function FarmerOrderDetail({ order, onClose, onChanged }) {
             {report.work_order_id && " · Linked to an existing work order"}
           </p>
 
-          {report.agro_activity_id && (
-            <p className="rounded bg-emerald-50 p-2 text-xs text-emerald-800">
-              Recorded in AgroAPI as a permanent activity.
-            </p>
-          )}
         </div>
 
         <div className="ov-footer">

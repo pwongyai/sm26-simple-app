@@ -410,9 +410,6 @@ function ViewReport({ report: r, onClose, onTogglePaid }) {
           {r.work_order_id && " · Linked to an existing work order"}
         </p>
 
-        {r.agro_activity_id && (
-          <p className="rounded bg-emerald-50 p-2 text-xs text-emerald-800">Recorded in AgroAPI as a permanent activity.</p>
-        )}
       </div>
 
       <div className="ov-footer">
@@ -642,11 +639,6 @@ function CreateReport({ onClose, onCreated, onViewExisting }) {
                 ? "Linked to the open work order for this field."
                 : "No work order existed for this field — one has been added to your notebook."}
             </p>
-            {done.activityId && (
-              <p className="rounded bg-emerald-50 p-2 text-xs text-emerald-800">
-                Recorded in AgroAPI as a permanent activity.
-              </p>
-            )}
           </>
         )}
 
