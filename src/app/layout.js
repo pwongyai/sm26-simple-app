@@ -12,8 +12,17 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "SM26 Simple App",
-  description: "Farmer-contractor work request MVP",
+  // What a phone shows under the icon once the app is added to a home screen,
+  // so it says what it is rather than what the project was called.
+  title: "Smart Machine",
+  description: "Farm machinery work orders and reports",
+  appleWebApp: { capable: true, title: "Smart Machine", statusBarStyle: "black-translucent" },
+};
+
+// The dark tile behind the icon, and the colour Android paints the status bar
+// when the app is opened from the home screen.
+export const viewport = {
+  themeColor: "#171717",
 };
 
 export default function RootLayout({ children }) {
