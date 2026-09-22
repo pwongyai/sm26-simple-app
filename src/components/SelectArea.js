@@ -8,8 +8,9 @@ import Map from "@/components/Map";
 import { polygonAreaM2 } from "@/lib/engine";
 import { FULL_PAGE_MAP_HEIGHT } from "@/lib/mapHeight";
 import { fmtDayMonth } from "@/lib/date";
+import { useT } from "@/lib/i18n";
 
-// Machine tab's "Select Area to Create Report" + "Draw Field Boundary"
+// Machine tab's t("Select Area to Create Report") + t("Draw Field Boundary")
 // (version 3 §2d-2f), on real data: tap the map — inside a known field hands
 // off into the existing, proven date-based report flow; anywhere else offers
 // to draw the field's boundary for real, writing a real AgroAPI
@@ -17,6 +18,7 @@ import { fmtDayMonth } from "@/lib/date";
 // "auto-detect" toggle is left out — it was explicitly a placeholder for a
 // future real model, not something drawing a fake box would improve on.
 export default function SelectArea({ machine, points, day, since, until, initialView, onClose }) {
+  const t = useT();
   const { areaUnit: unitLabel, areaUnitM2 } = useUnits();
   const router = useRouter();
   const [fields, setFields] = useState([]);
@@ -197,7 +199,7 @@ export default function SelectArea({ machine, points, day, since, until, initial
       const res = await fetch(`/api/reports/preview?${query}`);
       const preview = await res.json();
       if (!res.ok) {
-        setError(preview.error || "Could not compute this report.");
+        setError(preview.error || t("Could not compute this report."));
         setBusy(false);
         return;
       }
@@ -212,7 +214,7 @@ export default function SelectArea({ machine, points, day, since, until, initial
       );
       router.push("/contractor/reports?fromSelectArea=1");
     } catch {
-      setError("Could not compute this report.");
+      setError(t("Could not compute this report."));
       setBusy(false);
     }
   }
@@ -245,7 +247,7 @@ export default function SelectArea({ machine, points, day, since, until, initial
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ name: newName, phone: newPhone }),
         });
-        if (!res.ok) throw new Error("Could not save this customer.");
+        if (!res.ok) throw new Error(t("Could not save this customer."));
         const data = await res.json();
         farmerId = data.id;
         farmerName = data.name;
@@ -263,7 +265,7 @@ export default function SelectArea({ machine, points, day, since, until, initial
         body: JSON.stringify({ boundary: [ring] }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Could not create this field.");
+      if (!res.ok) throw new Error(data.error || t("Could not create this field."));
       setCreated({ ...data, boundary: [ring], farmerId, farmerName });
       setMode("done");
     } catch (e) {
@@ -290,37 +292,31 @@ export default function SelectArea({ machine, points, day, since, until, initial
           ←
         </button>
         <span className="ov-title">
-          {mode === "pick" && "Select Area to Create Report"}
-          {mode === "notfound" && "Create Work Report"}
-          {mode === "draw" && "Draw Field Boundary"}
+          {mode === "pick" && t("Select Area to Create Report")}
+          {mode === "notfound" && t("Create Work Report")}
+          {mode === "draw" && t("Draw Field Boundary")}
           {mode === "farmer" && "Farmer's Name"}
-          {mode === "match" && "Match Work Order"}
-          {mode === "done" && "Field Created"}
+          {mode === "match" && t("Match Work Order")}
+          {mode === "done" && t("Field Created")}
         </span>
       </div>
 
       <div className="ov-body">
         {mode === "pick" && (
           <>
-            <div className="fieldset-note">
-              Tap the map — inside a field, or anywhere else if none match.
-            </div>
+            <div className="fieldset-note">{t("Tap the map — inside a field, or anywhere else if none match.")}</div>
             {nearbyFields.length > 0 && (
               <div className="flex items-center gap-4 text-xs text-[var(--text-sec)]">
                 <span>
                   <span
                     className="mr-1 inline-block h-2.5 w-2.5 rounded-full"
                     style={{ background: "#4ade80" }}
-                  />
-                  No report yet
-                </span>
+                  />{t("No report yet")}</span>
                 <span>
                   <span
                     className="mr-1 inline-block h-2.5 w-2.5 rounded-full"
                     style={{ background: "#c084fc" }}
-                  />
-                  Already reported
-                </span>
+                  />{t("Already reported")}</span>
               </div>
             )}
             {error && <p className="text-sm text-[var(--danger)]">{error}</p>}
@@ -332,7 +328,7 @@ export default function SelectArea({ machine, points, day, since, until, initial
                     sequential AgroAPI calls) — "Checking for an open
                     order" undersold how much was actually happening and
                     read as stuck well before it was. */}
-                {matching ? "Generating report…" : "Loading fields…"}
+                {matching ? t("Generating report…") : t("Loading fields…")}
               </div>
             ) : (
               <Map
@@ -353,10 +349,8 @@ export default function SelectArea({ machine, points, day, since, until, initial
         {mode === "notfound" && (
           <div className="card flex flex-col items-center gap-2 p-6 text-center">
             <span className="text-3xl">⚠️</span>
-            <h2 className="text-base font-semibold">Field Boundary Not Found</h2>
-            <p className="text-sm text-[var(--text-sec)]">
-              Draw the field boundary to create a report.
-            </p>
+            <h2 className="text-base font-semibold">{t("Field Boundary Not Found")}</h2>
+            <p className="text-sm text-[var(--text-sec)]">{t("Draw the field boundary to create a report.")}</p>
           </div>
         )}
 
@@ -394,12 +388,12 @@ export default function SelectArea({ machine, points, day, since, until, initial
           <>
             {farmerStep === "search" && (
               <>
-                <div className="field-label">Search customer name or phone</div>
+                <div className="field-label">{t("Search customer name or phone")}</div>
                 <input
                   className="field"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Start typing…"
+                  placeholder={t("Start typing…")}
                   autoFocus
                 />
                 {q && (
@@ -415,7 +409,7 @@ export default function SelectArea({ machine, points, day, since, until, initial
                           }}
                         >
                           <b>{c.name}</b>
-                          <span>{c.phone || "No phone"}</span>
+                          <span>{c.phone || t("No phone")}</span>
                         </button>
                       ))}
                     </div>
@@ -440,7 +434,7 @@ export default function SelectArea({ machine, points, day, since, until, initial
             {farmerStep === "selected" && (
               <>
                 <div className="flex items-center justify-between">
-                  <div className="field-label mb-0">Customer</div>
+                  <div className="field-label mb-0">{t("Customer")}</div>
                   <button
                     className="text-xs font-bold"
                     onClick={() => {
@@ -448,15 +442,13 @@ export default function SelectArea({ machine, points, day, since, until, initial
                       setQuery("");
                       setChosenFarmer(null);
                     }}
-                  >
-                    Change
-                  </button>
+                  >{t("Change")}</button>
                 </div>
                 <div className="choice-card selected" style={{ cursor: "default" }}>
                   <div className="icon">👤</div>
                   <div className="txt">
                     <b>{chosenFarmer.name}</b>
-                    <span>{chosenFarmer.phone || "No phone on file"}</span>
+                    <span>{chosenFarmer.phone || t("No phone on file")}</span>
                   </div>
                 </div>
               </>
@@ -465,26 +457,24 @@ export default function SelectArea({ machine, points, day, since, until, initial
             {farmerStep === "new" && (
               <>
                 <div className="flex items-center justify-between">
-                  <div className="field-label mb-0">New customer details</div>
+                  <div className="field-label mb-0">{t("New customer details")}</div>
                   <button
                     className="text-xs font-bold"
                     onClick={() => setFarmerStep("search")}
-                  >
-                    Change
-                  </button>
+                  >{t("Change")}</button>
                 </div>
                 <input
                   className="field"
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
-                  placeholder="Full name"
+                  placeholder={t("Full name")}
                 />
                 <input
                   className="field"
                   type="tel"
                   value={newPhone}
                   onChange={(e) => setNewPhone(e.target.value)}
-                  placeholder="Phone number"
+                  placeholder={t("Phone number")}
                 />
               </>
             )}
@@ -498,9 +488,7 @@ export default function SelectArea({ machine, points, day, since, until, initial
             this the tap looked like it had done nothing at all. */}
         {mode === "match" && busy && (
           <div className="flex flex-col items-center justify-center gap-3 py-14 text-sm text-[var(--text-sec)]">
-            <span className="spinner" />
-            Generating report…
-          </div>
+            <span className="spinner" />{t("Generating report…")}</div>
         )}
 
         {mode === "match" && !busy && (
@@ -524,11 +512,11 @@ export default function SelectArea({ machine, points, day, since, until, initial
                 >
                   <div className="icon">📋</div>
                   <div className="txt">
-                    <b>{o.activity_type_name || "Job"}</b>
+                    <b>{o.activity_type_name || t("Job")}</b>
                     <span>
                       {o.scheduled_date
                         ? fmtDayMonth(o.scheduled_date)
-                        : "No date"}
+                        : t("No date")}
                       {" · "}
                       {o.crop_size_m2 != null ? areaOut(o.crop_size_m2, areaUnitM2) : "?"}{" "}
                       {unitLabel} · {o.status}
@@ -544,13 +532,13 @@ export default function SelectArea({ machine, points, day, since, until, initial
           <>
             <div className="detail-card">
               <div className="detail-row">
-                <div className="lbl">Field</div>
-                <div className="val">{created?.name || "Created in AgroAPI"}</div>
+                <div className="lbl">{t("Field")}</div>
+                <div className="val">{created?.name || t("Created in AgroAPI")}</div>
               </div>
               {created?.cropzoneId && (
                 <div className="detail-row">
-                  <div className="lbl">Cropzone</div>
-                  <div className="val">Ready</div>
+                  <div className="lbl">{t("Cropzone")}</div>
+                  <div className="val">{t("Ready")}</div>
                 </div>
               )}
             </div>
@@ -567,12 +555,8 @@ export default function SelectArea({ machine, points, day, since, until, initial
       <div className="ov-footer">
         {mode === "notfound" && (
           <>
-            <button className="btn btn-outline flex-1" onClick={() => setMode("pick")}>
-              Cancel
-            </button>
-            <button className="btn btn-go flex-1" onClick={() => setMode("draw")}>
-              Draw Field Boundary
-            </button>
+            <button className="btn btn-outline flex-1" onClick={() => setMode("pick")}>{t("Cancel")}</button>
+            <button className="btn btn-go flex-1" onClick={() => setMode("draw")}>{t("Draw Field Boundary")}</button>
           </>
         )}
         {mode === "draw" && (
@@ -586,7 +570,7 @@ export default function SelectArea({ machine, points, day, since, until, initial
         )}
         {mode === "farmer" && farmerStep !== "search" && (
           <button className="btn btn-go w-full" disabled={busy} onClick={createField}>
-            {busy ? "Creating…" : "Create Field"}
+            {busy ? t("Creating…") : t("Create Field")}
           </button>
         )}
         {mode === "match" && (
@@ -600,9 +584,7 @@ export default function SelectArea({ machine, points, day, since, until, initial
                 workOrderId: null,
               })
             }
-          >
-            No matching order — create new
-          </button>
+          >{t("No matching order — create new")}</button>
         )}
         {mode === "done" && (
           <button
@@ -615,7 +597,7 @@ export default function SelectArea({ machine, points, day, since, until, initial
               )
             }
           >
-            {matching ? "Checking…" : "Continue to Report →"}
+            {matching ? t("Checking…") : "Continue to Report →"}
           </button>
         )}
       </div>

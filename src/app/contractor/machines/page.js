@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import MachinePhoto from "@/components/MachinePhoto";
 import FrozenHeaderScroll from "@/components/FrozenHeaderScroll";
+import { useT } from "@/lib/i18n";
 
 // Which machines show up here, and in what order, is a local-only display
 // preference (machine_settings) — AgroAPI has no concept of either. Edit
@@ -11,6 +12,7 @@ import FrozenHeaderScroll from "@/components/FrozenHeaderScroll";
 // nothing writes until Save, and Save commits every row's active state +
 // order together in one batch (src/app/api/machines/settings/route.js).
 export default function MachinesTab() {
+  const t = useT();
   const [machines, setMachines] = useState(null);
   const [error, setError] = useState("");
   const [editing, setEditing] = useState(false);
@@ -21,7 +23,7 @@ export default function MachinesTab() {
     fetch("/api/machines?activeOnly=1")
       .then((r) => (r.ok ? r.json() : Promise.reject()))
       .then(setMachines)
-      .catch(() => setError("Could not load machines."));
+      .catch(() => setError(t("Could not load machines.")));
   }, []);
 
   useEffect(() => {
@@ -67,11 +69,9 @@ export default function MachinesTab() {
   const header = (
     <>
       <div className="mb-1 flex items-center justify-between">
-        <h1 className="text-lg font-semibold">Machines</h1>
+        <h1 className="text-lg font-semibold">{t("Machines")}</h1>
         {!editing && (
-          <button onClick={startEdit} className="text-xs text-[var(--text-sec)] underline">
-            Edit
-          </button>
+          <button onClick={startEdit} className="text-xs text-[var(--text-sec)] underline">{t("Edit")}</button>
         )}
       </div>
     </>
@@ -86,7 +86,7 @@ export default function MachinesTab() {
           list here.
         </p>
         <div className="flex flex-col gap-2">
-          {draft.length === 0 && <p className="text-sm text-[var(--text-sec)]">Loading…</p>}
+          {draft.length === 0 && <p className="text-sm text-[var(--text-sec)]">{t("Loading…")}</p>}
           {draft.map((m, i) => (
             <div
               key={m.id}
@@ -118,8 +118,8 @@ export default function MachinesTab() {
               </div>
               <div className="flex gap-1.5">
                 {[
-                  { key: true, label: "Active" },
-                  { key: false, label: "Inactive" },
+                  { key: true, label: t("Active") },
+                  { key: false, label: t("Inactive") },
                 ].map((opt) => (
                   <button
                     key={opt.label}
@@ -140,11 +140,9 @@ export default function MachinesTab() {
             onClick={() => setEditing(false)}
             disabled={busy}
             className="btn btn-outline flex-1"
-          >
-            Cancel
-          </button>
+          >{t("Cancel")}</button>
           <button onClick={save} disabled={busy} className="btn btn-primary flex-1">
-            {busy ? "Saving…" : "Save"}
+            {busy ? t("Saving…") : t("Save")}
           </button>
         </div>
       </FrozenHeaderScroll>
@@ -154,11 +152,9 @@ export default function MachinesTab() {
   return (
     <FrozenHeaderScroll header={header}>
       {error && <p className="text-sm text-red-600">{error}</p>}
-      {!machines && !error && <p className="text-sm text-[var(--text-sec)]">Loading…</p>}
+      {!machines && !error && <p className="text-sm text-[var(--text-sec)]">{t("Loading…")}</p>}
       {machines && machines.length === 0 && (
-        <p className="text-sm text-[var(--text-sec)]">
-          No active machines — tap Edit above to bring one back.
-        </p>
+        <p className="text-sm text-[var(--text-sec)]">{t("No active machines — tap Edit above to bring one back.")}</p>
       )}
 
       <ul className="flex flex-col gap-3">

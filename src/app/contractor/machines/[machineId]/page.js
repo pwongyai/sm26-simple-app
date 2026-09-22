@@ -8,6 +8,7 @@ import MachinePhoto from "@/components/MachinePhoto";
 import ImplementPicker from "@/components/ImplementPicker";
 import { FULL_PAGE_MAP_HEIGHT } from "@/lib/mapHeight";
 import { fmtDate } from "@/lib/date";
+import { useT } from "@/lib/i18n";
 
 // Version 3's three ranges — Today, 2 days, Custom — rather than the wider
 // windows this used to offer. Matches TRAJECTORY_FETCH_GUIDE.md's chunked
@@ -48,12 +49,13 @@ function maxUntil(since) {
 }
 
 export default function MachineDetailPage({ params }) {
+  const t = useT();
   const { machineId } = use(params);
   const [pane, setPane] = useState("trajectory");
   const [range, setRange] = useState("today");
   const [customSince, setCustomSince] = useState(todayISO());
   const [customUntil, setCustomUntil] = useState(todayISO());
-  // "Latest" is a single found day, not a picked range — null until the
+  // t("Latest") is a single found day, not a picked range — null until the
   // backward search (see findLatestActivityDate) resolves one.
   const [latestDate, setLatestDate] = useState(null);
   const [findingLatest, setFindingLatest] = useState(false);
@@ -113,14 +115,14 @@ export default function MachineDetailPage({ params }) {
       // everywhere, not "midnight wherever this device thinks it is."
       const sinceDate = new Date(`${customSince}T00:00:00+07:00`);
       if (!customSince || Number.isNaN(sinceDate.getTime())) {
-        setError("Pick a start date.");
+        setError(t("Pick a start date."));
         setLoading(false);
         return;
       }
       const untilStr = maxUntil(customSince) < customUntil ? maxUntil(customSince) : customUntil;
       const untilDate = new Date(`${untilStr}T23:59:59+07:00`);
       if (!untilStr || Number.isNaN(untilDate.getTime())) {
-        setError("Pick an end date.");
+        setError(t("Pick an end date."));
         setLoading(false);
         return;
       }
@@ -156,8 +158,8 @@ export default function MachineDetailPage({ params }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [machineId, range]);
 
-  // Switching to "Latest" kicks off the backward search; switching away
-  // clears it so re-selecting "Latest" later re-searches rather than
+  // Switching to t("Latest") kicks off the backward search; switching away
+  // clears it so re-selecting t("Latest") later re-searches rather than
   // silently reusing a stale date from a previous visit.
   useEffect(() => {
     if (range !== "latest") {
@@ -261,9 +263,7 @@ export default function MachineDetailPage({ params }) {
                 onClick={load}
                 className="btn btn-primary shrink-0 text-[11px]"
                 style={{ padding: "6px 9px" }}
-              >
-                Check
-              </button>
+              >{t("Check")}</button>
             </div>
           )}
 
@@ -273,12 +273,12 @@ export default function MachineDetailPage({ params }) {
                 ? "Searching for this machine's most recent activity…"
                 : latestDate
                   ? `Most recent activity: ${fmtDate(latestDate)}`
-                  : "No GPS activity found for this machine in the past year."}
+                  : t("No GPS activity found for this machine in the past year.")}
             </div>
           )}
 
           {error && <p className="text-sm text-red-600">{error}</p>}
-          {loading && <p className="text-sm text-[var(--text-sec)]">Loading track…</p>}
+          {loading && <p className="text-sm text-[var(--text-sec)]">{t("Loading track…")}</p>}
 
           {!loading && data && (
             <>
@@ -293,15 +293,11 @@ export default function MachineDetailPage({ params }) {
                 <div
                   className="flex items-center justify-center rounded-xl border border-[var(--rule)] bg-[var(--map-b)] text-xs text-[var(--text-tert)]"
                   style={{ height: FULL_PAGE_MAP_HEIGHT }}
-                >
-                  No GPS points in this range.
-                </div>
+                >{t("No GPS points in this range.")}</div>
               )}
 
               <div className="mt-4 flex gap-2">
-                <button onClick={() => load(true)} className="btn btn-outline flex-1">
-                  Refresh
-                </button>
+                <button onClick={() => load(true)} className="btn btn-outline flex-1">{t("Refresh")}</button>
                 <button
                   className="btn btn-go flex-1"
                   disabled={points.length < 2}
@@ -339,6 +335,7 @@ const MACHINE_ROWS = (meta) => [
 ];
 
 function MachineDetailsPane({ meta }) {
+  const t = useT();
   const [implement, setImplement] = useState(null);
   const [loadingImplement, setLoadingImplement] = useState(true);
   const [picking, setPicking] = useState(false);
@@ -352,16 +349,14 @@ function MachineDetailsPane({ meta }) {
       .finally(() => setLoadingImplement(false));
   }, [meta]);
 
-  if (!meta) return <p className="text-sm text-[var(--text-sec)]">Loading…</p>;
+  if (!meta) return <p className="text-sm text-[var(--text-sec)]">{t("Loading…")}</p>;
 
   return (
     <>
       <MachinePhoto id={meta.id} kind={meta.kind} className="photo-box mb-4" emptyContent="🚜" />
 
       <div className="mb-1 flex items-center justify-between">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--text-tert)]">
-          Machine
-        </h2>
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--text-tert)]">{t("Machine")}</h2>
       </div>
       <div className="spec-card mb-4">
         <div className="spec-grid">
@@ -375,33 +370,29 @@ function MachineDetailsPane({ meta }) {
       </div>
 
       <div className="mb-1 flex items-center justify-between">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--text-tert)]">
-          Implement
-        </h2>
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--text-tert)]">{t("Implement")}</h2>
         {!loadingImplement && (
           <button className="text-xs font-bold" onClick={() => setPicking(true)}>
-            {implement ? "Edit" : "Assign"}
+            {implement ? t("Edit") : t("Assign")}
           </button>
         )}
       </div>
       <div className="spec-card">
         {loadingImplement ? (
-          <p className="text-sm text-[var(--text-sec)]">Loading…</p>
+          <p className="text-sm text-[var(--text-sec)]">{t("Loading…")}</p>
         ) : implement ? (
           <div className="spec-grid">
             <div className="spec-row">
-              <div className="lbl">Implement Type</div>
+              <div className="lbl">{t("Implement Type")}</div>
               <div className="val">{implement.name}</div>
             </div>
             <div className="spec-row">
-              <div className="lbl">Implement Width</div>
+              <div className="lbl">{t("Implement Width")}</div>
               <div className="val">{implement.width_m ? `${implement.width_m} m` : "—"}</div>
             </div>
           </div>
         ) : (
-          <p className="empty-msg" style={{ padding: "8px 0" }}>
-            No implement assigned yet.
-          </p>
+          <p className="empty-msg" style={{ padding: "8px 0" }}>{t("No implement assigned yet.")}</p>
         )}
       </div>
 
@@ -428,6 +419,7 @@ function MachineDetailsPane({ meta }) {
 // heavier implement) — that's the whole reason this isn't just one number
 // per machine.
 function FuelSection({ machineId }) {
+  const t = useT();
   const [data, setData] = useState(null);
   const [fuelType, setFuelType] = useState("diesel");
   const [adding, setAdding] = useState(false);
@@ -453,7 +445,7 @@ function FuelSection({ machineId }) {
   }, [machineId]);
 
   function flashSaved() {
-    setSaved("Saved");
+    setSaved(t("Saved"));
     setTimeout(() => setSaved(""), 1200);
   }
 
@@ -510,14 +502,12 @@ function FuelSection({ machineId }) {
   return (
     <>
       <div className="mb-1 mt-4 flex items-center justify-between">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--text-tert)]">
-          Fuel
-        </h2>
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--text-tert)]">{t("Fuel")}</h2>
         {saved && <span className="text-xs text-green-dark">{saved}</span>}
       </div>
       <div className="spec-card">
         <div className="spec-row">
-          <div className="lbl">Type</div>
+          <div className="lbl">{t("Type")}</div>
           <div className="flex gap-1.5">
             {["diesel", "gasoline"].map((ft) => (
               <button
@@ -537,7 +527,7 @@ function FuelSection({ machineId }) {
 
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
-            <span className="flex-1 text-xs font-medium">Default</span>
+            <span className="flex-1 text-xs font-medium">{t("Default")}</span>
             <input
               type="number"
               step="0.1"
@@ -580,19 +570,15 @@ function FuelSection({ machineId }) {
               onChange={(e) => setNewServiceId(e.target.value)}
               autoFocus
             >
-              <option value="">Choose a job…</option>
+              <option value="">{t("Choose a job…")}</option>
               {availableServices.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.name}
                 </option>
               ))}
             </select>
-            <button className="text-xs font-bold" onClick={confirmAdd}>
-              Add
-            </button>
-            <button className="text-xs" onClick={() => setAdding(false)}>
-              Cancel
-            </button>
+            <button className="text-xs font-bold" onClick={confirmAdd}>{t("Add")}</button>
+            <button className="text-xs" onClick={() => setAdding(false)}>{t("Cancel")}</button>
           </div>
         ) : (
           availableServices.length > 0 && (

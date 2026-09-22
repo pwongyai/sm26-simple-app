@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Map from "@/components/Map";
 import FrozenHeaderScroll from "@/components/FrozenHeaderScroll";
 import { fieldAndOwner } from "@/lib/labels";
+import { useT } from "@/lib/i18n";
 
 function fmtTime(iso) {
   if (!iso) return "—";
@@ -26,11 +27,11 @@ function fmtDate(iso) {
 // different questions and deliberately use different columns:
 //
 //   sort   created_at   so the report you just wrote is at the top
-//   filter started_at   so "This Month" means work done this month, which is
+//   filter started_at   so t("This Month") means work done this month, which is
 //                       the billing question a contractor actually asks
 //
 // A report written today for a session last November therefore does NOT appear
-// under "This Month", and that is correct — the work was not this month. This
+// under t("This Month"), and that is correct — the work was not this month. This
 // was briefly "fixed" to created_at on 2026-08-23 on the mistaken reasoning
 // that a newly written report must always be visible; it need not be, under a
 // work-date filter. Reverted the same day. Do not make the filter follow the
@@ -147,6 +148,7 @@ export default function ReportsTab() {
 // 3 does: Select Area's tap is what pins down the field, this screen never
 // re-asks "which one."
 function ReportsTabInner() {
+  const t = useT();
   const router = useRouter();
   const searchParams = useSearchParams();
   const fromSelectArea = searchParams.get("fromSelectArea") === "1";
@@ -206,7 +208,7 @@ function ReportsTabInner() {
   const header = (
     <>
       <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-lg font-semibold">Work Reports</h1>
+        <h1 className="text-lg font-semibold">{t("Work Reports")}</h1>
         <button
           onClick={() => router.push("/contractor/machines")}
           className="add-btn"
@@ -220,17 +222,17 @@ function ReportsTabInner() {
           <div className="filter-pill">
             <span>📅</span>
             <select value={timeFilter} onChange={(e) => setTimeFilter(e.target.value)}>
-              <option value="6months">Last 6 Months</option>
-              <option value="month">This Month</option>
-              <option value="week">This Week</option>
-              <option value="today">Today</option>
-              <option value="all">All Time</option>
+              <option value="6months">{t("Last 6 Months")}</option>
+              <option value="month">{t("This Month")}</option>
+              <option value="week">{t("This Week")}</option>
+              <option value="today">{t("Today")}</option>
+              <option value="all">{t("All Time")}</option>
             </select>
           </div>
           <div className="filter-pill">
             <span>🚜</span>
             <select value={machineFilter} onChange={(e) => setMachineFilter(e.target.value)}>
-              <option value="all">All Machines</option>
+              <option value="all">{t("All Machines")}</option>
               {machineNames.map((name) => (
                 <option key={name} value={name}>
                   {name}
@@ -240,18 +242,12 @@ function ReportsTabInner() {
           </div>
         </div>
         <div className="pay-filter-row">
-          <button className={`date-chip ${payFilter === "all" ? "active" : ""}`} onClick={() => setPayFilter("all")}>
-            All
-          </button>
+          <button className={`date-chip ${payFilter === "all" ? "active" : ""}`} onClick={() => setPayFilter("all")}>{t("All")}</button>
           <button
             className={`date-chip ${payFilter === "unpaid" ? "active" : ""}`}
             onClick={() => setPayFilter("unpaid")}
-          >
-            Unpaid
-          </button>
-          <button className={`date-chip ${payFilter === "paid" ? "active" : ""}`} onClick={() => setPayFilter("paid")}>
-            Paid
-          </button>
+          >{t("Unpaid")}</button>
+          <button className={`date-chip ${payFilter === "paid" ? "active" : ""}`} onClick={() => setPayFilter("paid")}>{t("Paid")}</button>
         </div>
       </div>
     </>
@@ -264,7 +260,7 @@ function ReportsTabInner() {
           <p className="empty-msg">
             {reports.length === 0
               ? "No reports yet. Tap + Create, pick a machine, then tap a field on its map."
-              : "No work reports match these filters."}
+              : t("No work reports match these filters.")}
           </p>
         )}
 
@@ -273,7 +269,7 @@ function ReportsTabInner() {
             <button key={r.id} className="report-card" onClick={() => openReport(r)}>
               <ReportThumb boundary={r.boundary} />
               <div className="txt">
-                <div className="name">{fieldAndOwner(r.field_name, r.farmer?.name || "Unassigned")}</div>
+                <div className="name">{fieldAndOwner(r.field_name, r.farmer?.name || t("Unassigned"))}</div>
                 <div className="sub">
                   {r.service_name || r.work_type_name || "—"} · {fmtDate(r.started_at)}
                 </div>
@@ -290,7 +286,7 @@ function ReportsTabInner() {
                 }}
               >
                 <span className="ic">{r.payment_status === "paid" ? "✓" : "○"}</span>
-                <span className="lbl">{r.payment_status === "paid" ? "Paid" : "Unpaid"}</span>
+                <span className="lbl">{r.payment_status === "paid" ? t("Paid") : t("Unpaid")}</span>
               </div>
             </button>
           ))}
@@ -324,45 +320,46 @@ function ReportsTabInner() {
 // Payment status is the one thing that genuinely still changes after the
 // fact, so it stays live.
 function ViewReport({ report: r, onClose, onTogglePaid }) {
+  const t = useT();
   const [tab, setTab] = useState(OVERVIEW_TAB);
 
   const overviewFields = [
-    ["Farmer Name", r.farmer?.name || "Unassigned"],
-    ["Work Type", r.service_name || r.work_type_name || "—"],
-    ["Total Hours", r.hours != null ? `${r.hours} hr` : "—"],
+    [t("Farmer Name"), r.farmer?.name || t("Unassigned")],
+    [t("Work Type"), r.service_name || r.work_type_name || "—"],
+    [t("Total Hours"), r.hours != null ? `${r.hours} hr` : "—"],
     // No machine, no clock. The start time came out as 07:00 on a report
     // nobody timed — midnight UTC read in Hanoi — which looks like a
     // measurement and is not one.
-    ["Start Time", r.agro_machine_id ? fmtTime(r.started_at) : "—"],
-    ["Stop Time", fmtTime(r.ended_at)],
-    ["Crop Area", `${r.field_area_units ?? "—"} ${r.unit_label || ""}`],
-    ["Work Area", `${r.work_area_units ?? "—"} ${r.unit_label || ""}`],
+    [t("Start Time"), r.agro_machine_id ? fmtTime(r.started_at) : "—"],
+    [t("Stop Time"), fmtTime(r.ended_at)],
+    [t("Crop Area"), `${r.field_area_units ?? "—"} ${r.unit_label || ""}`],
+    [t("Work Area"), `${r.work_area_units ?? "—"} ${r.unit_label || ""}`],
     ["% Work Area", `${r.percent_worked ?? "—"}%`],
   ];
 
   const machineFields = [
-    ["Machine Name", r.machine_name || "—"],
-    ["Implement Width", r.width_m ? `${r.width_m} m` : "—"],
+    [t("Machine Name"), r.machine_name || "—"],
+    [t("Implement Width"), r.width_m ? `${r.width_m} m` : "—"],
     // The distance INSIDE the field, not the machine's whole day. This row
     // used to read total_distance_m, which meant it could not produce the
     // fuel figure printed directly beneath it (155.68 km against 8.28 L at
     // 2.4 L/km). Sourced from inside_distance_m, distance x rate = fuel x
     // factor = emissions all check out on the page (2026-08-23).
     [
-      "Total Distance",
+      t("Total Distance"),
       r.inside_distance_m != null ? `${(r.inside_distance_m / 1000).toFixed(2)} km` : "—",
     ],
-    ["Fuel Consumption", r.fuel_l != null ? `${r.fuel_l} L` : "rate not set"],
-    ["Emissions", r.emissions_kg != null ? `${r.emissions_kg} kg CO₂` : "—"],
+    [t("Fuel Consumption"), r.fuel_l != null ? `${r.fuel_l} L` : "rate not set"],
+    [t("Emissions"), r.emissions_kg != null ? `${r.emissions_kg} kg CO₂` : "—"],
   ];
 
   return (
     <div className="overlay">
       <div className="ov-header">
-        <button className="ov-back" onClick={onClose} aria-label="Back">
+        <button className="ov-back" onClick={onClose} aria-label={t("Back")}>
           ←
         </button>
-        <span className="ov-title">Review Work Report</span>
+        <span className="ov-title">{t("Review Work Report")}</span>
       </div>
 
       <div className="ov-body">
@@ -370,12 +367,8 @@ function ViewReport({ report: r, onClose, onTogglePaid }) {
 
         <div className="spec-card">
           <div className="pilltabs">
-            <button className={tab === OVERVIEW_TAB ? "active" : ""} onClick={() => setTab(OVERVIEW_TAB)}>
-              Overview
-            </button>
-            <button className={tab === MACHINE_TAB ? "active" : ""} onClick={() => setTab(MACHINE_TAB)}>
-              Machine
-            </button>
+            <button className={tab === OVERVIEW_TAB ? "active" : ""} onClick={() => setTab(OVERVIEW_TAB)}>{t("Overview")}</button>
+            <button className={tab === MACHINE_TAB ? "active" : ""} onClick={() => setTab(MACHINE_TAB)}>{t("Machine")}</button>
           </div>
           <div className="spec-grid">
             {(tab === OVERVIEW_TAB ? overviewFields : machineFields).map(([lbl, val]) => (
@@ -388,7 +381,7 @@ function ViewReport({ report: r, onClose, onTogglePaid }) {
         </div>
 
         <div>
-          <div className="field-label mb-1">Payment status</div>
+          <div className="field-label mb-1">{t("Payment status")}</div>
           <div className="flex items-center justify-between rounded-xl border border-[var(--rule)] bg-white p-3">
             <span className="text-lg font-semibold">{fmtMoney(Number(r.service_charge), r.currency)}</span>
             <div className="flex gap-2">
@@ -397,17 +390,13 @@ function ViewReport({ report: r, onClose, onTogglePaid }) {
                   r.payment_status === "unpaid" ? "bg-[var(--ink)] text-white" : "border border-[var(--rule)]"
                 }`}
                 onClick={() => r.payment_status !== "unpaid" && onTogglePaid()}
-              >
-                Unpaid
-              </button>
+              >{t("Unpaid")}</button>
               <button
                 className={`rounded-full px-3 py-1.5 text-xs font-medium ${
                   r.payment_status === "paid" ? "bg-[var(--ink)] text-white" : "border border-[var(--rule)]"
                 }`}
                 onClick={() => r.payment_status !== "paid" && onTogglePaid()}
-              >
-                Paid
-              </button>
+              >{t("Paid")}</button>
             </div>
           </div>
           <p className="mt-1 text-[11px] text-[var(--text-tert)]">
@@ -419,9 +408,7 @@ function ViewReport({ report: r, onClose, onTogglePaid }) {
       </div>
 
       <div className="ov-footer">
-        <button onClick={onClose} className="btn btn-primary w-full">
-          Close
-        </button>
+        <button onClick={onClose} className="btn btn-primary w-full">{t("Close")}</button>
       </div>
     </div>
   );
@@ -436,6 +423,7 @@ function ViewReport({ report: r, onClose, onTogglePaid }) {
 // never re-derives "which field" by matching against a separately-fetched
 // suggestion list.
 function CreateReport({ onClose, onCreated, onViewExisting }) {
+  const t = useT();
   const [status, setStatus] = useState("loading"); // loading | notfound | reviewing
   const [chosen, setChosen] = useState(null);
   // Seeded from the community rather than assumed to be Thailand.
@@ -572,65 +560,63 @@ function CreateReport({ onClose, onCreated, onViewExisting }) {
       });
       const body = await res.json();
       if (!res.ok) {
-        setError(body.error || "Could not approve this report.");
+        setError(body.error || t("Could not approve this report."));
         setApproving(false);
         return;
       }
       setDone(body);
       onCreated();
     } catch {
-      setError("Could not approve this report.");
+      setError(t("Could not approve this report."));
     } finally {
       setApproving(false);
     }
   }
 
   const overviewFields = chosen && [
-    ["Farmer Name", done?.report?.farmer?.name || matchInfo?.farmerName || "Unassigned"],
-    ["Work Type", service?.name || chosen.detectedService || "—"],
-    ["Total Hours", chosen.work?.hours != null ? `${chosen.work.hours} hr` : "—"],
-    ["Start Time", fmtTime(chosen.startedAt)],
-    ["Stop Time", fmtTime(chosen.endedAt)],
-    ["Crop Area", `${chosen.fieldAreaUnits ?? "—"} ${unit}`],
-    ["Work Area", `${chosen.workAreaUnits ?? "—"} ${unit}`],
+    [t("Farmer Name"), done?.report?.farmer?.name || matchInfo?.farmerName || t("Unassigned")],
+    [t("Work Type"), service?.name || chosen.detectedService || "—"],
+    [t("Total Hours"), chosen.work?.hours != null ? `${chosen.work.hours} hr` : "—"],
+    [t("Start Time"), fmtTime(chosen.startedAt)],
+    [t("Stop Time"), fmtTime(chosen.endedAt)],
+    [t("Crop Area"), `${chosen.fieldAreaUnits ?? "—"} ${unit}`],
+    [t("Work Area"), `${chosen.workAreaUnits ?? "—"} ${unit}`],
     ["% Work Area", `${chosen.work?.percentWorked ?? "—"}%`],
   ];
 
   const machineFields = chosen && [
-    ["Machine Name", chosen.machineName],
-    ["Implement Type", implement?.name || "—"],
-    ["Implement Width", chosen.widthM ? `${chosen.widthM} m` : "—"],
+    [t("Machine Name"), chosen.machineName],
+    [t("Implement Type"), implement?.name || "—"],
+    [t("Implement Width"), chosen.widthM ? `${chosen.widthM} m` : "—"],
     [
-      "Total Distance",
+      t("Total Distance"),
       chosen.work?.insideDistanceM != null
         ? `${(chosen.work.insideDistanceM / 1000).toFixed(2)} km`
         : "—",
     ],
-    ["Fuel Consumption", chosen.fuelL != null ? `${chosen.fuelL} L` : "rate not set"],
-    ["Emissions", chosen.emissionsKg != null ? `${chosen.emissionsKg} kg CO₂` : "—"],
+    [t("Fuel Consumption"), chosen.fuelL != null ? `${chosen.fuelL} L` : "rate not set"],
+    [t("Emissions"), chosen.emissionsKg != null ? `${chosen.emissionsKg} kg CO₂` : "—"],
   ];
 
   return (
     <div className="overlay">
       <div className="ov-header">
-        <button className="ov-back" onClick={onClose} aria-label="Back">
+        <button className="ov-back" onClick={onClose} aria-label={t("Back")}>
           ←
         </button>
-        <span className="ov-title">{done ? "Report approved" : "Create Work Report"}</span>
+        <span className="ov-title">{done ? t("Report approved") : t("Create Work Report")}</span>
       </div>
 
       <div className="ov-body">
         {status === "loading" && (
           <div className="flex flex-col items-center justify-center gap-3 py-14 text-sm text-[var(--text-sec)]">
-            <span className="spinner" />
-            Loading…
-          </div>
+            <span className="spinner" />{t("Loading…")}</div>
         )}
 
         {status === "notfound" && (
           <div className="card flex flex-col items-center gap-2 p-6 text-center">
             <span className="text-3xl">⚠️</span>
-            <h3 className="text-base font-semibold">Nothing to review here</h3>
+            <h3 className="text-base font-semibold">{t("Nothing to review here")}</h3>
             <p className="text-sm text-[var(--text-sec)]">
               This field may already have a report, or this page was opened directly instead of
               by tapping a field on the machine's map. Go back and tap a field to create one.
@@ -642,7 +628,7 @@ function CreateReport({ onClose, onCreated, onViewExisting }) {
           <>
             <p className="text-sm">
               {done.matched
-                ? "Linked to the open work order for this field."
+                ? t("Linked to the open work order for this field.")
                 : "No work order existed for this field — one has been added to your notebook."}
             </p>
           </>
@@ -661,12 +647,8 @@ function CreateReport({ onClose, onCreated, onViewExisting }) {
 
             <div className="spec-card">
               <div className="pilltabs">
-                <button className={tab === OVERVIEW_TAB ? "active" : ""} onClick={() => setTab(OVERVIEW_TAB)}>
-                  Overview
-                </button>
-                <button className={tab === MACHINE_TAB ? "active" : ""} onClick={() => setTab(MACHINE_TAB)}>
-                  Machine
-                </button>
+                <button className={tab === OVERVIEW_TAB ? "active" : ""} onClick={() => setTab(OVERVIEW_TAB)}>{t("Overview")}</button>
+                <button className={tab === MACHINE_TAB ? "active" : ""} onClick={() => setTab(MACHINE_TAB)}>{t("Machine")}</button>
               </div>
               <div className="spec-grid">
                 {(tab === OVERVIEW_TAB ? overviewFields : machineFields).map(([lbl, val]) => (
@@ -679,7 +661,7 @@ function CreateReport({ onClose, onCreated, onViewExisting }) {
             </div>
 
             <div>
-              <div className="field-label mb-1">Payment status</div>
+              <div className="field-label mb-1">{t("Payment status")}</div>
               <div className="flex items-center justify-between rounded-xl border border-[var(--rule)] bg-white p-3">
                 <span className="text-lg font-semibold">{fmtMoney(charge, currency)}</span>
                 <div className="flex gap-2">
@@ -688,17 +670,13 @@ function CreateReport({ onClose, onCreated, onViewExisting }) {
                       paymentStatus === "unpaid" ? "bg-[var(--ink)] text-white" : "border border-[var(--rule)]"
                     }`}
                     onClick={() => setPaymentStatus("unpaid")}
-                  >
-                    Unpaid
-                  </button>
+                  >{t("Unpaid")}</button>
                   <button
                     className={`rounded-full px-3 py-1.5 text-xs font-medium ${
                       paymentStatus === "paid" ? "bg-[var(--ink)] text-white" : "border border-[var(--rule)]"
                     }`}
                     onClick={() => setPaymentStatus("paid")}
-                  >
-                    Paid
-                  </button>
+                  >{t("Paid")}</button>
                 </div>
               </div>
               <p className="mt-1 text-[11px] text-[var(--text-tert)]">
@@ -727,17 +705,13 @@ function CreateReport({ onClose, onCreated, onViewExisting }) {
 
       <div className="ov-footer">
         {done && (
-          <button onClick={onClose} className="btn btn-primary w-full">
-            Done
-          </button>
+          <button onClick={onClose} className="btn btn-primary w-full">{t("Done")}</button>
         )}
         {status === "reviewing" && !done && (
           <>
-            <button className="btn btn-outline" onClick={() => setEditing(true)}>
-              Edit
-            </button>
+            <button className="btn btn-outline" onClick={() => setEditing(true)}>{t("Edit")}</button>
             <button disabled={approving} onClick={approve} className="flex-1 btn btn-primary">
-              {approving ? "Recording…" : "Approve"}
+              {approving ? t("Recording…") : t("Approve")}
             </button>
           </>
         )}
@@ -783,6 +757,7 @@ function EditDetails({
   onChargeChange,
   onClose,
 }) {
+  const t = useT();
   const [query, setQuery] = useState("");
   const [customers, setCustomers] = useState([]);
 
@@ -799,19 +774,19 @@ function EditDetails({
   return (
     <div className="overlay" onClick={(e) => e.stopPropagation()}>
       <div className="ov-header">
-        <button className="ov-back" onClick={onClose} aria-label="Back">
+        <button className="ov-back" onClick={onClose} aria-label={t("Back")}>
           ←
         </button>
-        <span className="ov-title">Edit Details</span>
+        <span className="ov-title">{t("Edit Details")}</span>
       </div>
       <div className="ov-body">
         <div>
-          <div className="field-label">Farmer</div>
+          <div className="field-label">{t("Farmer")}</div>
           <input
             className="field"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder={farmerName || "Search customer name…"}
+            placeholder={farmerName || t("Search customer name…")}
           />
           {hits.length > 0 && (
             <div className="mt-2 flex flex-col gap-2">
@@ -826,7 +801,7 @@ function EditDetails({
                   }}
                 >
                   <b>{c.name}</b>
-                  <span>{c.phone || "No phone"}</span>
+                  <span>{c.phone || t("No phone")}</span>
                 </button>
               ))}
             </div>
@@ -834,7 +809,7 @@ function EditDetails({
         </div>
 
         <div>
-          <div className="field-label">Work Type</div>
+          <div className="field-label">{t("Work Type")}</div>
           <select value={serviceId} onChange={(e) => onServiceChange(e.target.value)} className="field w-full">
             {services.map((s) => (
               <option key={s.id} value={s.id}>
@@ -848,7 +823,7 @@ function EditDetails({
         </div>
 
         <div>
-          <div className="field-label">Implement</div>
+          <div className="field-label">{t("Implement")}</div>
           <select
             value={implement?.id || ""}
             disabled={implementBusy}
@@ -858,7 +833,7 @@ function EditDetails({
             }}
             className="field w-full disabled:opacity-60"
           >
-            {!implement && <option value="">No implement — telemetry width used</option>}
+            {!implement && <option value="">{t("No implement — telemetry width used")}</option>}
             {implementCatalog.map((i) => (
               <option key={i.id} value={i.id}>
                 {i.name} — {i.width_m} m
@@ -866,7 +841,7 @@ function EditDetails({
             ))}
           </select>
           {implementBusy && (
-            <p className="mt-1 text-[11px] text-[var(--text-tert)]">Recalculating…</p>
+            <p className="mt-1 text-[11px] text-[var(--text-tert)]">{t("Recalculating…")}</p>
           )}
           <p className="mt-1 text-[11px] text-[var(--text-tert)]">
             Only for this report — correct this if the physical implement was
@@ -875,7 +850,7 @@ function EditDetails({
         </div>
 
         <div>
-          <div className="field-label">Service Charge</div>
+          <div className="field-label">{t("Service Charge")}</div>
           <div className="flex items-center gap-2">
             <span className="text-sm text-[var(--text-sec)]">
               {moneySymbol(currency)}
@@ -896,9 +871,7 @@ function EditDetails({
         </div>
       </div>
       <div className="ov-footer">
-        <button className="btn btn-primary w-full" onClick={onClose}>
-          Done
-        </button>
+        <button className="btn btn-primary w-full" onClick={onClose}>{t("Done")}</button>
       </div>
     </div>
   );

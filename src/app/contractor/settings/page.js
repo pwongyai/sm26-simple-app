@@ -9,6 +9,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { logout } from "@/lib/useSession";
 import Map from "@/components/Map";
+import { useT } from "@/lib/i18n";
 
 // Version 2 §4.2 + version 3 §4: the contractor's own business profile, home
 // base, services/pricing, and account — nothing here is fixed by AgroAPI,
@@ -31,6 +32,7 @@ const SETTINGS_VIEWS = [
 ];
 
 export default function SettingsTab() {
+  const t = useT();
   const [view, setView] = useState("general");
   const [settings, setSettings] = useState(null);
   const [profile, setProfile] = useState(null);
@@ -58,12 +60,12 @@ export default function SettingsTab() {
   }
 
   if (!settings || !profile) {
-    return <p className="text-sm text-[var(--text-sec)]">Loading…</p>;
+    return <p className="text-sm text-[var(--text-sec)]">{t("Loading…")}</p>;
   }
 
   return (
     <>
-      <h1 className="mb-5 text-lg font-semibold">Settings</h1>
+      <h1 className="mb-5 text-lg font-semibold">{t("Settings")}</h1>
 
       <div className="subtabs mb-4">
         {SETTINGS_VIEWS.map((v) => (
@@ -87,7 +89,7 @@ export default function SettingsTab() {
             profile={profile}
             onChanged={() => {
               load();
-              flash("Home base saved");
+              flash(t("Home base saved"));
             }}
           />
 
@@ -98,7 +100,7 @@ export default function SettingsTab() {
             settings={settings}
             onChanged={() => {
               load();
-              flash("Saved");
+              flash(t("Saved"));
             }}
           />
         </div>
@@ -111,14 +113,14 @@ export default function SettingsTab() {
             organization={settings.organization}
             onChanged={() => {
               load();
-              flash("Settings saved");
+              flash(t("Settings saved"));
             }}
           />
 
           <FarmOrganization
             onChanged={() => {
               load();
-              flash("Community switched");
+              flash(t("Community switched"));
             }}
           />
 
@@ -128,7 +130,7 @@ export default function SettingsTab() {
             settings={settings}
             onChanged={() => {
               load();
-              flash("Saved");
+              flash(t("Saved"));
             }}
           />
 
@@ -140,13 +142,12 @@ export default function SettingsTab() {
 }
 
 function SectionHeader({ title, onEdit }) {
+  const t = useT();
   return (
     <div className="mb-2 flex items-center justify-between">
       <h2 className="text-sm font-semibold">{title}</h2>
       {onEdit && (
-        <button onClick={onEdit} className="text-xs text-[var(--text-sec)] underline">
-          Edit
-        </button>
+        <button onClick={onEdit} className="text-xs text-[var(--text-sec)] underline">{t("Edit")}</button>
       )}
     </div>
   );
@@ -162,19 +163,19 @@ function ViewRow({ label, value }) {
 }
 
 function EditActions({ busy, onCancel, onSave, saveDisabled }) {
+  const t = useT();
   return (
     <div className="mt-2 flex gap-2">
-      <button onClick={onCancel} disabled={busy} className="btn btn-outline flex-1">
-        Cancel
-      </button>
+      <button onClick={onCancel} disabled={busy} className="btn btn-outline flex-1">{t("Cancel")}</button>
       <button onClick={onSave} disabled={busy || saveDisabled} className="btn btn-primary flex-1">
-        {busy ? "Saving…" : "Save"}
+        {busy ? t("Saving…") : t("Save")}
       </button>
     </div>
   );
 }
 
 function ContractorProfile({ profile, organization, onChanged }) {
+  const t = useT();
   // Only Owner Name is editable here, and it writes to the LOGIN, not to this
   // business (R13, 2026-08-23):
   //
@@ -215,7 +216,7 @@ function ContractorProfile({ profile, organization, onChanged }) {
     });
     setBusy(false);
     if (!res.ok) {
-      setError((await res.json()).error || "Could not save.");
+      setError((await res.json()).error || t("Could not save."));
       return;
     }
     setEditing(false);
@@ -225,11 +226,11 @@ function ContractorProfile({ profile, organization, onChanged }) {
   if (!editing) {
     return (
       <section className="mb-6">
-        <SectionHeader title="Contractor Profile" onEdit={startEdit} />
+        <SectionHeader title={t("Contractor Profile")} onEdit={startEdit} />
         <div className="flex flex-col gap-1.5">
-          <ViewRow label="Business Name" value={profile.businessName} />
-          <ViewRow label="Owner Name" value={profile.ownerName} />
-          <ViewRow label="Phone number" value={profile.phone} />
+          <ViewRow label={t("Business Name")} value={profile.businessName} />
+          <ViewRow label={t("Owner Name")} value={profile.ownerName} />
+          <ViewRow label={t("Phone number")} value={profile.phone} />
         </div>
         <ChangePassword />
       </section>
@@ -238,17 +239,17 @@ function ContractorProfile({ profile, organization, onChanged }) {
 
   return (
     <section className="mb-6">
-      <h2 className="mb-2 text-sm font-semibold">Contractor Profile</h2>
+      <h2 className="mb-2 text-sm font-semibold">{t("Contractor Profile")}</h2>
       <div className="flex flex-col gap-2">
         <div>
           <div className="field-label">Contractor / Business Name</div>
           <div className="detail-row">
             <div className="val">{profile.businessName || "—"}</div>
           </div>
-          <p className="text-[11px] text-[var(--text-tert)]">Set in AgroAPI</p>
+          <p className="text-[11px] text-[var(--text-tert)]">{t("Set in AgroAPI")}</p>
         </div>
         <div>
-          <div className="field-label">Owner Name</div>
+          <div className="field-label">{t("Owner Name")}</div>
           <input
             className="field"
             value={ownerName}
@@ -260,16 +261,14 @@ function ContractorProfile({ profile, organization, onChanged }) {
               themselves out of a shared test account — but the people about to
               use this are real contractors whose number is their own, and the
               farmer's side has been editable all along. */}
-          <div className="field-label">Phone number</div>
+          <div className="field-label">{t("Phone number")}</div>
           <input
             className="field"
             type="tel"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
           />
-          <p className="text-[11px] text-[var(--text-tert)]">
-            This is how you sign in — changing it changes your login.
-          </p>
+          <p className="text-[11px] text-[var(--text-tert)]">{t("This is how you sign in — changing it changes your login.")}</p>
         </div>
         {error && <p className="text-sm text-[var(--danger)]">{error}</p>}
         <EditActions busy={busy} onCancel={() => setEditing(false)} onSave={save} />
@@ -281,6 +280,7 @@ function ContractorProfile({ profile, organization, onChanged }) {
 // Same panel as the farmer's Profile, closed until asked for: a password box
 // standing open on a settings screen is something to scroll past, not to use.
 function ChangePassword() {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
@@ -299,12 +299,12 @@ function ChangePassword() {
     });
     setBusy(false);
     if (!res.ok) {
-      setError((await res.json()).error || "Could not change password.");
+      setError((await res.json()).error || t("Could not change password."));
       return;
     }
     setCurrent("");
     setNext("");
-    setMsg("Password changed");
+    setMsg(t("Password changed"));
     setTimeout(() => {
       setMsg("");
       setOpen(false);
@@ -317,7 +317,7 @@ function ChangePassword() {
         className="mt-3 flex w-full items-center justify-between text-left"
         onClick={() => setOpen(true)}
       >
-        <span className="text-sm font-medium">Change Password</span>
+        <span className="text-sm font-medium">{t("Change Password")}</span>
         <span className="text-[var(--text-tert)]">›</span>
       </button>
     );
@@ -325,11 +325,11 @@ function ChangePassword() {
 
   return (
     <div className="mt-3">
-      <div className="field-label">Change Password</div>
+      <div className="field-label">{t("Change Password")}</div>
       <input
         className="field mb-2"
         type="password"
-        placeholder="Current password"
+        placeholder={t("Current password")}
         autoComplete="current-password"
         value={current}
         onChange={(e) => setCurrent(e.target.value)}
@@ -337,12 +337,12 @@ function ChangePassword() {
       <input
         className="field"
         type="password"
-        placeholder="New password"
+        placeholder={t("New password")}
         autoComplete="new-password"
         value={next}
         onChange={(e) => setNext(e.target.value)}
       />
-      <p className="mt-1 text-[11px] text-[var(--text-tert)]">At least 6 characters.</p>
+      <p className="mt-1 text-[11px] text-[var(--text-tert)]">{t("At least 6 characters.")}</p>
       {error && <p className="mt-2 text-sm text-[var(--danger)]">{error}</p>}
       {msg && <p className="mt-2 text-sm text-[var(--green-dark)]">{msg}</p>}
       <div className="mt-2 flex gap-2">
@@ -354,15 +354,13 @@ function ChangePassword() {
             setNext("");
             setError("");
           }}
-        >
-          Cancel
-        </button>
+        >{t("Cancel")}</button>
         <button
           className="btn btn-primary flex-1"
           disabled={busy || !current || !next}
           onClick={submit}
         >
-          {busy ? "Saving…" : "Save"}
+          {busy ? t("Saving…") : t("Save")}
         </button>
       </div>
     </div>
@@ -381,6 +379,7 @@ function ChangePassword() {
 // is deleted — every row keeps its own community, so switching back restores
 // the view exactly.
 function FarmOrganization({ onChanged }) {
+  const t = useT();
   const [data, setData] = useState(null);
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -430,14 +429,14 @@ function FarmOrganization({ onChanged }) {
     return (
       <section className="mb-6">
         <SectionHeader
-          title="Farming Community"
+          title={t("Farming Community")}
           onEdit={data.options.length ? () => setEditing(true) : undefined}
         />
         <div className="flex flex-col gap-1.5">
-          <ViewRow label="Working in" value={current?.name || data.current || "—"} />
+          <ViewRow label={t("Working in")} value={current?.name || data.current || "—"} />
           {current && (
             <ViewRow
-              label="Prices shown in"
+              label={t("Prices shown in")}
               value={`${current.currency} per ${current.areaUnit}`}
             />
           )}
@@ -448,7 +447,7 @@ function FarmOrganization({ onChanged }) {
 
   return (
     <section className="mb-6">
-      <h2 className="mb-2 text-sm font-semibold">Farming Community</h2>
+      <h2 className="mb-2 text-sm font-semibold">{t("Farming Community")}</h2>
       <div className="fieldset-note">
         Which community you are working in. Jobs, customers and fields from the
         others are hidden until you switch back — nothing is lost.
@@ -470,9 +469,7 @@ function FarmOrganization({ onChanged }) {
             {o.isCurrent && <span className="ml-auto font-bold">✓</span>}
           </button>
         ))}
-        <button className="btn btn-outline" onClick={() => setEditing(false)}>
-          Cancel
-        </button>
+        <button className="btn btn-outline" onClick={() => setEditing(false)}>{t("Cancel")}</button>
       </div>
 
       {pending && (
@@ -490,15 +487,13 @@ function FarmOrganization({ onChanged }) {
               <button
                 className="btn btn-outline flex-1"
                 onClick={() => setPending(null)}
-              >
-                Cancel
-              </button>
+              >{t("Cancel")}</button>
               <button
                 className="btn btn-go flex-1"
                 disabled={busy}
                 onClick={() => choose(pending.id)}
               >
-                {busy ? "Switching…" : "Switch"}
+                {busy ? t("Switching…") : t("Switch")}
               </button>
             </div>
           </div>
@@ -509,6 +504,7 @@ function FarmOrganization({ onChanged }) {
 }
 
 function HomeBase({ profile, onChanged }) {
+  const t = useT();
   const currentPin =
     profile.homeLat != null && profile.homeLng != null
       ? { lat: profile.homeLat, lng: profile.homeLng }
@@ -539,22 +535,20 @@ function HomeBase({ profile, onChanged }) {
 
   return (
     <section className="mb-6">
-      <SectionHeader title="Home Base Location" onEdit={editing ? null : startEdit} />
+      <SectionHeader title={t("Home Base Location")} onEdit={editing ? null : startEdit} />
       {/* The line explaining what a home base is for lived here and was read
           once, by whoever set it. The one instruction worth keeping is the one
           you need while you are actually moving the pin. */}
       {editing && (
-        <p className="mb-2 text-[11px] text-[var(--text-tert)]">
-          Tap the map to move the pin.
-        </p>
+        <p className="mb-2 text-[11px] text-[var(--text-tert)]">{t("Tap the map to move the pin.")}</p>
       )}
       <Map pin={shownPin} onPick={editing ? setDraftPin : null} height={170} />
       <p className="mt-1 text-[11px] text-[var(--text-tert)]">
         {shownPin
-          ? `${editing ? "New location" : "Home at"} ${shownPin.lat.toFixed(5)}, ${shownPin.lng.toFixed(5)}`
+          ? `${editing ? t("New location") : t("Home at")} ${shownPin.lat.toFixed(5)}, ${shownPin.lng.toFixed(5)}`
           : editing
-          ? "Tap the map to place the pin."
-          : "No home base set yet."}
+          ? t("Tap the map to place the pin.")
+          : t("No home base set yet.")}
       </p>
       {editing && (
         <EditActions
@@ -574,6 +568,7 @@ function HomeBase({ profile, onChanged }) {
 // job. Before 2026-09-22 this form sent a hardcoded "other", so every service
 // created in the app was filed in AgroAPI as an unclassified activity.
 function ServiceList({ services, unit, currency, settings, onChanged }) {
+  const t = useT();
   const groups = groupedWorkTypes();
   const [editing, setEditing] = useState(false);
   const [drafts, setDrafts] = useState({});
@@ -659,11 +654,9 @@ function ServiceList({ services, unit, currency, settings, onChanged }) {
   return (
     <section className="mb-6">
       <div className="mb-2 flex items-center justify-between">
-        <h2 className="text-sm font-semibold">Services &amp; pricing</h2>
+        <h2 className="text-sm font-semibold">{t("Services & pricing")}</h2>
         {!editing && (
-          <button onClick={startEdit} className="text-xs text-[var(--text-sec)] underline">
-            Edit
-          </button>
+          <button onClick={startEdit} className="text-xs text-[var(--text-sec)] underline">{t("Edit")}</button>
         )}
       </div>
 
@@ -704,7 +697,7 @@ function ServiceList({ services, unit, currency, settings, onChanged }) {
                   active ? "bg-green-light text-green-dark" : "bg-surface text-tert"
                 }`}
               >
-                {active ? "Available" : "Unavailable"}
+                {active ? t("Available") : t("Unavailable")}
               </button>
               </div>
 
@@ -731,7 +724,7 @@ function ServiceList({ services, unit, currency, settings, onChanged }) {
                   </select>
                 ) : (
                   <span className="text-xs text-[var(--text-tert)]">
-                    {workType(s.adapt_code)?.label || "Kind of work not set"}
+                    {workType(s.adapt_code)?.label || t("Kind of work not set")}
                   </span>
                 )}
               </div>
@@ -746,7 +739,7 @@ function ServiceList({ services, unit, currency, settings, onChanged }) {
               <input
                 value={r.name}
                 onChange={(e) => setNewDraft(r.clientId, { name: e.target.value })}
-                placeholder="New service name"
+                placeholder={t("New service name")}
                 className="flex-1 rounded border border-[var(--rule)] px-2 py-1 text-sm"
               />
               <input
@@ -762,9 +755,7 @@ function ServiceList({ services, unit, currency, settings, onChanged }) {
               <button
                 onClick={() => removeNewDraft(r.clientId)}
                 className="rounded px-2 py-1 text-[11px] text-[var(--text-tert)] underline"
-              >
-                Remove
-              </button>
+              >{t("Remove")}</button>
               </div>
 
               {/* Required: a service with no work type cannot be recorded in
@@ -825,15 +816,17 @@ function ServiceList({ services, unit, currency, settings, onChanged }) {
 }
 
 function Language() {
+  const t = useT();
   return (
     <section className="mb-6">
-      <h2 className="mb-2 text-sm font-semibold">Language</h2>
+      <h2 className="mb-2 text-sm font-semibold">{t("Language")}</h2>
       <LanguagePicker />
     </section>
   );
 }
 
 function CurrencyAndArea({ settings, onChanged }) {
+  const t = useT();
   const [editing, setEditing] = useState(false);
   const [currency, setCurrency] = useState(settings.currency);
   const [unit, setUnit] = useState(settings.areaUnit);
@@ -867,11 +860,11 @@ function CurrencyAndArea({ settings, onChanged }) {
   if (!editing) {
     return (
       <section className="mb-6">
-        <SectionHeader title="Currency &amp; Area Unit" onEdit={startEdit} />
+        <SectionHeader title={t("Currency & Area Unit")} onEdit={startEdit} />
         <div className="flex flex-col gap-1.5">
-          <ViewRow label="Currency" value={settings.currency} />
+          <ViewRow label={t("Currency")} value={settings.currency} />
           <ViewRow
-            label="Area unit"
+            label={t("Area unit")}
             value={
               settings.areaUnitM2
                 ? `${settings.areaUnit} · ${Number(settings.areaUnitM2).toLocaleString()} m²`
@@ -885,13 +878,13 @@ function CurrencyAndArea({ settings, onChanged }) {
 
   return (
     <section className="mb-6">
-      <h2 className="mb-2 text-sm font-semibold">Currency &amp; Area Unit</h2>
+      <h2 className="mb-2 text-sm font-semibold">{t("Currency & Area Unit")}</h2>
       <div className="fieldset-note">
         Applies to everyone in this community, not just you. Reports already
         written keep the currency and unit they were created with.
       </div>
 
-      <label className="mb-1 block text-xs text-[var(--text-sec)]">Currency</label>
+      <label className="mb-1 block text-xs text-[var(--text-sec)]">{t("Currency")}</label>
       <select
         value={currency}
         onChange={(e) => setCurrency(e.target.value)}
@@ -904,7 +897,7 @@ function CurrencyAndArea({ settings, onChanged }) {
         ))}
       </select>
 
-      <label className="mb-1 block text-xs text-[var(--text-sec)]">Area unit</label>
+      <label className="mb-1 block text-xs text-[var(--text-sec)]">{t("Area unit")}</label>
       <select
         value={unit}
         onChange={(e) => setUnit(e.target.value)}
@@ -928,6 +921,7 @@ function CurrencyAndArea({ settings, onChanged }) {
 }
 
 function LogOut() {
+  const t = useT();
   const router = useRouter();
   const [confirming, setConfirming] = useState(false);
 
@@ -941,17 +935,13 @@ function LogOut() {
             await logout();
             router.push("/login");
           }}
-        >
-          Log out of the app?
-        </button>
+        >{t("Log out of the app?")}</button>
       ) : (
         <button
           className="btn btn-outline w-full"
           style={{ color: "var(--danger)" }}
           onClick={() => setConfirming(true)}
-        >
-          Log Out
-        </button>
+        >{t("Log Out")}</button>
       )}
     </section>
   );
