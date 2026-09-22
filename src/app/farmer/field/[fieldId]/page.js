@@ -219,7 +219,7 @@ export default function FieldDetailPage({ params }) {
                   ? "—"
                   : !cropRecorded
                     ? "needs a crop — none recorded yet"
-                    : "not predicted yet by AgroAPI"}
+                    : "No prediction yet"}
               </span>
             )}
           </p>
