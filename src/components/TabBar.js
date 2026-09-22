@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useT } from "@/lib/i18n";
 
 // Version 3's bottom tab bar. Nothing about a web app prevents this — it's
 // where a thumb reaches on a phone, and it's the navigation the team already
@@ -56,6 +57,8 @@ const ICONS = {
 };
 
 export default function TabBar({ tabs, active }) {
+  // `tr`, not `t` — the map below already binds `t` to a tab.
+  const tr = useT();
   return (
     <nav className="tabbar">
       {tabs.map((t) => (
@@ -74,7 +77,7 @@ export default function TabBar({ tabs, active }) {
           >
             {ICONS[t.icon]}
           </svg>
-          {t.label}
+          {tr(t.label)}
         </Link>
       ))}
     </nav>

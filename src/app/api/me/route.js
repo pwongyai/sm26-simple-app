@@ -32,6 +32,8 @@ export async function GET() {
     currency: user.organization.currency,
     areaUnit: user.organization.area_unit,
     areaUnitM2: user.organization.area_unit_m2,
+    // The person's own language (app_users.language). Null means English.
+    language: user.language || "en",
     joinedAt: user.created_at,
   });
 }
@@ -71,9 +73,19 @@ export async function PATCH(request) {
     }
   }
 
+  // Language is the one field here a person may change without touching their
+  // identity, so it is accepted on its own as well as alongside a name change.
+  const updates = { name, phone };
+  if (body.language !== undefined) {
+    if (!["th", "en", "vn", null].includes(body.language)) {
+      return Response.json({ error: "Unknown language" }, { status: 400 });
+    }
+    updates.language = body.language;
+  }
+
   const { error } = await supabaseAdmin
     .from("app_users")
-    .update({ name, phone })
+    .update(updates)
     .eq("id", user.id);
 
   if (error) {

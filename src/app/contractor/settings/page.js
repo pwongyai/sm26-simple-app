@@ -3,6 +3,7 @@
 
 import { clearUnitsCache } from "@/lib/useUnits";
 import { ADAPT_VERSION, groupedWorkTypes, workType } from "@/lib/workTypes";
+import LanguagePicker from "@/components/LanguagePicker";
 import { AREA_UNITS, CURRENCIES, areaUnit, priceOut, roundMoney } from "@/lib/units";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -121,7 +122,7 @@ export default function SettingsTab() {
             }}
           />
 
-          <Language profile={profile} onChanged={() => { load(); flash("Language saved"); }} />
+          <Language />
 
           <CurrencyAndArea
             settings={settings}
@@ -823,64 +824,15 @@ function ServiceList({ services, unit, currency, settings, onChanged }) {
   );
 }
 
-function Language({ profile, onChanged }) {
-  const [busy, setBusy] = useState(false);
-
-  async function setLanguage(language) {
-    setBusy(true);
-    await fetch("/api/contractor-profile", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ language }),
-    });
-    setBusy(false);
-    onChanged();
-  }
-
+function Language() {
   return (
     <section className="mb-6">
       <h2 className="mb-2 text-sm font-semibold">Language</h2>
-      <div className="flex gap-2">
-        <button
-          disabled={busy}
-          onClick={() => setLanguage("th")}
-          className={`btn flex-1 ${profile.language === "th" ? "btn-primary" : "btn-outline"}`}
-        >
-          ไทย
-        </button>
-        <button
-          disabled={busy}
-          onClick={() => setLanguage("en")}
-          className={`btn flex-1 ${profile.language === "en" ? "btn-primary" : "btn-outline"}`}
-        >
-          English
-        </button>
-        <button
-          disabled={busy}
-          onClick={() => setLanguage("vn")}
-          className={`btn flex-1 ${profile.language === "vn" ? "btn-primary" : "btn-outline"}`}
-        >
-          Tiếng Việt
-        </button>
-      </div>
-      <p className="mt-1 text-[11px] text-[var(--text-tert)]">
-        Sets your preference — the rest of the app stays in English for now.
-      </p>
+      <LanguagePicker />
     </section>
   );
 }
 
-// What the community bills and measures in.
-//
-// Deliberately a COMMUNITY setting, not a contractor one (review item R4): one
-// community bills in one currency and measures in one unit, and a contractor
-// and a farmer looking at the same field must never disagree about what it
-// measures. So changing this changes what every farmer here sees too, which
-// the note below says out loud.
-//
-// Safe to change whenever: each work report freezes its own currency and unit
-// label at creation, so past reports keep reading in whatever was set when the
-// work was done.
 function CurrencyAndArea({ settings, onChanged }) {
   const [editing, setEditing] = useState(false);
   const [currency, setCurrency] = useState(settings.currency);

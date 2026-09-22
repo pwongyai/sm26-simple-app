@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { logout } from "@/lib/useSession";
 import { fmtDate } from "@/lib/date";
+import LanguagePicker from "@/components/LanguagePicker";
 
 // Profile — version 3 §4/§11.6: the farmer's own details, who they're
 // connected to, and the way out. No language toggle yet; that's listed in the
@@ -231,6 +232,11 @@ export default function ProfileTab() {
             </div>
           </>
         )}
+      </div>
+
+      <p className="field-label">Language</p>
+      <div className="mb-4">
+        <LanguagePicker />
       </div>
 
       <p className="field-label">Organization</p>

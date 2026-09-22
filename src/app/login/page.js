@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useT } from "@/lib/i18n";
 
 // Phone number and password. The number is the user ID — the same number signs
 // back into the same account from any device, which is the point: a farmer's
@@ -42,9 +43,11 @@ export default function LoginPage() {
     else router.push(data.user.role === "farmer" ? "/farmer" : "/contractor");
   }
 
+  const t = useT();
+
   return (
     <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-6">
-      <h1 className="mb-8 text-xl font-semibold">Smart Machine</h1>
+      <h1 className="mb-8 text-xl font-semibold">{t("Smart Machine")}</h1>
 
       <form onSubmit={submit} className="flex flex-col gap-3">
         <input
@@ -52,7 +55,7 @@ export default function LoginPage() {
           inputMode="tel"
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
-          placeholder="Phone number"
+          placeholder={t("Phone number")}
           required
           autoComplete="username"
           className="field"
@@ -62,7 +65,7 @@ export default function LoginPage() {
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder="Password"
+          placeholder={t("Password")}
           required
           autoComplete="current-password"
           className="field"
@@ -75,7 +78,7 @@ export default function LoginPage() {
           disabled={busy}
           className="btn btn-primary w-full"
         >
-          {busy ? "Signing in…" : "Sign In"}
+          {busy ? t("Signing in…") : t("Sign In")}
         </button>
       </form>
     </main>
