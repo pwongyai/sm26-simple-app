@@ -666,3 +666,11 @@ body {
   border-top: 1px solid var(--rule);
   padding-top: 18px;
 }
+
+/* The app header sits at the very top of the screen. With viewport-fit=cover
+   the page reaches under the Dynamic Island / notch, so the header has to hold
+   that space itself or the customer's name renders behind the camera cutout.
+   Zero on every device without one. */
+.app-header {
+  padding-top: calc(12px + env(safe-area-inset-top));
+}

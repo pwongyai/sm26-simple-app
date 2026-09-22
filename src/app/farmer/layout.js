@@ -33,7 +33,7 @@ export default function FarmerLayout({ children }) {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="flex items-center justify-between bg-white px-5 py-3">
+      <header className="app-header flex items-center justify-between bg-white px-5 py-3">
         <div className="flex items-center gap-2.5">
           <Logo size={28} />
           <div>

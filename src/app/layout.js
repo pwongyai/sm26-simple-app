@@ -23,6 +23,10 @@ export const metadata = {
 // when the app is opened from the home screen.
 export const viewport = {
   themeColor: "#171717",
+  // Let the page reach under the Dynamic Island and the home indicator, so
+  // `env(safe-area-inset-*)` below has real numbers to work with. Without it
+  // iOS letterboxes a standalone app between grey bars.
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }) {

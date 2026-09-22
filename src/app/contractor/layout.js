@@ -61,7 +61,7 @@ function ContractorChrome({ user, children }) {
     // flex sibling at the true bottom, every time — nothing to overlap.
     <div className="flex h-dvh flex-col">
       {/* The logo sits where a title would, exactly as version 3 has it. */}
-      <header className="flex items-center justify-between bg-white px-5 py-3">
+      <header className="app-header flex items-center justify-between bg-white px-5 py-3">
         <div className="flex items-center gap-2.5">
           <Logo size={28} />
           <div>
