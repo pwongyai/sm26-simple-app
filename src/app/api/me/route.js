@@ -50,9 +50,21 @@ export async function PATCH(request) {
   // and a leading +, which are how people write a phone down, are stripped
   // rather than refused; anything left over is not a phone.
   const phone = (body.phone || "").replace(/[\s\-()+]/g, "");
-  if (!/^\d{8,15}$/.test(phone)) {
+
+  // Say which thing is wrong. One combined message told someone who typed
+  // "12345" that the number had to be digits only — which it was.
+  if (!phone) {
+    return Response.json({ error: "Enter your mobile number" }, { status: 400 });
+  }
+  if (!/^\d+$/.test(phone)) {
     return Response.json(
-      { error: "Enter a mobile number — digits only" },
+      { error: "A mobile number can only contain digits" },
+      { status: 400 }
+    );
+  }
+  if (phone.length < 8 || phone.length > 15) {
+    return Response.json(
+      { error: "That does not look like a mobile number" },
       { status: 400 }
     );
   }
