@@ -263,6 +263,10 @@ export default function ProfileTab() {
           </div>
         </div>
       </div>
+      <p className="-mt-3 mb-4 px-1 text-[11px] text-[var(--text-tert)]">
+        Currency and area unit are set by your contractor for the whole
+        community.
+      </p>
 
       <button
         className="btn w-full"
