@@ -163,7 +163,6 @@ export default function FarmerOrderDetail({ order, onClose, onChanged }) {
 
           <p className="text-xs text-[var(--text-tert)]">
             {fmtDate(report.started_at)}
-            {report.work_order_id && " · Linked to an existing work order"}
           </p>
 
         </div>

@@ -407,7 +407,6 @@ function ViewReport({ report: r, onClose, onTogglePaid }) {
 
         <p className="text-xs text-[var(--text-tert)]">
           {fmtDate(r.started_at)}
-          {r.work_order_id && " · Linked to an existing work order"}
         </p>
 
       </div>
@@ -715,7 +714,6 @@ function CreateReport({ onClose, onCreated, onViewExisting }) {
 
             <p className="text-xs text-[var(--text-tert)]">
               {fmtDate(chosen.startedAt)}
-              {matchInfo?.workOrderId && " · Linked to an existing work order"}
             </p>
 
             {error && <p className="text-sm text-red-600">{error}</p>}
