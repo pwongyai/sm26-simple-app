@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import Map from "@/components/Map";
 import { polygonAreaM2 } from "@/lib/engine";
 import { FULL_PAGE_MAP_HEIGHT } from "@/lib/mapHeight";
+import { fmtDayMonth } from "@/lib/date";
 
 // Machine tab's "Select Area to Create Report" + "Draw Field Boundary"
 // (version 3 §2d-2f), on real data: tap the map — inside a known field hands
@@ -513,10 +514,7 @@ export default function SelectArea({ machine, points, day, since, until, initial
                     <b>{o.activity_type_name || "Job"}</b>
                     <span>
                       {o.scheduled_date
-                        ? new Date(o.scheduled_date).toLocaleDateString([], {
-                            day: "numeric",
-                            month: "short",
-                          })
+                        ? fmtDayMonth(o.scheduled_date)
                         : "No date"}
                       {" · "}
                       {o.crop_size_m2 != null ? areaOut(o.crop_size_m2, areaUnitM2) : "?"}{" "}

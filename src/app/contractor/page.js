@@ -8,6 +8,7 @@ import OrderCalendar from "@/components/OrderCalendar";
 import FrozenHeaderScroll from "@/components/FrozenHeaderScroll";
 import Map from "@/components/Map";
 import { haversineKm } from "@/lib/track";
+import { fmtDate } from "@/lib/date";
 
 const VIEWS = [
   { key: "list", label: "List" },
@@ -160,12 +161,7 @@ export default function BookingTab() {
           <OrderCalendar orders={listOrders} selected={day} onSelect={setDay} />
           <div className="mt-3 flex items-center justify-between">
             <p className="text-sm font-semibold">
-              {day &&
-                new Date(`${day}T00:00:00`).toLocaleDateString([], {
-                  day: "numeric",
-                  month: "short",
-                  year: "numeric",
-                })}
+              {day && fmtDate(day)}
             </p>
             <button className="add-btn py-1.5" onClick={() => setAdding(true)}>
               + Add

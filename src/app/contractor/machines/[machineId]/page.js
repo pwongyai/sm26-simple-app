@@ -7,6 +7,7 @@ import SelectArea from "@/components/SelectArea";
 import MachinePhoto from "@/components/MachinePhoto";
 import ImplementPicker from "@/components/ImplementPicker";
 import { FULL_PAGE_MAP_HEIGHT } from "@/lib/mapHeight";
+import { fmtDate } from "@/lib/date";
 
 // Version 3's three ranges — Today, 2 days, Custom — rather than the wider
 // windows this used to offer. Matches TRAJECTORY_FETCH_GUIDE.md's chunked
@@ -271,7 +272,7 @@ export default function MachineDetailPage({ params }) {
               {findingLatest
                 ? "Searching for this machine's most recent activity…"
                 : latestDate
-                  ? `Most recent activity: ${new Date(`${latestDate}T00:00:00`).toLocaleDateString([], { day: "numeric", month: "short", year: "numeric" })}`
+                  ? `Most recent activity: ${fmtDate(latestDate)}`
                   : "No GPS activity found for this machine in the past year."}
             </div>
           )}

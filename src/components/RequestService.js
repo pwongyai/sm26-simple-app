@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { createOrder } from "@/lib/store";
 import { boundaryCentre } from "@/lib/engine";
 import FieldThumb from "@/components/FieldThumb";
-import { fmtDate } from "@/lib/date";
+import { fmtDate, fmtDayMonth } from "@/lib/date";
 
 // Request Contractor — five steps, in order:
 //   Field → Contractor → Service → Preferred Date → Review.
@@ -30,13 +30,6 @@ const STEP_TITLES = {
   review: "Review Request",
 };
 
-function fmtDayMonth(iso) {
-  return new Date(`${iso}T00:00:00`).toLocaleDateString([], {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-  });
-}
 
 export default function RequestService({
   fields,

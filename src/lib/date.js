@@ -43,3 +43,14 @@ export function fmtDateTime(value) {
       })
     : "—";
 }
+
+// A calendar's own heading: "September 2026".
+export function fmtMonthYear(value) {
+  const d = value instanceof Date ? value : toDate(value);
+  return d ? d.toLocaleDateString([], { month: "long", year: "numeric" }) : "—";
+}
+
+export function fmtTime(value) {
+  const d = toDate(value);
+  return d ? d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—";
+}

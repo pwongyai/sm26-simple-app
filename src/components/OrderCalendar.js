@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { daysLate } from "@/components/OrderCard";
+import { fmtMonthYear } from "@/lib/date";
 
 // Month grid showing where the workload sits. Version 3: each day carries a
 // small pill badge with its job count — colored red if anything that day is
@@ -47,7 +48,7 @@ export default function OrderCalendar({ orders, selected, onSelect }) {
           ←
         </button>
         <p className="text-sm font-medium">
-          {month.toLocaleDateString([], { month: "long", year: "numeric" })}
+          {fmtMonthYear(month)}
         </p>
         <button
           onClick={() => setMonth(new Date(year, m + 1, 1))}

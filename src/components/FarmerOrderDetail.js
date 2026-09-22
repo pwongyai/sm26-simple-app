@@ -6,12 +6,8 @@ import { useEffect, useState } from "react";
 import { deleteOrder } from "@/lib/store";
 import StatusBadge from "@/components/StatusBadge";
 import Map from "@/components/Map";
-import { fmtDate } from "@/lib/date";
+import { fmtDate, fmtTime } from "@/lib/date";
 
-function fmtTime(iso) {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-}
 
 
 const OVERVIEW_TAB = "overview";
