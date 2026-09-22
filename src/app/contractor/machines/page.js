@@ -174,11 +174,6 @@ export default function MachinesTab() {
                 <p className="text-sm text-[var(--text-sec)]">
                   {[m.kind, [m.make, m.model].filter(Boolean).join(" ")].filter(Boolean).join(" · ")}
                 </p>
-                {m.lastLocation && (
-                  <p className="mt-1 text-xs text-[var(--text-tert)]">
-                    last seen at {m.lastLocation[1].toFixed(4)}, {m.lastLocation[0].toFixed(4)}
-                  </p>
-                )}
               </div>
             </Link>
           </li>
