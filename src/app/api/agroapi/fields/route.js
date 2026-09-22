@@ -70,25 +70,38 @@ export async function GET(request) {
     // A field's own boundary cannot lie about where it is. The radius is
     // applied to that instead, so a farm's centroid no longer decides whether
     // its fields exist.
-    const all = [];
-    for (let page = 1; page <= 40; page++) {
-      const r = await agroFetchWithRetry(`/organizations/${orgId}/fields?page=${page}`);
-      if (!r.ok || !Array.isArray(r.body) || r.body.length === 0) break;
-      all.push(...r.body);
-      if (r.body.length < 50) break;
-    }
+    // Ask AgroAPI for the fields inside a box around the tap and let PostGIS
+    // answer it: /organizations/:id/fields accepts `boundary` as two corners
+    // and filters with ST_Within on each field's real shape.
+    //
+    // Two earlier versions got this wrong by trusting a stored point instead
+    // of a shape. Walking the org's FARMS measured each farm's own location:
+    // Huong Ngai keeps all its fields under one farm whose point is 35 km
+    // away, so nothing was ever in range. Sorting fields by distance had the
+    // same flaw one level down — AgroAPI's field centroids put Đồng Lệu
+    // outside 250 m of its own middle, so an early stop returned nothing.
+    //
+    // A boundary cannot be wrong about where it is. One request, no paging,
+    // and the work happens in the database (2026-09-23).
+    const dLat = radiusM / 111320;
+    const dLng = radiusM / (111320 * Math.cos((lat * Math.PI) / 180));
+    const box = JSON.stringify([
+      [lng - dLng, lat - dLat],
+      [lng + dLng, lat + dLat],
+    ]);
+
+    const r = await agroFetchWithRetry(
+      `/organizations/${orgId}/fields?boundary=${encodeURIComponent(box)}`
+    );
+    // Over 50 matches AgroAPI answers with clusters instead of fields. That
+    // means the box is too coarse to tap in anyway; better an empty map than
+    // a wrong one.
+    const rows = Array.isArray(r.body) ? r.body : [];
 
     const fields = [];
-    for (const f of all) {
+    for (const f of rows) {
       const ring = f.location?.boundary?.coordinates;
-      if (!ring) continue; // no shape drawn yet — can't be tapped on the map
-      const pts = ring[0] || [];
-      if (!pts.length) continue;
-      const centroid = [
-        pts.reduce((sum, p) => sum + p[0], 0) / pts.length,
-        pts.reduce((sum, p) => sum + p[1], 0) / pts.length,
-      ];
-      if (haversineM([lng, lat], centroid) > radiusM) continue;
+      if (!ring?.[0]?.length) continue; // no shape drawn yet — can't be tapped
       fields.push({
         id: f.id,
         name: f.name,
