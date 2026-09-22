@@ -455,7 +455,11 @@ body {
 }
 .ov-header {
   flex-shrink: 0;
-  padding: 16px 20px 12px;
+  /* An overlay covers the whole screen, so its own header sits under the
+     Dynamic Island once the page is allowed to reach there (viewport-fit).
+     The app headers already hold this space; these did not, so "Work Order"
+     rendered behind the camera cutout. */
+  padding: calc(16px + env(safe-area-inset-top)) 20px 12px;
   display: flex;
   align-items: center;
   gap: 12px;
