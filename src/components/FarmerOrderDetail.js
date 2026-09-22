@@ -54,7 +54,7 @@ export default function FarmerOrderDetail({ order, onClose, onChanged }) {
 
   const overviewFields = report && [
     ["Farmer Name", report.farmer?.name || "Unassigned"],
-    ["Work Type", report.work_type_name || report.service_name || "—"],
+    ["Work Type", report.service_name || report.work_type_name || "—"],
     ["Total Hours", report.hours != null ? `${report.hours} hr` : "—"],
     ["Start Time", fmtTime(report.started_at)],
     ["Stop Time", fmtTime(report.ended_at)],

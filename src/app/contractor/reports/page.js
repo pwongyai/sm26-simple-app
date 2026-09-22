@@ -265,7 +265,7 @@ function ReportsTabInner() {
               <div className="txt">
                 <div className="name">{r.farmer?.name || "Unassigned"}</div>
                 <div className="sub">
-                  {r.work_type_name || r.service_name || "—"} · {fmtDate(r.started_at)}
+                  {r.service_name || r.work_type_name || "—"} · {fmtDate(r.started_at)}
                 </div>
                 <div className="sub">
                   {Number(r.field_area_units ?? 0).toFixed(2)} {r.unit_label} · {r.percent_worked ?? 0}% work area
@@ -318,7 +318,7 @@ function ViewReport({ report: r, onClose, onTogglePaid }) {
 
   const overviewFields = [
     ["Farmer Name", r.farmer?.name || "Unassigned"],
-    ["Work Type", r.work_type_name || r.service_name || "—"],
+    ["Work Type", r.service_name || r.work_type_name || "—"],
     ["Total Hours", r.hours != null ? `${r.hours} hr` : "—"],
     ["Start Time", fmtTime(r.started_at)],
     ["Stop Time", fmtTime(r.ended_at)],
