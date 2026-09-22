@@ -26,14 +26,15 @@ export default function ForceCloseSheet({ order, services, onCancel, onDone }) {
 
   // The service behind this job, for the rate. Matched on the work type the
   // order already carries, so the usual case needs no choosing.
+  // Only to price the job on screen. `services` carries no activity_type_id —
+  // the canonical name is the real link — so this is a name match, which holds
+  // for a job a farmer requested (the order took the service's own name) and
+  // can miss on a backfilled one. When it misses the contractor is asked, and
+  // the server resolves the authoritative service from the order's activity
+  // type either way (reports/route.js).
   const matchingService = useMemo(
-    () =>
-      (services || []).find(
-        (s) =>
-          s.activity_type_id === order.activity_type_id ||
-          s.name === order.activity_type_name
-      ) || null,
-    [services, order.activity_type_id, order.activity_type_name]
+    () => (services || []).find((s) => s.name === order.activity_type_name) || null,
+    [services, order.activity_type_name]
   );
 
   const [serviceId, setServiceId] = useState(matchingService?.id || "");

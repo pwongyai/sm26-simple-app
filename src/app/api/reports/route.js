@@ -4,7 +4,7 @@ import { agroFetch } from "@/lib/agroapi";
 import { contractorOrgId } from "@/lib/contractor";
 import { cropzoneInSite } from "@/lib/siteFarms";
 import { EMISSION_KG_PER_L } from "@/lib/emissions";
-import { recordWorkOrder, recordWorkRecord } from "@/lib/adapt";
+import { recordWorkOrder, recordWorkRecord, serviceForActivityType } from "@/lib/adapt";
 
 export async function GET() {
   const { user, response } = await requireAccess();
@@ -155,6 +155,35 @@ export async function POST(request) {
       .eq("contractor_agro_org_id", contractorOrgId(user))
       .maybeSingle();
     service = data || null;
+  }
+
+  // A Force Close names no service: the job already says what work it is, so
+  // the link comes from the order rather than from a string compared in the
+  // browser. `serviceForActivityType` is the same resolver order creation
+  // uses — it maps the order's AgroAPI activity type to the contractor's
+  // service by canonical name, which survives a backfilled order whose
+  // activity_type_name is AgroAPI's word ("Planting") and not the service's
+  // ("Transplanting").
+  if (!service && b.workOrderId) {
+    const { data: forOrder } = await supabaseAdmin
+      .from("work_orders")
+      .select("activity_type_id")
+      .eq("id", b.workOrderId)
+      .maybeSingle();
+    if (forOrder?.activity_type_id) {
+      const resolved = await serviceForActivityType(
+        contractorOrgId(user),
+        forOrder.activity_type_id
+      );
+      if (resolved) {
+        const { data: full } = await supabaseAdmin
+          .from("services")
+          .select("*")
+          .eq("id", resolved.id)
+          .maybeSingle();
+        service = full || resolved;
+      }
+    }
   }
 
   const types = await agroFetch("/activity_types");
