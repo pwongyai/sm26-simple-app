@@ -85,8 +85,12 @@ export function priceIn(displayPrice, areaUnitM2, currency) {
 // m² -> the reader's unit, and back.
 export function areaOut(areaM2, areaUnitM2, digits = 1) {
   const n = Number(areaM2);
-  if (!Number.isFinite(n)) return null;
-  return Number((n / (Number(areaUnitM2) || 1)).toFixed(digits));
+  const per = Number(areaUnitM2);
+  // No unit yet (settings still loading) returns null so the caller shows "—".
+  // Falling back to 1 would print raw square metres under a heading that says
+  // sào, which is the same class of lie this whole change removes.
+  if (!Number.isFinite(n) || !per) return null;
+  return Number((n / per).toFixed(digits));
 }
 
 export function areaIn(displayArea, areaUnitM2) {

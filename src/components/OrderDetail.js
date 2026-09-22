@@ -20,7 +20,7 @@ export default function OrderDetail({ order, services, onClose, onChanged }) {
   const [workType, setWorkType] = useState(order.activity_type_name || "");
   const { areaUnit, areaUnitM2 } = useUnits();
   // Typed and shown in the reader's unit; stored as m².
-  const [rai, setRai] = useState(
+  const [cropSize, setCropSize] = useState(
     order.crop_size_m2 != null ? String(areaOut(order.crop_size_m2, areaUnitM2)) : ""
   );
   const [note, setNote] = useState(order.note || "");
@@ -33,7 +33,7 @@ export default function OrderDetail({ order, services, onClose, onChanged }) {
     await updateOrder(order.id, {
       scheduledDate: date || null,
       workType: workType ? { id: null, name: workType } : null,
-      cropSizeM2: rai === "" ? null : areaIn(rai, areaUnitM2),
+      cropSizeM2: cropSize === "" ? null : areaIn(cropSize, areaUnitM2),
       note: note.trim() || null,
     });
     setBusy(false);
@@ -171,13 +171,13 @@ export default function OrderDetail({ order, services, onClose, onChanged }) {
               />
             </div>
             <div>
-              <div className="field-label">Crop size (rai)</div>
+              <div className="field-label">Crop size ({areaUnit})</div>
               <input
                 className="field"
                 type="number"
                 step="0.1"
-                value={rai}
-                onChange={(e) => setRai(e.target.value)}
+                value={cropSize}
+                onChange={(e) => setCropSize(e.target.value)}
                 placeholder="unknown"
               />
             </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { areaOut } from "@/lib/units";
 import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { polygonAreaM2 } from "@/lib/engine";
@@ -64,7 +65,7 @@ export default function ManageField({
   }, [view, crops]);
 
   const areaUnits = useMemo(
-    () => (points.length >= 3 ? (polygonAreaM2(points) / unitM2).toFixed(2) : null),
+    () => (points.length >= 3 ? areaOut(polygonAreaM2(points), unitM2, 2) : null),
     [points, unitM2]
   );
 

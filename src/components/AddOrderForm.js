@@ -14,7 +14,7 @@ import Map from "@/components/Map";
 // customer or offers to create one from whatever was typed; the rest of the
 // form only then unfolds. Location is three options and never blocks saving.
 export default function AddOrderForm({ services, onClose, onCreated }) {
-  const { areaUnitM2 } = useUnits();
+  const { areaUnit, areaUnitM2 } = useUnits();
   // 'search' → 'selected' | 'new'
   const [step, setStep] = useState("search");
   const [query, setQuery] = useState("");
@@ -219,7 +219,7 @@ export default function AddOrderForm({ services, onClose, onCreated }) {
           <>
             <div className="flex gap-2.5">
               <div className="flex-1">
-                <div className="field-label">Crop size (rai)</div>
+                <div className="field-label">Crop size ({areaUnit})</div>
                 <input
                   className="field"
                   type="number"

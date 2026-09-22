@@ -1,5 +1,6 @@
 "use client";
 
+import { areaOut } from "@/lib/units";
 import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { polygonAreaM2 } from "@/lib/engine";
@@ -54,7 +55,7 @@ export default function AddFieldFlow({ unit, unitM2, onClose, onCreated }) {
 
   const areaUnits = useMemo(() => {
     if (points.length < 3) return null;
-    return (polygonAreaM2(points) / unitM2).toFixed(2);
+    return areaOut(polygonAreaM2(points), unitM2, 2);
   }, [points, unitM2]);
 
   const matches = useMemo(() => {
