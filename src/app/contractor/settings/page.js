@@ -547,7 +547,7 @@ function HomeBase({ profile, onChanged }) {
           Tap the map to move the pin.
         </p>
       )}
-      <Map pin={shownPin} onPick={editing ? setDraftPin : null} height={200} />
+      <Map pin={shownPin} onPick={editing ? setDraftPin : null} height={170} />
       <p className="mt-1 text-[11px] text-[var(--text-tert)]">
         {shownPin
           ? `${editing ? "New location" : "Home at"} ${shownPin.lat.toFixed(5)}, ${shownPin.lng.toFixed(5)}`
