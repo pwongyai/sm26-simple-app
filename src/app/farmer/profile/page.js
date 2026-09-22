@@ -15,6 +15,9 @@ export default function ProfileTab() {
   const [saved, setSaved] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  // Read-only until you ask to edit, the same as the password panel below.
+  // A profile is something you look at far more often than you change.
+  const [editing, setEditing] = useState(false);
 
   // Password change. Kept in its own piece of state and its own request: it
   // has a different failure mode from name/phone (the current password can be
@@ -24,6 +27,9 @@ export default function ProfileTab() {
   const [pwMsg, setPwMsg] = useState("");
   const [pwError, setPwError] = useState("");
   const [pwBusy, setPwBusy] = useState(false);
+  // Closed until asked for. Two password boxes standing open on the screen
+  // you came to to fix your name is not a thing anyone wants to look at.
+  const [pwOpen, setPwOpen] = useState(false);
 
   const load = useCallback(() => {
     fetch("/api/me", { cache: "no-store" })
@@ -52,6 +58,7 @@ export default function ProfileTab() {
       setError((await res.json()).error || "Could not save.");
       return;
     }
+    setEditing(false);
     setSaved("Saved");
     setTimeout(() => setSaved(""), 1500);
     load();
@@ -74,7 +81,10 @@ export default function ProfileTab() {
     setPwCurrent("");
     setPwNew("");
     setPwMsg("Password changed");
-    setTimeout(() => setPwMsg(""), 2000);
+    setTimeout(() => {
+      setPwMsg("");
+      setPwOpen(false);
+    }, 1500);
   }
 
   if (!me) return <p className="empty-msg">Loading…</p>;
@@ -90,70 +100,136 @@ export default function ProfileTab() {
       )}
 
       <div className="card mb-4 p-4">
-        <div className="field-label">Your name</div>
-        <input
-          className="field mb-3"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
+        {!editing ? (
+          <>
+            <div className="detail-row">
+              <div className="lbl">Your name</div>
+              <div className="val">{me.name}</div>
+            </div>
+            <div className="detail-row">
+              <div className="lbl">Mobile number</div>
+              <div className="val">{me.phone}</div>
+            </div>
 
-        <div className="field-label">Mobile number</div>
-        <input
-          className="field"
-          type="tel"
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-        />
-        <p className="mt-1 text-[11px] text-[var(--text-tert)]">
-          This is how you sign in — changing it changes your login.
-        </p>
+            <button
+              className="mt-3 flex w-full items-center justify-between text-left"
+              onClick={() => {
+                setName(me.name || "");
+                setPhone(me.phone || "");
+                setError("");
+                setEditing(true);
+              }}
+            >
+              <span className="text-sm font-medium">Edit</span>
+              <span className="text-[var(--text-tert)]">›</span>
+            </button>
+          </>
+        ) : (
+          <>
+            <div className="field-label">Your name</div>
+            <input
+              className="field mb-3"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
 
-        {error && <p className="mt-2 text-sm text-[var(--danger)]">{error}</p>}
+            <div className="field-label">Mobile number</div>
+            <input
+              className="field"
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+            />
+            <p className="mt-1 text-[11px] text-[var(--text-tert)]">
+              This is how you sign in — changing it changes your login.
+            </p>
 
-        <button
-          className="btn btn-primary mt-3 w-full"
-          disabled={busy}
-          onClick={save}
-        >
-          {busy ? "Saving…" : "Save"}
-        </button>
+            {error && <p className="mt-2 text-sm text-[var(--danger)]">{error}</p>}
+
+            <div className="mt-3 flex gap-2">
+              <button
+                className="btn flex-1"
+                onClick={() => {
+                  setEditing(false);
+                  setError("");
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-primary flex-1"
+                disabled={busy}
+                onClick={save}
+              >
+                {busy ? "Saving…" : "Save"}
+              </button>
+            </div>
+          </>
+        )}
       </div>
 
       <div className="card mb-4 p-4">
-        <div className="field-label">Password</div>
+        {!pwOpen ? (
+          <button
+            className="flex w-full items-center justify-between text-left"
+            onClick={() => setPwOpen(true)}
+          >
+            <span className="text-sm font-medium">Change Password</span>
+            <span className="text-[var(--text-tert)]">›</span>
+          </button>
+        ) : (
+          <>
+            <div className="field-label">Change Password</div>
 
-        <input
-          className="field mb-3"
-          type="password"
-          placeholder="Current password"
-          autoComplete="current-password"
-          value={pwCurrent}
-          onChange={(e) => setPwCurrent(e.target.value)}
-        />
-        <input
-          className="field"
-          type="password"
-          placeholder="New password"
-          autoComplete="new-password"
-          value={pwNew}
-          onChange={(e) => setPwNew(e.target.value)}
-        />
-        <p className="mt-1 text-[11px] text-[var(--text-tert)]">
-          At least 6 characters.
-        </p>
+            <input
+              className="field mb-3"
+              type="password"
+              placeholder="Current password"
+              autoComplete="current-password"
+              value={pwCurrent}
+              onChange={(e) => setPwCurrent(e.target.value)}
+            />
+            <input
+              className="field"
+              type="password"
+              placeholder="New password"
+              autoComplete="new-password"
+              value={pwNew}
+              onChange={(e) => setPwNew(e.target.value)}
+            />
+            <p className="mt-1 text-[11px] text-[var(--text-tert)]">
+              At least 6 characters.
+            </p>
 
-        {pwError && <p className="mt-2 text-sm text-[var(--danger)]">{pwError}</p>}
-        {pwMsg && (
-          <p className="mt-2 text-sm text-[var(--green-dark)]">{pwMsg}</p>
+            {pwError && (
+              <p className="mt-2 text-sm text-[var(--danger)]">{pwError}</p>
+            )}
+            {pwMsg && (
+              <p className="mt-2 text-sm text-[var(--green-dark)]">{pwMsg}</p>
+            )}
+
+            <div className="mt-3 flex gap-2">
+              <button
+                className="btn flex-1"
+                onClick={() => {
+                  setPwOpen(false);
+                  setPwCurrent("");
+                  setPwNew("");
+                  setPwError("");
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-primary flex-1"
+                disabled={pwBusy || !pwCurrent || !pwNew}
+                onClick={changePassword}
+              >
+                {pwBusy ? "Saving…" : "Save"}
+              </button>
+            </div>
+          </>
         )}
-
-        <button
-          className="btn mt-3 w-full"
-          disabled={pwBusy || !pwCurrent || !pwNew}
-          onClick={changePassword}
-        >
-          {pwBusy ? "Changing…" : "Change Password"}
-        </button>
       </div>
 
       <p className="field-label">Organization</p>
