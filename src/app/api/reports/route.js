@@ -75,9 +75,27 @@ export async function POST(request) {
   }
 
   const b = await request.json();
-  const required = ["cropzoneId", "machineId", "startedAt"];
-  for (const key of required) {
-    if (!b[key]) return Response.json({ error: `${key} is required` }, { status: 400 });
+  if (!b.startedAt) {
+    return Response.json({ error: "startedAt is required" }, { status: 400 });
+  }
+
+  // Three kinds of report now arrive here, and they differ only in how much
+  // was measured. One route, because they are the same document:
+  //
+  //   machine + field   the machine's track gives the area      (as before)
+  //   field, no machine the contractor states the area — no GPS on the
+  //                     machine, or the work was done by hand
+  //   neither           a job jotted into the digital notebook for a manual
+  //                     customer that was never tied to a field
+  //
+  // A fieldless report is only reachable from an existing order: there is
+  // nothing to attach it to otherwise, and no field to check ownership of.
+  const hasField = !!b.cropzoneId;
+  if (!hasField && !b.workOrderId) {
+    return Response.json(
+      { error: "A report without a field must belong to an existing job" },
+      { status: 400 }
+    );
   }
 
   // The field must belong to this contractor's own community. Re-checked here
@@ -89,28 +107,37 @@ export async function POST(request) {
   // walk produced the first message for the second situation, so a transient
   // hiccup looked like a permissions problem on land the community plainly
   // owns.
-  let inSite;
-  try {
-    inSite = await cropzoneInSite(b.cropzoneId, user.organization.agro_org_id);
-  } catch (e) {
-    console.error("site check failed", e);
-    return Response.json(
-      { error: "Could not verify this field with AgroAPI just now — try again" },
-      { status: 503 }
-    );
-  }
-  if (!inSite) {
-    return Response.json({ error: "That field is not in your organization" }, { status: 403 });
+  if (hasField) {
+    let inSite;
+    try {
+      inSite = await cropzoneInSite(b.cropzoneId, user.organization.agro_org_id);
+    } catch (e) {
+      console.error("site check failed", e);
+      return Response.json(
+        { error: "Could not verify this field with AgroAPI just now — try again" },
+        { status: 503 }
+      );
+    }
+    if (!inSite) {
+      return Response.json({ error: "That field is not in your organization" }, { status: 403 });
+    }
   }
 
-  // Refuse to bill the same session twice.
-  const { data: dupe } = await supabaseAdmin
-    .from("work_reports")
-    .select("id")
-    .eq("agro_cropzone_id", b.cropzoneId)
-    .eq("agro_machine_id", b.machineId)
-    .eq("started_at", b.startedAt)
-    .maybeSingle();
+  // Refuse to bill the same work twice.
+  //
+  // A machine session is identified by field + machine + start time. A report
+  // with no machine has none of that to be unique on, so it is identified by
+  // the job it closes: a job can be billed once.
+  const dupeQuery = supabaseAdmin.from("work_reports").select("id");
+  if (b.machineId) {
+    dupeQuery
+      .eq("agro_cropzone_id", b.cropzoneId)
+      .eq("agro_machine_id", b.machineId)
+      .eq("started_at", b.startedAt);
+  } else {
+    dupeQuery.eq("work_order_id", b.workOrderId);
+  }
+  const { data: dupe } = await dupeQuery.maybeSingle();
 
   if (dupe) {
     return Response.json({ error: "Already reported", reportId: dupe.id }, { status: 409 });
@@ -141,8 +168,12 @@ export async function POST(request) {
   // Write the permanent record into AgroAPI first. If this fails we do not
   // save a report — a report that claims work was recorded when it wasn't is
   // worse than no report.
+  //
+  // A notebook job with no field has no cropzone to write an activity TO, so
+  // it produces a report and nothing else. That is the whole difference
+  // between the two kinds.
   let activityId = null;
-  if (activityType) {
+  if (activityType && hasField) {
     const orgId = user.organization.agro_org_id;
     const startDate = String(b.startedAt).slice(0, 10);
     const written = await agroFetch(
@@ -153,8 +184,9 @@ export async function POST(request) {
           activity_type_id: activityType.id,
           start_date: `${startDate}T00:00:00Z`,
           note:
-            `${b.workAreaUnits ?? "?"} ${user.organization.area_unit} worked by ` +
-            `${b.machineName || "machine"} — recorded via SM26`,
+            `${b.workAreaUnits ?? "?"} ${user.organization.area_unit} worked` +
+            (b.machineName ? ` by ${b.machineName}` : "") +
+            " — recorded via SM26",
         }),
       }
     );
@@ -263,7 +295,7 @@ export async function POST(request) {
   // Only ever runs on an EXPLICIT assignment (b.farmerId). A farmer inherited
   // from a matched work order, or the Unassigned fallback, is not somebody
   // claiming anything.
-  if (assignedExplicitly && farmerId) {
+  if (hasField && assignedExplicitly && farmerId) {
     await claimFieldOwnership({ user, cropzoneId: b.cropzoneId, farmerId });
   }
 
@@ -276,7 +308,12 @@ export async function POST(request) {
         // only ever held 'force_closed', so a properly reported job and one
         // merely marked complete both read as NULL and could not be told
         // apart without joining work_reports (2026-08-23).
-        completion_type: "matched",
+        //
+        // A report with no machine is still a force close — the contractor
+        // stated what he did rather than a tracker measuring it. It now
+        // carries a real, billable report either way; the label says which
+        // kind of evidence is behind the number.
+        completion_type: b.machineId ? "matched" : "force_closed",
         completed_at: new Date().toISOString(),
         agro_activity_id: activityId,
         // Reality overwrites the plan: the measured area replaces the estimate.
@@ -328,8 +365,8 @@ export async function POST(request) {
       contractor_agro_org_id: contractorOrgId(user),
       work_order_id: workOrderId,
       farmer_id: farmerId,
-      agro_cropzone_id: b.cropzoneId,
-      agro_machine_id: b.machineId,
+      agro_cropzone_id: b.cropzoneId || null,
+      agro_machine_id: b.machineId || null,
       field_name: b.fieldName || null,
       machine_name: b.machineName || null,
       work_type_id: activityType?.id || null,

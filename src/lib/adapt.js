@@ -222,6 +222,13 @@ export async function recordWorkRecord(report, { order, service, fieldId, trackU
     resolvedFieldId = await fieldIdForCropzone(report.agro_cropzone_id);
   }
 
+  // No field, no document. ADAPT makes Field Id REQUIRED on a Work Record, so
+  // a notebook job that was never tied to land cannot produce a conformant
+  // one — and emitting a non-conformant document is worse than emitting none
+  // (2026-09-23). Such a job still produces a work report; it is billing and
+  // the contractor's own notebook, not a farm record anyone else receives.
+  if (!resolvedFieldId) return;
+
   await record({
     payload: buildWorkRecord(report, { order, service, fieldId: resolvedFieldId, trackUrl }),
     docType: "work_record",

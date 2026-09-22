@@ -3,9 +3,10 @@
 import { areaIn, areaOut } from "@/lib/units";
 import { useUnits } from "@/lib/useUnits";
 import { useState } from "react";
-import { updateOrder, deleteOrder, completeOrder } from "@/lib/store";
+import { updateOrder, deleteOrder } from "@/lib/store";
 import { daysLate } from "@/components/OrderCard";
 import { fmtDate } from "@/lib/date";
+import ForceCloseSheet from "@/components/ForceCloseSheet";
 
 // One shared detail screen, opened from every view — version 2 §8.1: no
 // per-tab detail screens, because automated and manual entries must never look
@@ -58,47 +59,10 @@ export default function OrderDetail({ order, services, onClose, onChanged }) {
     onClose();
   }
 
-  async function forceClose() {
-    setBusy(true);
-    await updateOrder(order.id, { forceClose: true });
-    setBusy(false);
-    onChanged();
-    onClose();
-  }
 
   // Completing writes a real, permanent Activity into AgroAPI. Only possible
   // once the job is tied to a cropzone — a jotted-down job with no field has
   // nowhere to record against yet; the report flow is what closes that.
-  async function complete() {
-    setBusy(true);
-    setError("");
-    try {
-      const res = await fetch(
-        `/api/agroapi/cropzones/${order.cropzone_id}/activities`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            activityTypeId: order.activity_type_id,
-            startDate: order.scheduled_date || order.booking_date,
-            note: `Completed via SM26 for ${order.farmer?.name || "customer"}`,
-          }),
-        }
-      );
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error?.errors?.join?.(", ") || "AgroAPI rejected this activity.");
-        setBusy(false);
-        return;
-      }
-      await completeOrder(order.id, data.id);
-      onChanged();
-      onClose();
-    } catch {
-      setError("Could not reach AgroAPI.");
-      setBusy(false);
-    }
-  }
 
   return (
     <div className="overlay">
@@ -147,7 +111,7 @@ export default function OrderDetail({ order, services, onClose, onChanged }) {
             <b>
               {late} {late === 1 ? "day" : "days"} late.
             </b>{" "}
-            If the job is done, use Force Close below.
+            If the job is done, close it below.
           </div>
         )}
 
@@ -255,15 +219,22 @@ export default function OrderDetail({ order, services, onClose, onChanged }) {
           </div>
         )}
 
-        {order.status === "booked" && order.cropzone_id && !editing && (
-          <button
-            className="btn"
-            style={{ background: "var(--green-dark)", color: "#fff" }}
-            disabled={busy}
-            onClick={complete}
-          >
-            {busy ? "Recording in AgroAPI…" : "Mark work complete"}
-          </button>
+        {/* "Mark work complete" used to sit here. It posted an Activity
+            straight to AgroAPI and closed the row — no report, no bill, no
+            ADAPT document, nothing the farmer ever saw. It was never part of
+            the design and it bypassed the exchange entirely, so it is gone
+            (2026-09-23). Closing a job now goes through a report, from the
+            machine's track or from the contractor's own figures. */}
+        {confirmingForceClose && !editing && (
+          <ForceCloseSheet
+            order={order}
+            services={services}
+            onCancel={() => setConfirmingForceClose(false)}
+            onDone={() => {
+              onChanged();
+              onClose();
+            }}
+          />
         )}
 
         {error && <p className="text-sm text-[var(--danger)]">{error}</p>}
@@ -305,16 +276,7 @@ export default function OrderDetail({ order, services, onClose, onChanged }) {
           >
             Really delete?
           </button>
-        ) : confirmingForceClose ? (
-          <button
-            className="btn"
-            style={{ background: "var(--accent)", color: "#fff" }}
-            disabled={busy}
-            onClick={forceClose}
-          >
-            Really force close?
-          </button>
-        ) : (
+        ) : confirmingForceClose ? null : (
           <>
             <button
               className="btn btn-outline"
@@ -329,7 +291,7 @@ export default function OrderDetail({ order, services, onClose, onChanged }) {
                 style={{ color: "var(--accent)" }}
                 onClick={() => setConfirmingForceClose(true)}
               >
-                Force Close
+                Close without machine
               </button>
             )}
             <button className="btn btn-primary" onClick={() => setEditing(true)}>
