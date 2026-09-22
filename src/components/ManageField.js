@@ -168,17 +168,19 @@ export default function ManageField({
 
             <div className="mt-2">
               <div className="field-label">New season</div>
+              {/* Forty words explaining what the button does, above the
+                  button. One line is enough: the only thing a farmer needs
+                  reassuring about is whether the old season disappears. The
+                  confirm step spells out the rest. */}
               <div className="fieldset-note mb-2">
-                Starting a new season archives this crop and opens a fresh one on
-                the same field. The old season stays in the field&apos;s history —
-                its records aren&apos;t lost, they just stop being the current crop.
+                The old season is kept in the field&apos;s history.
               </div>
               <button
                 className="btn btn-outline w-full"
                 onClick={() => setConfirmRenew(true)}
                 disabled={!cropzone.planting_date}
               >
-                Renew crop — start a new season
+                Start a new season
               </button>
               {!cropzone.planting_date && (
                 <p className="mt-1 text-[11px] text-[var(--text-tert)]">
