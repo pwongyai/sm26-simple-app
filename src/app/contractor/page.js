@@ -105,14 +105,16 @@ export default function BookingTab() {
     return { delayedToday: delayed, routedToday: routed, unmappedToday: unmapped };
   }, [listOrders, homeBase]);
 
+  // The same jobs the list shows, in the same order: delayed first, then the
+  // on-time ones routed from home. The map used to plot only the routed half,
+  // so the delayed jobs — the ones the list puts at the top and the whole
+  // point of looking at this screen — had no pins at all (2026-09-23).
   const todayMarkers = useMemo(() => {
-    const stops = routedToday.map((o, i) => ({
-      lat: o.location_lat,
-      lng: o.location_lng,
-      label: i + 1,
-    }));
+    const stops = [...delayedToday, ...routedToday]
+      .map((o, i) => ({ lat: o.location_lat, lng: o.location_lng, label: i + 1 }))
+      .filter((m) => m.lat != null && m.lng != null);
     return homeBase ? [{ ...homeBase, home: true }, ...stops] : stops;
-  }, [routedToday, homeBase]);
+  }, [delayedToday, routedToday, homeBase]);
 
   const header = (
     <>
