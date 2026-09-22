@@ -76,13 +76,13 @@ export default function OrderCard({ order, onClick, index }) {
       }`}
     >
       <div className="min-w-0 flex flex-col gap-0.5">
-        <p className="truncate font-bold leading-tight">
+        <p className="truncate text-sm font-bold leading-tight">
           {index != null && (
             <span className="mr-1.5 text-[var(--text-tert)]">{index}.</span>
           )}
           {fieldAndOwner(order.field_name, order.farmer?.name)}
         </p>
-        <p className="truncate text-sm leading-tight text-[var(--text-sec)]">
+        <p className="truncate text-xs leading-tight text-[var(--text-sec)]">
           {order.activity_type_name || "No work type"}
         </p>
         <p className="text-xs leading-tight text-[var(--text-tert)]">

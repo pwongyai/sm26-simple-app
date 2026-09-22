@@ -34,7 +34,7 @@ export default function IncomingRequestCard({ order, onChanged }) {
   return (
     <div className="card p-3 text-sm">
       <div className="mb-1 flex items-center justify-between gap-2">
-        <p className="font-medium">{fieldAndOwner(order.field_name, order.farmer?.name)}</p>
+        <p className="truncate text-sm font-medium">{fieldAndOwner(order.field_name, order.farmer?.name)}</p>
         <span className="shrink-0 rounded bg-green-light px-1.5 py-0.5 text-[11px] text-green-dark">
           Smart Farmer
         </span>

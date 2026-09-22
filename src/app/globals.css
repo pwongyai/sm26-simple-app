@@ -623,7 +623,9 @@ body {
 .report-thumb svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 .report-card .txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
 .report-card .txt .name {
-  font-size: 14px;
+  /* Two things on this line now — the field and the owner — so it drops a step
+     rather than being cut off after the field name. */
+  font-size: 13px;
   font-weight: 700;
   color: var(--ink);
   overflow: hidden;
