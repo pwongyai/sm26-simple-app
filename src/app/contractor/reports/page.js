@@ -50,6 +50,14 @@ function inTimeRange(iso, filter) {
     from.setDate(from.getDate() - 30);
     return d >= from && d <= today;
   }
+  // A season is longer than a month. Work reported in July is still the
+  // current season's work in September, and the default filter was hiding it
+  // behind an empty list (2026-09-23).
+  if (filter === "6months") {
+    const from = new Date(today);
+    from.setMonth(from.getMonth() - 6);
+    return d >= from && d <= today;
+  }
   return true;
 }
 
@@ -161,7 +169,7 @@ function ReportsTabInner() {
       setViewing(row);
     }
   }
-  const [timeFilter, setTimeFilter] = useState("month");
+  const [timeFilter, setTimeFilter] = useState("6months");
   const [machineFilter, setMachineFilter] = useState("all");
   const [payFilter, setPayFilter] = useState("all");
 
@@ -211,6 +219,7 @@ function ReportsTabInner() {
           <div className="filter-pill">
             <span>📅</span>
             <select value={timeFilter} onChange={(e) => setTimeFilter(e.target.value)}>
+              <option value="6months">Last 6 Months</option>
               <option value="month">This Month</option>
               <option value="week">This Week</option>
               <option value="today">Today</option>
