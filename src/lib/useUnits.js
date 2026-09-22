@@ -21,6 +21,12 @@ import { useEffect, useState } from "react";
 let cache = null;
 let inFlight = null;
 
+// Every mounted component that shows an area or a price. Without this, changing
+// the unit in Settings updated that screen and left every other one showing the
+// old unit until a full page reload — the module cache outlives client-side
+// navigation, so "44.9 sào" survived a switch to hectares.
+const subscribers = new Set();
+
 const FALLBACK = { currency: "THB", areaUnit: "rai", areaUnitM2: 1600 };
 
 async function fetchUnits() {
@@ -46,10 +52,15 @@ async function fetchUnits() {
   return inFlight;
 }
 
-// Call after changing the setting, so open screens pick up the new unit
-// instead of showing the old one until a reload.
+// Call after changing the setting. Drops the cache AND tells every mounted
+// component to re-read, so an open Booking list stops saying sào the moment the
+// community switches to hectares.
 export function clearUnitsCache() {
   cache = null;
+  inFlight = null;
+  fetchUnits().then((u) => {
+    for (const notify of subscribers) notify(u);
+  });
 }
 
 export function useUnits() {
@@ -57,11 +68,14 @@ export function useUnits() {
 
   useEffect(() => {
     let alive = true;
-    fetchUnits().then((u) => {
+    const notify = (u) => {
       if (alive) setUnits(u);
-    });
+    };
+    subscribers.add(notify);
+    fetchUnits().then(notify);
     return () => {
       alive = false;
+      subscribers.delete(notify);
     };
   }, []);
 

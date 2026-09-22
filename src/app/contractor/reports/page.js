@@ -1,15 +1,11 @@
 "use client";
 
 import { useUnits } from "@/lib/useUnits";
+import { fmtMoney, moneySymbol } from "@/lib/units";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Map from "@/components/Map";
 import FrozenHeaderScroll from "@/components/FrozenHeaderScroll";
-
-function fmtMoney(amount, currency) {
-  if (amount == null) return "—";
-  return `${currency === "THB" ? "฿" : ""}${amount.toLocaleString()}`;
-}
 
 function fmtTime(iso) {
   if (!iso) return "—";
@@ -437,9 +433,11 @@ function CreateReport({ onClose, onCreated, onViewExisting }) {
   const [status, setStatus] = useState("loading"); // loading | notfound | reviewing
   const [chosen, setChosen] = useState(null);
   // Seeded from the community rather than assumed to be Thailand.
-  const { areaUnit: communityUnit } = useUnits();
+  // Seeded from the community, not assumed to be Thailand. Both are then
+  // overwritten by the preview's own answer, which is what the report freezes.
+  const { areaUnit: communityUnit, currency: communityCurrency } = useUnits();
   const [unit, setUnit] = useState(communityUnit);
-  const [currency, setCurrency] = useState("THB");
+  const [currency, setCurrency] = useState(communityCurrency);
   const [services, setServices] = useState([]);
   const [serviceId, setServiceId] = useState("");
   const [tab, setTab] = useState(OVERVIEW_TAB);
@@ -883,7 +881,7 @@ function EditDetails({
           <div className="field-label">Service Charge</div>
           <div className="flex items-center gap-2">
             <span className="text-sm text-[var(--text-sec)]">
-              {currency === "THB" ? "฿" : currency}
+              {moneySymbol(currency)}
             </span>
             <input
               type="number"

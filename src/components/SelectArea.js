@@ -377,7 +377,11 @@ export default function SelectArea({ machine, points, day, since, until, initial
               >
                 ↺ Undo
               </button>
-              {areaRai && <span className="text-xs text-[var(--text-tert)]">Area: {areaRai} rai</span>}
+              {areaRai && (
+                <span className="text-xs text-[var(--text-tert)]">
+                  Area: {areaRai} {unitLabel}
+                </span>
+              )}
             </div>
           </>
         )}

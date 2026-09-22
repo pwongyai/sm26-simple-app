@@ -101,3 +101,19 @@ export function roundMoney(amount, currency) {
   if (!Number.isFinite(n)) return n;
   return currency === "VND" ? Math.round(n) : Math.round(n * 100) / 100;
 }
+
+// Native symbols, because a farmer reads ₫ and not "VND" — an ISO code is what
+// a system says to another system. Two files each had their own
+// `currency === "THB" ? "฿" : ""`, which printed VND amounts with no symbol at
+// all; one formatter means one place to be wrong.
+export const CURRENCY_SYMBOL = { THB: "\u0e3f", VND: "\u20ab" };
+
+export function moneySymbol(currency) {
+  return CURRENCY_SYMBOL[currency] || currency || "";
+}
+
+export function fmtMoney(amount, currency) {
+  const n = Number(amount);
+  if (!Number.isFinite(n)) return "—";
+  return `${moneySymbol(currency)}${roundMoney(n, currency).toLocaleString()}`;
+}

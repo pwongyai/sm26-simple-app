@@ -1,16 +1,11 @@
 "use client";
 
-import { areaIn, areaOut } from "@/lib/units";
+import { areaIn, areaOut, fmtMoney } from "@/lib/units";
 import { useUnits } from "@/lib/useUnits";
 import { useEffect, useState } from "react";
 import { deleteOrder } from "@/lib/store";
 import StatusBadge from "@/components/StatusBadge";
 import Map from "@/components/Map";
-
-function fmtMoney(amount, currency) {
-  if (amount == null) return "—";
-  return `${currency === "THB" ? "฿" : ""}${amount.toLocaleString()}`;
-}
 
 function fmtTime(iso) {
   if (!iso) return "—";

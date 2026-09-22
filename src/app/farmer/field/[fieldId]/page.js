@@ -192,7 +192,9 @@ export default function FieldDetailPage({ params }) {
         {/* No crop icon: it implied a rice field on cropzones where nobody has
             recorded a crop at all. */}
         <p className="text-sm text-[var(--text-sec)]">{crop}</p>
-        <p className="text-sm text-[var(--text-sec)]">{areaRai} rai</p>
+        <p className="text-sm text-[var(--text-sec)]">
+          {areaRai} {unitLabel}
+        </p>
 
         <div className="mt-2 border-t border-[var(--rule)] pt-2 text-xs">
           <p className="text-[var(--text-sec)]">

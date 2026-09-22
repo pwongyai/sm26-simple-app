@@ -1,6 +1,7 @@
 "use client";
 
 
+import { clearUnitsCache } from "@/lib/useUnits";
 import { ADAPT_VERSION, groupedWorkTypes, workType } from "@/lib/workTypes";
 import { AREA_UNITS, CURRENCIES, areaUnit, priceOut, roundMoney } from "@/lib/units";
 import { useCallback, useEffect, useState } from "react";
@@ -747,6 +748,10 @@ function CurrencyAndArea({ settings, onChanged }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ currency, areaUnit: unit }),
     });
+    // Every screen that shows an area or a price reads the cached setting, so
+    // it has to be dropped here or the Booking list keeps saying sào after a
+    // switch to hectares.
+    clearUnitsCache();
     setBusy(false);
     setEditing(false);
     onChanged();

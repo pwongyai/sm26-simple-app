@@ -62,7 +62,9 @@ export default function MyFieldsTab() {
 
   useEffect(load, [load]);
 
-  const unit = data?.organization.areaUnit ?? "rai";
+  // No "rai" fallback: for a Vietnamese farmer that flashes the wrong unit
+  // for as long as the request takes.
+  const unit = data?.organization.areaUnit ?? "";
   const fields = (data?.fields || []).map((f) => ({
     ...f,
     areaUnits:
@@ -135,7 +137,7 @@ export default function MyFieldsTab() {
       {adding && (
         <AddFieldFlow
           unit={unit}
-          unitM2={data?.organization.areaUnitM2 || 1600}
+          unitM2={data?.organization.areaUnitM2}
           onClose={() => setAdding(false)}
           onCreated={load}
         />
