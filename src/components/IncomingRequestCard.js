@@ -6,6 +6,7 @@ import { useState } from "react";
 import { updateOrder } from "@/lib/store";
 import { fmtDate } from "@/lib/date";
 import { fieldAndOwner } from "@/lib/labels";
+import { useT } from "@/lib/i18n";
 
 // The richer per-request card version 3 uses inside Incoming Requests — Accept/
 // Decline (with an inline date adjust) happen right here, no detour through
@@ -13,6 +14,7 @@ import { fieldAndOwner } from "@/lib/labels";
 // to match the real sequence: see the request, call the farmer to confirm
 // it, adjust the date if the call turned up a different one, then decide.
 export default function IncomingRequestCard({ order, onChanged }) {
+  const t = useT();
   const { areaUnit, areaUnitM2 } = useUnits();
   const [date, setDate] = useState(order.scheduled_date || "");
   const [busy, setBusy] = useState(false);
@@ -35,12 +37,10 @@ export default function IncomingRequestCard({ order, onChanged }) {
     <div className="card p-3 text-sm">
       <div className="mb-1 flex items-center justify-between gap-2">
         <p className="truncate text-sm font-medium">{fieldAndOwner(order.field_name, order.farmer?.name)}</p>
-        <span className="shrink-0 rounded bg-green-light px-1.5 py-0.5 text-[11px] text-green-dark">
-          Smart Farmer
-        </span>
+        <span className="shrink-0 rounded bg-green-light px-1.5 py-0.5 text-[11px] text-green-dark">{t("Smart Farmer")}</span>
       </div>
       <p className="text-[var(--text-sec)]">
-        {order.activity_type_name || "No work type"}
+        {order.activity_type_name || t("No work type")}
         {order.crop_size_m2 != null && ` · ${areaOut(order.crop_size_m2, areaUnitM2)} ${areaUnit}`}
       </p>
       <p className="text-xs text-[var(--text-tert)]">
@@ -60,7 +60,7 @@ export default function IncomingRequestCard({ order, onChanged }) {
       )}
 
       <div className="mt-2">
-        <div className="field-label">Adjust scheduled date — before accepting</div>
+        <div className="field-label">{t("Adjust scheduled date — before accepting")}</div>
         <input
           type="date"
           className="field"
@@ -70,12 +70,8 @@ export default function IncomingRequestCard({ order, onChanged }) {
       </div>
 
       <div className="mt-2 flex gap-2">
-        <button className="btn btn-outline flex-1" disabled={busy} onClick={decline}>
-          Decline
-        </button>
-        <button className="btn btn-go flex-1" disabled={busy} onClick={accept}>
-          Accept Job
-        </button>
+        <button className="btn btn-outline flex-1" disabled={busy} onClick={decline}>{t("Decline")}</button>
+        <button className="btn btn-go flex-1" disabled={busy} onClick={accept}>{t("Accept Job")}</button>
       </div>
     </div>
   );

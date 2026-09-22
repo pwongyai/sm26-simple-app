@@ -4,6 +4,7 @@ import { areaOut } from "@/lib/units";
 import { useUnits } from "@/lib/useUnits";
 import { fmtDate } from "@/lib/date";
 import { fieldAndOwner } from "@/lib/labels";
+import { useT } from "@/lib/i18n";
 
 // One card layout everywhere an order appears — List, Calendar, Today's Work.
 // Version 2 §8.9: customer name leads (field name is a system construct
@@ -32,39 +33,35 @@ export function daysLate(order) {
 // danger (red) for late, green for the system/Smart Farmer source, surface
 // (grey) for an ordinary completed job.
 function Badge({ order }) {
+  const t = useT();
   const late = daysLate(order);
   if (order.completion_type === "force_closed") {
     return (
-      <span className="rounded bg-accent-light px-1.5 py-0.5 text-[11px] text-accent">
-        Force Closed
-      </span>
+      <span className="rounded bg-accent-light px-1.5 py-0.5 text-[11px] text-accent">{t("Force Closed")}</span>
     );
   }
   if (order.status === "completed") {
     return (
-      <span className="rounded bg-surface px-1.5 py-0.5 text-[11px] text-sec">
-        Completed
-      </span>
+      <span className="rounded bg-surface px-1.5 py-0.5 text-[11px] text-sec">{t("Completed")}</span>
     );
   }
   if (late > 0) {
     return (
       <span className="rounded bg-danger-light px-1.5 py-0.5 text-[11px] text-danger">
-        {late} {late === 1 ? "day" : "days"} late
+        {t(late === 1 ? "1 day late" : "{n} days late").replace("{n}", late)}
       </span>
     );
   }
   if (order.source === "smart_farmer") {
     return (
-      <span className="rounded bg-green-light px-1.5 py-0.5 text-[11px] text-green-dark">
-        Smart Farmer
-      </span>
+      <span className="rounded bg-green-light px-1.5 py-0.5 text-[11px] text-green-dark">{t("Smart Farmer")}</span>
     );
   }
   return null;
 }
 
 export default function OrderCard({ order, onClick, index }) {
+  const t = useT();
   const { areaUnit, areaUnitM2 } = useUnits();
   const late = daysLate(order);
 
@@ -83,12 +80,12 @@ export default function OrderCard({ order, onClick, index }) {
           {fieldAndOwner(order.field_name, order.farmer?.name)}
         </p>
         <p className="truncate text-xs leading-tight text-[var(--text-sec)]">
-          {order.activity_type_name || "No work type"}
+          {order.activity_type_name || t("No work type")}
         </p>
         <p className="text-xs leading-tight text-[var(--text-tert)]">
           {order.scheduled_date
             ? fmtDate(order.scheduled_date)
-            : "No date"}
+            : t("No date")}
         </p>
       </div>
 

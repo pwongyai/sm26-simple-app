@@ -11,6 +11,7 @@ import Logo from "@/components/Logo";
 import TabBar from "@/components/TabBar";
 import OrderDetail from "@/components/OrderDetail";
 import IncomingRequestCard from "@/components/IncomingRequestCard";
+import { useT } from "@/lib/i18n";
 
 // Version 2's three-step workflow plus settings — Booking, Machine, Report,
 // Settings — as a bottom tab bar, the way version 3 laid it out.
@@ -34,6 +35,7 @@ export default function ContractorLayout({ children }) {
 }
 
 function ContractorChrome({ user, children }) {
+  const t = useT();
   const pathname = usePathname();
   const {
     services,
@@ -90,11 +92,11 @@ function ContractorChrome({ user, children }) {
             <button className="ov-back" onClick={closeIncoming}>
               ←
             </button>
-            <span className="ov-title">Incoming Requests</span>
+            <span className="ov-title">{t("Incoming Requests")}</span>
           </div>
           <div className="ov-body">
             {pending.length === 0 && (
-              <p className="empty-msg">Nothing waiting right now.</p>
+              <p className="empty-msg">{t("Nothing waiting right now.")}</p>
             )}
             {pending.map((o) => (
               <IncomingRequestCard

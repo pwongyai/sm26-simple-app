@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useUnits } from "@/lib/useUnits";
 import { areaIn, areaOut, priceOut, fmtMoney, roundMoney } from "@/lib/units";
+import { useT } from "@/lib/i18n";
 
 // Closing a job the machine did not measure.
 //
@@ -22,6 +23,7 @@ import { areaIn, areaOut, priceOut, fmtMoney, roundMoney } from "@/lib/units";
 // report alone; that is the whole difference, and it is decided by the data,
 // not by anything on this screen.
 export default function ForceCloseSheet({ order, services, onCancel, onDone }) {
+  const t = useT();
   const { areaUnit, areaUnitM2, currency } = useUnits();
 
   // The service behind this job, for the rate. Matched on the work type the
@@ -98,7 +100,7 @@ export default function ForceCloseSheet({ order, services, onCancel, onDone }) {
     setBusy(false);
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      setError(body.error || "Could not close this job.");
+      setError(body.error || t("Could not close this job."));
       return;
     }
     onDone();
@@ -112,13 +114,13 @@ export default function ForceCloseSheet({ order, services, onCancel, onDone }) {
           not have one. */}
       {!matchingService && (
         <div>
-          <div className="field-label">Service</div>
+          <div className="field-label">{t("Service")}</div>
           <select
             className="field"
             value={serviceId}
             onChange={(e) => setServiceId(e.target.value)}
           >
-            <option value="">Choose…</option>
+            <option value="">{t("Choose…")}</option>
             {(services || []).map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name}
@@ -130,7 +132,7 @@ export default function ForceCloseSheet({ order, services, onCancel, onDone }) {
 
       {!order.scheduled_date && !order.booking_date && (
         <div>
-          <div className="field-label">Date worked</div>
+          <div className="field-label">{t("Date worked")}</div>
           <input
             className="field"
             type="date"
@@ -152,7 +154,7 @@ export default function ForceCloseSheet({ order, services, onCancel, onDone }) {
       </div>
 
       <div>
-        <div className="field-label">Charge</div>
+        <div className="field-label">{t("Charge")}</div>
         <input
           className="field"
           type="number"
@@ -174,15 +176,13 @@ export default function ForceCloseSheet({ order, services, onCancel, onDone }) {
       {error && <p className="text-sm text-[var(--danger)]">{error}</p>}
 
       <div className="flex gap-2">
-        <button className="btn btn-outline flex-1" disabled={busy} onClick={onCancel}>
-          Cancel
-        </button>
+        <button className="btn btn-outline flex-1" disabled={busy} onClick={onCancel}>{t("Cancel")}</button>
         <button
           className="btn btn-primary flex-1"
           disabled={busy || !service}
           onClick={submit}
         >
-          {busy ? "Closing…" : "Force Close"}
+          {busy ? t("Closing…") : t("Force Close")}
         </button>
       </div>
     </div>

@@ -9,6 +9,7 @@ import FrozenHeaderScroll from "@/components/FrozenHeaderScroll";
 import Map from "@/components/Map";
 import { haversineKm } from "@/lib/track";
 import { fmtDate } from "@/lib/date";
+import { useT } from "@/lib/i18n";
 
 const VIEWS = [
   { key: "list", label: "List" },
@@ -46,6 +47,7 @@ function nearestNeighborOrder(home, jobs) {
 }
 
 export default function BookingTab() {
+  const t = useT();
   const { orders, refresh, services, openOrder } = useContractorOrders();
   const [view, setView] = useState("list");
   const [adding, setAdding] = useState(false);
@@ -128,7 +130,7 @@ export default function BookingTab() {
               setDay(null);
             }}
           >
-            {v.label}
+            {t(v.label)}
           </button>
         ))}
       </div>
@@ -149,7 +151,7 @@ export default function BookingTab() {
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search customer name"
+              placeholder={t("Search customer name")}
             />
           </div>
           <button className="add-btn" onClick={() => setAdding(true)}>
@@ -178,9 +180,7 @@ export default function BookingTab() {
       {view === "today" &&
         (delayedToday.length > 0 || routedToday.length > 0 || unmappedToday.length > 0) && (
           <div className="mt-3 flex items-center justify-between">
-            <p className="text-xs text-[var(--text-tert)]">
-              Suggested order — delayed jobs first, then closest to home.
-            </p>
+            <p className="text-xs text-[var(--text-tert)]">{t("Suggested order — delayed jobs first, then closest to home.")}</p>
             {unmappedToday.length > 0 && (
               <span className="rounded bg-surface px-1.5 py-0.5 text-[11px] text-tert">
                 {unmappedToday.length} unmapped
@@ -199,8 +199,8 @@ export default function BookingTab() {
             {searched.length === 0 && (
               <p className="empty-msg">
                 {search
-                  ? "No customer by that name."
-                  : "Nothing written down yet. Tap + Add after a customer calls."}
+                  ? t("No customer by that name.")
+                  : t("Nothing written down yet. Tap + Add after a customer calls.")}
               </p>
             )}
             {searched.map((o) => (
@@ -212,7 +212,7 @@ export default function BookingTab() {
         {view === "calendar" && (
           <div className="flex flex-col gap-2">
             {day && dayOrders?.length === 0 && (
-              <p className="empty-msg">Nothing scheduled that day.</p>
+              <p className="empty-msg">{t("Nothing scheduled that day.")}</p>
             )}
             {(dayOrders || []).map((o) => (
               <OrderCard key={o.id} order={o} onClick={() => openOrder(o)} />
@@ -225,7 +225,7 @@ export default function BookingTab() {
         {view === "today" && (
           <div className="flex flex-col gap-2">
             {delayedToday.length + routedToday.length + unmappedToday.length === 0 && (
-              <p className="empty-msg">Nothing due today.</p>
+              <p className="empty-msg">{t("Nothing due today.")}</p>
             )}
 
             {delayedToday.map((o) => (

@@ -5,6 +5,7 @@ import { useUnits } from "@/lib/useUnits";
 import { useEffect, useState } from "react";
 import { createOrder } from "@/lib/store";
 import Map from "@/components/Map";
+import { useT } from "@/lib/i18n";
 
 // Add Work Order — version 3's flow, kept step for step.
 //
@@ -14,6 +15,7 @@ import Map from "@/components/Map";
 // customer or offers to create one from whatever was typed; the rest of the
 // form only then unfolds. Location is three options and never blocks saving.
 export default function AddOrderForm({ services, onClose, onCreated }) {
+  const t = useT();
   const { areaUnit, areaUnitM2 } = useUnits();
   // 'search' → 'selected' | 'new'
   const [step, setStep] = useState("search");
@@ -55,7 +57,7 @@ export default function AddOrderForm({ services, onClose, onCreated }) {
 
   async function save() {
     if (step === "search") {
-      setError("Search and select, or add, a customer first");
+      setError(t("Search and select, or add, a customer first"));
       return;
     }
     setBusy(true);
@@ -90,7 +92,7 @@ export default function AddOrderForm({ services, onClose, onCreated }) {
       onCreated();
       onClose();
     } catch {
-      setError("Could not save this job.");
+      setError(t("Could not save this job."));
       setBusy(false);
     }
   }
@@ -98,10 +100,10 @@ export default function AddOrderForm({ services, onClose, onCreated }) {
   return (
     <div className="overlay">
       <div className="ov-header">
-        <button className="ov-back" onClick={onClose} aria-label="Back">
+        <button className="ov-back" onClick={onClose} aria-label={t("Back")}>
           ←
         </button>
-        <span className="ov-title">Add Work Order</span>
+        <span className="ov-title">{t("Add Work Order")}</span>
       </div>
 
       <div className="ov-body">
@@ -109,7 +111,7 @@ export default function AddOrderForm({ services, onClose, onCreated }) {
         {step === "search" && (
           <>
             <div>
-              <div className="field-label">Search customer name or phone</div>
+              <div className="field-label">{t("Search customer name or phone")}</div>
               {/* The input is never re-created while typing — only the results
                   below it re-render. v3 hit a real bug where rebuilding the
                   whole form on each keystroke dropped focus after one letter. */}
@@ -117,7 +119,7 @@ export default function AddOrderForm({ services, onClose, onCreated }) {
                 className="field"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Start typing…"
+                placeholder={t("Start typing…")}
                 autoFocus
               />
             </div>
@@ -135,7 +137,7 @@ export default function AddOrderForm({ services, onClose, onCreated }) {
                       }}
                     >
                       <b>{c.name}</b>
-                      <span>{c.phone || "No phone"}</span>
+                      <span>{c.phone || t("No phone")}</span>
                     </button>
                   ))}
                 </div>
@@ -162,7 +164,7 @@ export default function AddOrderForm({ services, onClose, onCreated }) {
         {step === "selected" && (
           <>
             <div className="flex items-center justify-between">
-              <div className="field-label mb-0">Customer</div>
+              <div className="field-label mb-0">{t("Customer")}</div>
               <button
                 className="text-xs font-bold"
                 onClick={() => {
@@ -170,15 +172,13 @@ export default function AddOrderForm({ services, onClose, onCreated }) {
                   setQuery("");
                   setChosen(null);
                 }}
-              >
-                Change
-              </button>
+              >{t("Change")}</button>
             </div>
             <div className="choice-card selected" style={{ cursor: "default" }}>
               <div className="icon">👤</div>
               <div className="txt">
                 <b>{chosen.name}</b>
-                <span>{chosen.phone || "No phone on file"}</span>
+                <span>{chosen.phone || t("No phone on file")}</span>
               </div>
             </div>
           </>
@@ -187,29 +187,27 @@ export default function AddOrderForm({ services, onClose, onCreated }) {
         {step === "new" && (
           <>
             <div className="flex items-center justify-between">
-              <div className="field-label mb-0">New customer details</div>
+              <div className="field-label mb-0">{t("New customer details")}</div>
               <button
                 className="text-xs font-bold"
                 onClick={() => {
                   setStep("search");
                   setQuery("");
                 }}
-              >
-                Change
-              </button>
+              >{t("Change")}</button>
             </div>
             <input
               className="field"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
-              placeholder="Full name"
+              placeholder={t("Full name")}
             />
             <input
               className="field"
               type="tel"
               value={newPhone}
               onChange={(e) => setNewPhone(e.target.value)}
-              placeholder="Phone number"
+              placeholder={t("Phone number")}
             />
           </>
         )}
@@ -229,13 +227,13 @@ export default function AddOrderForm({ services, onClose, onCreated }) {
                 />
               </div>
               <div className="flex-1">
-                <div className="field-label">Work type</div>
+                <div className="field-label">{t("Work type")}</div>
                 <select
                   className="field"
                   value={workType}
                   onChange={(e) => setWorkType(e.target.value)}
                 >
-                  <option value="">Choose…</option>
+                  <option value="">{t("Choose…")}</option>
                   {services?.map((s) => (
                     <option key={s.id} value={s.id}>
                       {s.name}
@@ -250,17 +248,17 @@ export default function AddOrderForm({ services, onClose, onCreated }) {
                 coming", "gate locked, use the north track", "moved because the
                 field was too wet". Optional by design. */}
             <div>
-              <div className="field-label">Note (optional)</div>
+              <div className="field-label">{t("Note (optional)")}</div>
               <input
                 className="field"
-                placeholder="Anything the driver should know"
+                placeholder={t("Anything the driver should know")}
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
               />
             </div>
 
             <div>
-              <div className="field-label">Scheduled work date</div>
+              <div className="field-label">{t("Scheduled work date")}</div>
               <input
                 className="field"
                 type="date"
@@ -270,9 +268,7 @@ export default function AddOrderForm({ services, onClose, onCreated }) {
             </div>
 
             <div>
-              <div className="field-label">
-                Field location — optional, never blocks saving
-              </div>
+              <div className="field-label">{t("Field location — optional, never blocks saving")}</div>
               <div className="flex flex-col gap-2">
                 <button
                   className={`choice-card ${locationType === "field" ? "selected" : ""}`}
@@ -280,8 +276,8 @@ export default function AddOrderForm({ services, onClose, onCreated }) {
                 >
                   <div className="icon">🗺️</div>
                   <div className="txt">
-                    <b>Existing field</b>
-                    <span>Pick by shape, not name</span>
+                    <b>{t("Existing field")}</b>
+                    <span>{t("Pick by shape, not name")}</span>
                   </div>
                 </button>
 
@@ -298,8 +294,8 @@ export default function AddOrderForm({ services, onClose, onCreated }) {
                 >
                   <div className="icon">📍</div>
                   <div className="txt">
-                    <b>Map pin</b>
-                    <span>Tap the map to drop a pin</span>
+                    <b>{t("Map pin")}</b>
+                    <span>{t("Tap the map to drop a pin")}</span>
                   </div>
                 </button>
 
@@ -309,7 +305,7 @@ export default function AddOrderForm({ services, onClose, onCreated }) {
                     <p className="mt-1 text-[11px] text-[var(--text-tert)]">
                       {pin
                         ? `Pin at ${pin.lat.toFixed(5)}, ${pin.lng.toFixed(5)} — tap again to move it.`
-                        : "Tap the map to drop a pin."}
+                        : t("Tap the map to drop a pin.")}
                     </p>
                   </div>
                 )}
@@ -320,8 +316,8 @@ export default function AddOrderForm({ services, onClose, onCreated }) {
                 >
                   <div className="icon">❔</div>
                   <div className="txt">
-                    <b>Unknown</b>
-                    <span>Not known yet — fine to skip</span>
+                    <b>{t("Unknown")}</b>
+                    <span>{t("Not known yet — fine to skip")}</span>
                   </div>
                 </button>
               </div>
@@ -333,11 +329,9 @@ export default function AddOrderForm({ services, onClose, onCreated }) {
       </div>
 
       <div className="ov-footer">
-        <button className="btn btn-outline" onClick={onClose}>
-          Cancel
-        </button>
+        <button className="btn btn-outline" onClick={onClose}>{t("Cancel")}</button>
         <button className="btn btn-primary" disabled={busy} onClick={save}>
-          {busy ? "Saving…" : "Save"}
+          {busy ? t("Saving…") : t("Save")}
         </button>
       </div>
     </div>

@@ -7,11 +7,13 @@ import { updateOrder, deleteOrder } from "@/lib/store";
 import { daysLate } from "@/components/OrderCard";
 import { fmtDate } from "@/lib/date";
 import ForceCloseSheet from "@/components/ForceCloseSheet";
+import { useT } from "@/lib/i18n";
 
 // One shared detail screen, opened from every view — version 2 §8.1: no
 // per-tab detail screens, because automated and manual entries must never look
 // like two different systems.
 export default function OrderDetail({ order, services, onClose, onChanged }) {
+  const t = useT();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [editing, setEditing] = useState(false);
@@ -67,11 +69,11 @@ export default function OrderDetail({ order, services, onClose, onChanged }) {
   return (
     <div className="overlay">
       <div className="ov-header">
-        <button className="ov-back" onClick={onClose} aria-label="Back">
+        <button className="ov-back" onClick={onClose} aria-label={t("Back")}>
           ←
         </button>
         <span className="ov-title">
-          {isPending ? "Incoming Request" : editing ? "Edit Work Order" : "Work Order"}
+          {isPending ? t("Incoming Request") : editing ? t("Edit Work Order") : t("Work Order")}
         </span>
       </div>
 
@@ -81,7 +83,7 @@ export default function OrderDetail({ order, services, onClose, onChanged }) {
           <div className="txt">
             <b>{order.farmer?.name || "—"}</b>
             <span>
-              {order.farmer?.phone || "No phone on file"}
+              {order.farmer?.phone || t("No phone on file")}
               {order.source === "smart_farmer" && " · requested in the app"}
             </span>
           </div>
@@ -89,7 +91,7 @@ export default function OrderDetail({ order, services, onClose, onChanged }) {
 
         {order.completion_type === "force_closed" && (
           <div className="fieldset-note" style={{ background: "var(--accent-light)", color: "var(--accent)" }}>
-            <b>Force closed.</b>{" "}
+            <b>{t("Force closed.")}</b>{" "}
             {order.history?.length
               ? `Closed by ${order.history[order.history.length - 1].user} · ${new Date(
                   order.history[order.history.length - 1].at
@@ -118,13 +120,13 @@ export default function OrderDetail({ order, services, onClose, onChanged }) {
         {editing ? (
           <>
             <div>
-              <div className="field-label">Work type</div>
+              <div className="field-label">{t("Work type")}</div>
               <select
                 className="field"
                 value={workType}
                 onChange={(e) => setWorkType(e.target.value)}
               >
-                <option value="">Not set</option>
+                <option value="">{t("Not set")}</option>
                 {services?.map((s) => (
                   <option key={s.id} value={s.name}>
                     {s.name}
@@ -133,7 +135,7 @@ export default function OrderDetail({ order, services, onClose, onChanged }) {
               </select>
             </div>
             <div>
-              <div className="field-label">Scheduled work date</div>
+              <div className="field-label">{t("Scheduled work date")}</div>
               <input
                 className="field"
                 type="date"
@@ -153,47 +155,47 @@ export default function OrderDetail({ order, services, onClose, onChanged }) {
               />
             </div>
             <div>
-              <div className="field-label">Note</div>
+              <div className="field-label">{t("Note")}</div>
               <input
                 className="field"
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
-                placeholder="Anything the driver should know"
+                placeholder={t("Anything the driver should know")}
               />
             </div>
           </>
         ) : (
           <div className="detail-card">
             <div className="detail-row">
-              <div className="lbl">Work type</div>
-              <div className="val">{order.activity_type_name || "Not set"}</div>
+              <div className="lbl">{t("Work type")}</div>
+              <div className="val">{order.activity_type_name || t("Not set")}</div>
             </div>
             <div className="detail-row">
-              <div className="lbl">Scheduled</div>
-              <div className="val">{order.scheduled_date ? fmtDate(order.scheduled_date) : "No date"}</div>
+              <div className="lbl">{t("Scheduled")}</div>
+              <div className="val">{order.scheduled_date ? fmtDate(order.scheduled_date) : t("No date")}</div>
             </div>
             <div className="detail-row">
-              <div className="lbl">Crop size</div>
+              <div className="lbl">{t("Crop size")}</div>
               <div className="val">
                 {order.crop_size_m2 != null
                   ? `${areaOut(order.crop_size_m2, areaUnitM2)} ${areaUnit}`
-                  : "Unknown"}
+                  : t("Unknown")}
               </div>
             </div>
             {order.field_name && (
               <div className="detail-row">
-                <div className="lbl">Field</div>
+                <div className="lbl">{t("Field")}</div>
                 <div className="val">{order.field_name}</div>
               </div>
             )}
             {order.note && (
               <div className="detail-row">
-                <div className="lbl">Note</div>
+                <div className="lbl">{t("Note")}</div>
                 <div className="val">{order.note}</div>
               </div>
             )}
             <div className="detail-row">
-              <div className="lbl">Written down</div>
+              <div className="lbl">{t("Written down")}</div>
               <div className="val">
                 {fmtDate(order.booking_date)}
               </div>
@@ -201,7 +203,7 @@ export default function OrderDetail({ order, services, onClose, onChanged }) {
             {order.status === "completed" && order.agro_activity_id && (
               <div className="detail-row">
                 <div className="lbl">AgroAPI</div>
-                <div className="val">Recorded</div>
+                <div className="val">{t("Recorded")}</div>
               </div>
             )}
           </div>
@@ -209,7 +211,7 @@ export default function OrderDetail({ order, services, onClose, onChanged }) {
 
         {isPending && (
           <div>
-            <div className="field-label">Scheduled date — adjust before accepting</div>
+            <div className="field-label">{t("Scheduled date — adjust before accepting")}</div>
             <input
               className="field"
               type="date"
@@ -247,25 +249,17 @@ export default function OrderDetail({ order, services, onClose, onChanged }) {
               className="btn btn-outline"
               disabled={busy}
               onClick={() => setStatus("declined")}
-            >
-              Decline
-            </button>
+            >{t("Decline")}</button>
             <button
               className="btn btn-go"
               disabled={busy}
               onClick={() => setStatus("booked")}
-            >
-              Accept
-            </button>
+            >{t("Accept")}</button>
           </>
         ) : editing ? (
           <>
-            <button className="btn btn-outline" onClick={() => setEditing(false)}>
-              Cancel
-            </button>
-            <button className="btn btn-primary" disabled={busy} onClick={save}>
-              Save
-            </button>
+            <button className="btn btn-outline" onClick={() => setEditing(false)}>{t("Cancel")}</button>
+            <button className="btn btn-primary" disabled={busy} onClick={save}>{t("Save")}</button>
           </>
         ) : confirmingDelete ? (
           <button
@@ -273,30 +267,22 @@ export default function OrderDetail({ order, services, onClose, onChanged }) {
             style={{ background: "var(--danger)", color: "#fff" }}
             disabled={busy}
             onClick={remove}
-          >
-            Really delete?
-          </button>
+          >{t("Really delete?")}</button>
         ) : confirmingForceClose ? null : (
           <>
             <button
               className="btn btn-outline"
               style={{ color: "var(--danger)" }}
               onClick={() => setConfirmingDelete(true)}
-            >
-              Delete
-            </button>
+            >{t("Delete")}</button>
             {order.status === "booked" && (
               <button
                 className="btn btn-outline"
                 style={{ color: "var(--accent)" }}
                 onClick={() => setConfirmingForceClose(true)}
-              >
-                Force Close
-              </button>
+              >{t("Force Close")}</button>
             )}
-            <button className="btn btn-primary" onClick={() => setEditing(true)}>
-              Edit
-            </button>
+            <button className="btn btn-primary" onClick={() => setEditing(true)}>{t("Edit")}</button>
           </>
         )}
       </div>
