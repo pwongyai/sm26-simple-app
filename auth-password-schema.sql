@@ -32,15 +32,16 @@ update public.contractor_organizations
    set language = 'vn', updated_at = now()
  where agro_contractor_org_id = '59296315-2537-4184-9cc9-8d24db0eae0f';
 
--- Two test accounts, following the existing convention: 08… is a farmer,
--- 09… is a contractor. The …0010 serial marks them as the Vietnam batch so
--- they are not confused with the Ruang Kaeo accounts at a glance.
+-- Two test accounts. Ruang Kaeo uses 08… for a farmer and 09… for a
+-- contractor; Vietnam keeps that role digit and swaps the leading 0 for a 1,
+-- so the country is visible at a glance and the two sites cannot be confused
+-- when someone reads a number aloud.
 insert into public.app_users (phone, name, role, organization_id, contractor_agro_org_id)
-values ('0800000010', 'Huong Ngai Farmer', 'farmer', 'HN', null)
+values ('1800000001', 'Huong Ngai Farmer', 'farmer', 'HN', null)
 on conflict (phone) do nothing;
 
 insert into public.app_users (phone, name, role, organization_id, contractor_agro_org_id)
-values ('0900000010', 'Nguyen The Thinh', 'contractor', 'HN',
+values ('1900000002', 'Nguyen The Thinh', 'contractor', 'HN',
         '59296315-2537-4184-9cc9-8d24db0eae0f')
 on conflict (phone) do nothing;
 
