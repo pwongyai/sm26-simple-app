@@ -106,11 +106,6 @@ export default function ForceCloseSheet({ order, services, onCancel, onDone }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="fieldset-note">
-        No machine recorded this job, so the area and charge are yours to
-        state. It is billed and the customer gets the report either way.
-      </div>
-
       {/* The work type and the date are on the card directly above this. The
           job was booked for them; asking again is the app forgetting what it
           just showed. Both are only asked for when the order genuinely does
