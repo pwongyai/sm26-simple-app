@@ -295,33 +295,30 @@ export default function FieldDetailPage({ params }) {
                     <span>0.0 bare</span>
                     <span>1.0 dense</span>
                   </div>
-                  <p className="mt-1 text-xs text-[var(--text-sec)]">
-                    Mean NDVI <b>{ndvi.meanNdvi}</b> · {ndvi.source}
-                    {ndvi.pixelMeanNdvi != null && (
-                      <span className="text-[var(--text-tert)]">
-                        {" "}
-                        (all pixels {ndvi.pixelMeanNdvi})
-                      </span>
-                    )}
+                  {/* Nine strings used to sit here, seven of them sentences
+                      with a number wedged inside — the kind that cannot be
+                      translated by swapping words, because Vietnamese and Thai
+                      do not order them the way English does. Most were ours,
+                      not the farmer's: the sensor name, the all-pixels figure,
+                      the pixel count and resolution, and the time we last
+                      pulled the image. Cut rather than translated
+                      (2026-09-22). The refresh still checks for a newer
+                      capture; it is now the icon rather than a sentence. */}
+                  <p className="mt-1 flex items-center justify-between text-xs text-[var(--text-sec)]">
+                    <span>
+                      Mean NDVI <b>{ndvi.meanNdvi}</b>
+                    </span>
                   </p>
-                  <p className="text-[11px] text-[var(--text-tert)]">
-                    {ndvi.coveragePixels} Sentinel-2 pixels, 10 m each
-                  </p>
-                  {/* Two different dates, and they can be weeks apart: when
-                      the satellite flew over, and when we last pulled it. */}
-                  <p className="text-[11px] text-[var(--text-tert)]">
-                    Satellite captured <b>{fmtDate(ndvi.date)}</b>
-                    {ndvi.fetchedAt && (
-                      <> · pulled {fmtDateTime(ndvi.fetchedAt)}</>
-                    )}
-                  </p>
-                  <p className="text-[11px] text-[var(--text-tert)]">
-                    {ndvi.available?.length} clear captures on record ·{" "}
+                  <p className="flex items-center justify-between text-[11px] text-[var(--text-tert)]">
+                    <span>
+                      Satellite captured <b>{fmtDate(ndvi.date)}</b>
+                    </span>
                     <button
                       onClick={() => loadNdvi(true)}
-                      className="underline"
+                      aria-label="Check for a newer image"
+                      className="px-1 text-sm"
                     >
-                      check for a newer one
+                      ↻
                     </button>
                   </p>
                 </>
