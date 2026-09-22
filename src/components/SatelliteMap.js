@@ -273,6 +273,11 @@ export default function SatelliteMap({
       <MapContainer
         center={initialView?.center || pinLatLng || center}
         zoom={initialView?.zoom || 15}
+        // Whole zoom levels double the scale each step, so fitBounds picks the
+        // largest one that still fits and can leave most of a step unused —
+        // which is why a field drew small in a box it had plenty of room in.
+        // zoomSnap 0 lets it land between levels and actually fill the frame.
+        zoomSnap={0}
         scrollWheelZoom={false}
         preferCanvas
         style={{ height: "100%", width: "100%" }}
