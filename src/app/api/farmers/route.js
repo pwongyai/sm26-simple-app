@@ -66,6 +66,18 @@ export async function POST(request) {
     .single();
 
   if (error) {
+    // A community may not have two customers with the same name — there is a
+    // unique index on (organization_id, name). That is a thing the contractor
+    // can act on, not a server fault: he already has this customer and should
+    // pick them from the search instead. Answering 500 "Could not add
+    // customer" told him nothing and looked like the app was broken
+    // (2026-09-24).
+    if (error.code === "23505") {
+      return Response.json(
+        { error: `You already have a customer called "${name.trim()}" — search for them instead` },
+        { status: 409 }
+      );
+    }
     console.error(error);
     return Response.json({ error: "Could not add customer" }, { status: 500 });
   }

@@ -30,6 +30,7 @@ export default function SelectArea({ machine, points, day, since, until, initial
   const [matchField, setMatchField] = useState(null);
   const [matchOwner, setMatchOwner] = useState(null);
   const [matchCandidates, setMatchCandidates] = useState([]);
+  const [me, setMe] = useState(null);
   const [matching, setMatching] = useState(false);
 
   const [farmerStep, setFarmerStep] = useState("search");
@@ -60,6 +61,14 @@ export default function SelectArea({ machine, points, day, since, until, initial
   // here, same mounted component) must show up immediately, not only after
   // a full remount. The server itself is already always fresh; this was the
   // one place still holding an unrefreshed snapshot from the first look.
+  // Who is drawing this field, for the Field Created card.
+  useEffect(() => {
+    fetch("/api/me", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then(setMe)
+      .catch(() => {});
+  }, []);
+
   useEffect(() => {
     if (mode !== "pick") return;
     if (!points.length && !initialView) {
@@ -247,7 +256,13 @@ export default function SelectArea({ machine, points, day, since, until, initial
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ name: newName, phone: newPhone }),
         });
-        if (!res.ok) throw new Error(t("Could not save this customer."));
+        // Show what the server said — it knows whether the name is taken,
+        // which the contractor can act on. The generic line is only the
+        // fallback for an answer with no message in it.
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body.error || t("Could not save this customer."));
+        }
         const data = await res.json();
         farmerId = data.id;
         farmerName = data.name;
@@ -530,24 +545,26 @@ export default function SelectArea({ machine, points, day, since, until, initial
 
         {mode === "done" && (
           <>
+            {/* What was added, shown rather than described: the shape on the
+                satellite, the name the system gave it, whose it is and who
+                drew it. The cropzone row said "Ready" — our plumbing reported
+                as news, in a word a contractor has no meaning for
+                (2026-09-24). */}
+            <Map boundary={created?.boundary} height={200} />
             <div className="detail-card">
               <div className="detail-row">
                 <div className="lbl">{t("Field")}</div>
-                <div className="val">{created?.name || t("Created in AgroAPI")}</div>
+                <div className="val">{created?.name || "—"}</div>
               </div>
-              {created?.cropzoneId && (
-                <div className="detail-row">
-                  <div className="lbl">{t("Cropzone")}</div>
-                  <div className="val">{t("Ready")}</div>
-                </div>
-              )}
+              <div className="detail-row">
+                <div className="lbl">{t("Farmer")}</div>
+                <div className="val">{created?.farmerName || "—"}</div>
+              </div>
+              <div className="detail-row">
+                <div className="lbl">{t("Created by")}</div>
+                <div className="val">{me?.name || "—"}</div>
+              </div>
             </div>
-            <p className="text-sm text-[var(--text-sec)]">
-              A real field now exists for this customer. AgroAPI&apos;s own
-              work detection may take a little while to pick up a brand-new
-              field — if it isn&apos;t offered on the next screen yet, it
-              should be shortly.
-            </p>
           </>
         )}
       </div>

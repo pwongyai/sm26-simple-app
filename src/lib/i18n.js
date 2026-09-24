@@ -23,6 +23,7 @@ const EN = "en";
 
 const DICT = {
   th: {
+    "Created by": "สร้างโดย",
     "Services & pricing": "บริการและราคา",
     "Contractor Profile": "ข้อมูลผู้รับจ้าง",
     "Set in AgroAPI": "ตั้งค่าใน AgroAPI",
@@ -342,6 +343,7 @@ const DICT = {
     "Really cancel?": "ยืนยันการยกเลิก?",
   },
   vn: {
+    "Created by": "Người tạo",
     "Services & pricing": "Dịch vụ & giá",
     "Contractor Profile": "Hồ sơ nhà thầu",
     "Set in AgroAPI": "Đặt trong AgroAPI",
