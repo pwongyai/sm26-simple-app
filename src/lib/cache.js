@@ -38,13 +38,17 @@ export const TTL = {
   siteFarmIds: 5 * 60,
   // AgroAPI's vocabularies are effectively static.
   catalog: 24 * 60 * 60,
-  // Same "a finished window can't change" logic, applied to raw GPS
-  // windows (see trackWindowTtl() below) — a window that ended more than a few
-  // minutes ago is permanent, so re-viewing a machine's trajectory tomorrow, or
-  // switching between Today/2 days/Custom when they overlap, costs no AgroAPI
-  // call for anything already fetched. Cache it hard, not forever, in case
-  // AgroAPI ever backfills/corrects a reading after the fact.
-  trackWindowFinished: 30 * 24 * 60 * 60,
+  // Raw GPS windows (see trackWindowTtl() below). A finished window still
+  // costs no AgroAPI call to re-view the same day — but ONE day, not thirty.
+  //
+  // The GPS at the provider is final once the time has passed; AgroAPI's COPY
+  // of it is not. AgroAPI collects a machine's telemetry when someone ends a
+  // work order or when its own timer runs, so a window fetched before that
+  // copy returns thin. At 30 days a thin answer outlived the season: Thua
+  // Khoai Tay 2 drew about a third of its real passes for a range the app had
+  // actually asked in full (2026-09-28). A day old is fresh enough to bill
+  // from; a month is not.
+  trackWindowFinished: 24 * 60 * 60,
 };
 
 // A GPS window is only "still moving" if it reaches into the last few

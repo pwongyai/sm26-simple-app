@@ -52,7 +52,15 @@ async function fetchWindow(machineId, sinceMs, untilMs, force, depth = 0) {
         until: new Date(untilMs).toISOString(),
       });
       const r = await agroFetchWithRetry(`/nouki/devices/${machineId}/locations?${query}`);
-      return r.ok ? r : { ...r, __noCache: true };
+      // Never store an EMPTY window. `cached` already refuses to store
+      // failures; an empty success looks like an answer and is not one. It is
+      // exactly what AgroAPI returns for a stretch it has not copied from the
+      // provider yet, and it is the only answer that can still grow. Storing
+      // it is how a field came to draw a third of its real passes.
+      if (!r.ok || !(r.body?.features || []).length) {
+        return { ...r, __noCache: true };
+      }
+      return r;
     },
     { force: bypassCache }
   );
@@ -141,17 +149,29 @@ function candidateWindows(anchorMs) {
   return windows; // nearest-to-now window first
 }
 
-async function probeWindowHasPoints(machineId, sinceMs, untilMs) {
+async function probeWindowHasPoints(machineId, sinceMs, untilMs, force = false) {
   const cacheKey = `track-probe:${machineId}:${sinceMs}-${untilMs}`;
-  const { ok, body } = await cached(cacheKey, trackWindowTtl(untilMs), async () => {
-    const query = new URLSearchParams({
-      items: "1",
-      since: new Date(sinceMs).toISOString(),
-      until: new Date(untilMs).toISOString(),
-    });
-    const r = await agroFetchWithRetry(`/nouki/devices/${machineId}/locations?${query}`);
-    return r.ok ? r : { ...r, __noCache: true };
-  });
+  const { ok, body } = await cached(
+    cacheKey,
+    trackWindowTtl(untilMs),
+    async () => {
+      const query = new URLSearchParams({
+        items: "1",
+        since: new Date(sinceMs).toISOString(),
+        until: new Date(untilMs).toISOString(),
+      });
+      const r = await agroFetchWithRetry(`/nouki/devices/${machineId}/locations?${query}`);
+      // Same rule as fetchWindow: "this machine reported nothing here" is the
+      // answer most likely to be wrong later, and this probe is what decides
+      // the Latest date. Cached, it kept saying a machine had been idle long
+      // after AgroAPI had collected the data.
+      if (!r.ok || !(r.body?.features || []).length) {
+        return { ...r, __noCache: true };
+      }
+      return r;
+    },
+    { force }
+  );
   return ok && (body.features || []).length > 0;
 }
 
@@ -167,17 +187,17 @@ async function probeWindowHasPoints(machineId, sinceMs, untilMs) {
 // real, precise fetch is exactly as cheap as the existing "Today" filter.
 const NARROW_TO_MS = 24 * 3600 * 1000;
 
-async function narrowToLatestPointTime(machineId, sinceMs, untilMs) {
+async function narrowToLatestPointTime(machineId, sinceMs, untilMs, force = false) {
   if (untilMs - sinceMs <= NARROW_TO_MS) {
-    const track = await fetchMachineTrack(machineId, sinceMs, untilMs);
+    const track = await fetchMachineTrack(machineId, sinceMs, untilMs, force);
     const last = track.points[track.points.length - 1];
     return last?.time || null;
   }
   const midMs = sinceMs + Math.floor((untilMs - sinceMs) / 2);
-  if (await probeWindowHasPoints(machineId, midMs, untilMs)) {
-    return narrowToLatestPointTime(machineId, midMs, untilMs);
+  if (await probeWindowHasPoints(machineId, midMs, untilMs, force)) {
+    return narrowToLatestPointTime(machineId, midMs, untilMs, force);
   }
-  return narrowToLatestPointTime(machineId, sinceMs, midMs);
+  return narrowToLatestPointTime(machineId, sinceMs, midMs, force);
 }
 
 // Probed in small parallel batches, nearest-to-now first — a machine used
@@ -193,13 +213,19 @@ const BATCH_SIZE = 4;
  *   `YYYY-MM-DD` (the caller's own timezone convention — same as the
  *   Custom-range date inputs), or null if nothing was found within a year.
  */
-export async function findLatestActivityDate(machineId) {
+// `force` comes from the machine page's Refresh, the same way the track route
+// passes it — without it, Refresh could clear the trajectory but not the
+// answer to "when did this machine last work", which is read from its own
+// cached probes.
+export async function findLatestActivityDate(machineId, force = false) {
   const anchorMs = new Date(new Date().toISOString().slice(0, 10) + "T00:00:00.000Z").getTime();
   const windows = candidateWindows(anchorMs);
 
   for (let i = 0; i < windows.length; i += BATCH_SIZE) {
     const batch = windows.slice(i, i + BATCH_SIZE);
-    const hits = await mapWithConcurrency(batch, ([s, u]) => probeWindowHasPoints(machineId, s, u));
+    const hits = await mapWithConcurrency(batch, ([s, u]) =>
+      probeWindowHasPoints(machineId, s, u, force)
+    );
     const hitIndex = hits.findIndex(Boolean);
     if (hitIndex === -1) continue;
 
@@ -207,7 +233,7 @@ export async function findLatestActivityDate(machineId) {
     // point rather than just returning "somewhere in this (possibly
     // months-wide) window".
     const [start, end] = batch[hitIndex];
-    const lastTime = await narrowToLatestPointTime(machineId, start, end);
+    const lastTime = await narrowToLatestPointTime(machineId, start, end, force);
     if (!lastTime) return null;
     // This org is Bangkok-only, no DST (same convention as the Custom
     // range's own +07:00 date construction) — shift before taking the

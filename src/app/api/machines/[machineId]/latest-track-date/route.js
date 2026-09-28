@@ -9,6 +9,11 @@ import { findLatestActivityDate } from "@/lib/trajectory";
 // handful of probes even for a machine idle for months, and cached.
 export async function GET(request, { params }) {
   const { machineId } = await params;
+  // Refresh reaches this too. Without it the trajectory could be re-fetched
+  // while "when did this machine last work" kept answering from its own
+  // cached probes — the same staleness, in the one place a contractor cannot
+  // see it.
+  const force = new URL(request.url).searchParams.get("refresh") === "1";
   const { user, response } = await requireAccess();
   if (response) return response;
 
@@ -24,6 +29,6 @@ export async function GET(request, { params }) {
   const machine = machines.body.find((m) => m.id === machineId);
   if (!machine) return Response.json({ error: "Not found" }, { status: 404 });
 
-  const date = await findLatestActivityDate(machineId);
+  const date = await findLatestActivityDate(machineId, force);
   return Response.json({ date });
 }

@@ -59,6 +59,10 @@ export default function MachineDetailPage({ params }) {
   // backward search (see findLatestActivityDate) resolves one.
   const [latestDate, setLatestDate] = useState(null);
   const [findingLatest, setFindingLatest] = useState(false);
+  // Bumped by Refresh. The Latest date comes from its own cached probes, so
+  // without this Refresh re-fetched the trajectory and left "when did this
+  // machine last work" answering from the cache.
+  const [refreshTick, setRefreshTick] = useState(0);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -156,7 +160,7 @@ export default function MachineDetailPage({ params }) {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [machineId, range]);
+  }, [machineId, range, refreshTick]);
 
   // Switching to t("Latest") kicks off the backward search; switching away
   // clears it so re-selecting t("Latest") later re-searches rather than
@@ -168,7 +172,10 @@ export default function MachineDetailPage({ params }) {
     }
     let cancelled = false;
     setFindingLatest(true);
-    fetch(`/api/machines/${machineId}/latest-track-date`)
+    fetch(
+        `/api/machines/${machineId}/latest-track-date` +
+          (refreshTick ? "?refresh=1" : "")
+      )
       .then((r) => (r.ok ? r.json() : { date: null }))
       .then((d) => {
         if (!cancelled) setLatestDate(d.date);
@@ -297,7 +304,13 @@ export default function MachineDetailPage({ params }) {
               )}
 
               <div className="mt-4 flex gap-2">
-                <button onClick={() => load(true)} className="btn btn-outline flex-1">{t("Refresh")}</button>
+                <button
+                  onClick={() => {
+                    setRefreshTick((n) => n + 1);
+                    load(true);
+                  }}
+                  className="btn btn-outline flex-1"
+                >{t("Refresh")}</button>
                 <button
                   className="btn btn-go flex-1"
                   disabled={points.length < 2}
