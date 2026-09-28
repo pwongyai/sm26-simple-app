@@ -1,5 +1,5 @@
 import { agroFetchWithRetry, mapWithConcurrency } from "@/lib/agroConcurrency";
-import { cached, trackWindowTtl, isTrackWindowFinished } from "@/lib/cache";
+import { cached, trackWindowTtl } from "@/lib/cache";
 
 // One machine's real trajectory, from NoukiOpenAPI telemetry — fetch strategy
 // per Projects/SM26/TRAJECTORY_FETCH_GUIDE.md (validated against live AgroAPI).
@@ -34,7 +34,14 @@ function splitWindows(sinceMs, untilMs, hours) {
 // points.
 async function fetchWindow(machineId, sinceMs, untilMs, force, depth = 0) {
   const cacheKey = `track:${machineId}:${sinceMs}-${untilMs}`;
-  const bypassCache = force && !isTrackWindowFinished(untilMs);
+  // Refresh always re-fetches. It used to skip the cache only for windows that
+  // hadn't finished yet, on the assumption that a past window's data is final.
+  // That holds for the GPS at Viettel but NOT for AgroAPI's copy of it: AgroAPI
+  // collects a machine's telemetry when someone ends a work order or when its
+  // own timer runs, so a window fetched before that copy happened caches a thin
+  // or empty result -- and, being "finished", kept it for 30 days with no way to
+  // clear it. Any cache over AgroAPI telemetry must assume the copy can still grow.
+  const bypassCache = force;
   const { ok, status, body } = await cached(
     cacheKey,
     trackWindowTtl(untilMs),
