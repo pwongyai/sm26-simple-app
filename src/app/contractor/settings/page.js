@@ -548,8 +548,17 @@ function HomeBase({ profile, onChanged }) {
           Map component's hardcoded Sa Kaeo centre — right for Ruang Kaeo by
           coincidence, another country for Huong Ngai. Standing at the yard
           and tapping "use my location" is the answer that works anywhere
-          (2026-10-10). */}
-      <Map pin={shownPin} onPick={editing ? setDraftPin : null} height={170} />
+          (2026-10-10).
+
+          Drawn with the house marker, not the generic green pin: this IS the
+          home base, and it is the same symbol Today's Work routes from. The
+          green teardrop means "a place you are marking" — a work location —
+          and using it for the yard made the two read as the same thing. */}
+      <Map
+        markers={shownPin ? [{ lat: shownPin.lat, lng: shownPin.lng, home: true }] : []}
+        onPick={editing ? setDraftPin : null}
+        height={170}
+      />
       {editing && <LocateButton onLocate={setDraftPin} className="mt-2" />}
       <p className="mt-1 text-[11px] text-[var(--text-tert)]">
         {shownPin
