@@ -9,6 +9,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { logout } from "@/lib/useSession";
 import Map from "@/components/Map";
+import LocateButton from "@/components/LocateButton";
 import { useT } from "@/lib/i18n";
 
 // Version 2 §4.2 + version 3 §4: the contractor's own business profile, home
@@ -542,7 +543,14 @@ function HomeBase({ profile, onChanged }) {
       {editing && (
         <p className="mb-2 text-[11px] text-[var(--text-tert)]">{t("Tap the map to move the pin.")}</p>
       )}
+      {/* The one map that cannot default to the home base, because this is
+          where the home base is set. Before a pin exists it falls back to the
+          Map component's hardcoded Sa Kaeo centre — right for Ruang Kaeo by
+          coincidence, another country for Huong Ngai. Standing at the yard
+          and tapping "use my location" is the answer that works anywhere
+          (2026-10-10). */}
       <Map pin={shownPin} onPick={editing ? setDraftPin : null} height={170} />
+      {editing && <LocateButton onLocate={setDraftPin} className="mt-2" />}
       <p className="mt-1 text-[11px] text-[var(--text-tert)]">
         {shownPin
           ? `${editing ? t("New location") : t("Home at")} ${shownPin.lat.toFixed(5)}, ${shownPin.lng.toFixed(5)}`

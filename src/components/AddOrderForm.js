@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { createOrder } from "@/lib/store";
 import Map from "@/components/Map";
 import FieldThumb from "@/components/FieldThumb";
+import LocateButton from "@/components/LocateButton";
 import { useT } from "@/lib/i18n";
 
 // Add Work Order — version 3's flow, kept step for step.
@@ -34,6 +35,10 @@ export default function AddOrderForm({ services, onClose, onCreated }) {
 
   const [locationType, setLocationType] = useState(null);
   const [pin, setPin] = useState(null);
+  // Where the pin map opens. Without this it opened on the Map component's
+  // hardcoded Sa Kaeo fallback, which is Ruang Kaeo's own neighbourhood by
+  // coincidence and another country for Huong Ngai (2026-10-10).
+  const [homeBase, setHomeBase] = useState(null);
 
   // "Existing field" — this customer's own registered plots, picked by shape.
   const [customerFields, setCustomerFields] = useState(null); // null = not loaded
@@ -47,6 +52,14 @@ export default function AddOrderForm({ services, onClose, onCreated }) {
     fetch("/api/farmers")
       .then((r) => (r.ok ? r.json() : []))
       .then(setCustomers)
+      .catch(() => {});
+    fetch("/api/contractor-profile")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((p) => {
+        if (p?.homeLat != null && p?.homeLng != null) {
+          setHomeBase([p.homeLat, p.homeLng]);
+        }
+      })
       .catch(() => {});
   }, []);
 
@@ -361,12 +374,23 @@ export default function AddOrderForm({ services, onClose, onCreated }) {
 
                 {locationType === "pin" && (
                   <div>
-                    <Map pin={pin} onPick={setPin} height={200} />
-                    <p className="mt-1 text-[11px] text-[var(--text-tert)]">
-                      {pin
-                        ? `Pin at ${pin.lat.toFixed(5)}, ${pin.lng.toFixed(5)} — tap again to move it.`
-                        : t("Tap the map to drop a pin.")}
-                    </p>
+                    {/* `center` only lands the map on mount; once a pin
+                        exists the map fits to it instead, so this is purely
+                        "where do I start looking". */}
+                    <Map
+                      pin={pin}
+                      onPick={setPin}
+                      height={200}
+                      {...(homeBase ? { center: homeBase } : {})}
+                    />
+                    <div className="mt-1 flex items-center justify-between gap-2">
+                      <p className="text-[11px] text-[var(--text-tert)]">
+                        {pin
+                          ? `Pin at ${pin.lat.toFixed(5)}, ${pin.lng.toFixed(5)} — tap again to move it.`
+                          : t("Tap the map to drop a pin.")}
+                      </p>
+                      <LocateButton onLocate={setPin} className="shrink-0" />
+                    </div>
                   </div>
                 )}
 
