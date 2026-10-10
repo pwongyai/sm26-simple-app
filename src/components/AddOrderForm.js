@@ -1,10 +1,11 @@
 "use client";
 
-import { areaIn } from "@/lib/units";
+import { areaIn, areaOut } from "@/lib/units";
 import { useUnits } from "@/lib/useUnits";
 import { useEffect, useState } from "react";
 import { createOrder } from "@/lib/store";
 import Map from "@/components/Map";
+import FieldThumb from "@/components/FieldThumb";
 import { useT } from "@/lib/i18n";
 
 // Add Work Order — version 3's flow, kept step for step.
@@ -35,6 +36,11 @@ export default function AddOrderForm({ services, onClose, onCreated }) {
   const [locationType, setLocationType] = useState(null);
   const [pin, setPin] = useState(null);
 
+  // "Existing field" — this customer's own registered plots, picked by shape.
+  const [customerFields, setCustomerFields] = useState(null); // null = not loaded
+  const [fieldsBusy, setFieldsBusy] = useState(false);
+  const [chosenField, setChosenField] = useState(null);
+
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -44,6 +50,20 @@ export default function AddOrderForm({ services, onClose, onCreated }) {
       .then(setCustomers)
       .catch(() => {});
   }, []);
+
+  // Loaded when the contractor actually asks for it, not on every booking —
+  // each field costs one AgroAPI call to hydrate, and most jobs are written
+  // down without ever opening this. A brand-new customer has nothing to load.
+  useEffect(() => {
+    setChosenField(null);
+    if (locationType !== "field" || !chosen?.id) return;
+    setFieldsBusy(true);
+    fetch(`/api/farmers/${chosen.id}/fields`)
+      .then((r) => (r.ok ? r.json() : []))
+      .then(setCustomerFields)
+      .catch(() => setCustomerFields([]))
+      .finally(() => setFieldsBusy(false));
+  }, [locationType, chosen?.id]);
 
   const q = query.trim().toLowerCase();
   const hits = q
@@ -79,14 +99,27 @@ export default function AddOrderForm({ services, onClose, onCreated }) {
       // activity type is resolved later, from the service, when the finished
       // work is recorded — so only the label is stored now.
       const service = services?.find((s) => s.id === workType);
+      const field = locationType === "field" ? chosenField : null;
       await createOrder({
         farmerId,
         activityTypeName: service?.name || null,
         scheduledDate: scheduled || null,
-        cropSizeM2: cropSize === "" ? null : areaIn(cropSize, areaUnitM2),
+        // A typed size always wins — the contractor may be booking part of a
+        // plot. Left blank, the field's own measured area is a better answer
+        // than nothing, and it is what the job card will show.
+        cropSizeM2:
+          cropSize === "" ? field?.areaM2 ?? null : areaIn(cropSize, areaUnitM2),
         note: note.trim() || null,
         lat: locationType === "pin" && pin ? pin.lat : null,
         lng: locationType === "pin" && pin ? pin.lng : null,
+        // The whole point of picking an existing field: the order now says
+        // WHICH plot. Until this existed, every order a contractor wrote had
+        // a null field_id, so the work could only be tied to land afterwards,
+        // by drawing a new boundary — which is how one plot ends up with two
+        // field records and two reports for the same work (2026-10-10).
+        fieldId: field?.fieldId || null,
+        cropzoneId: field?.cropzoneId || null,
+        fieldName: field?.name || null,
       });
 
       onCreated();
@@ -281,10 +314,53 @@ export default function AddOrderForm({ services, onClose, onCreated }) {
                   </div>
                 </button>
 
-                {locationType === "field" && (
-                  <div className="fieldset-note ml-2">
-                    Field shapes come from the report the machine produces — none
-                    are mapped to this customer yet.
+                {/* The customer's own registered plots, drawn as outlines —
+                    the same screen the farmer already has in Request Service,
+                    for the contractor booking on their behalf. "Pick by shape,
+                    not name" was the promise here from the start; until today
+                    this branch rendered one hardcoded sentence saying no field
+                    was mapped, which was simply untrue, and left every
+                    contractor-written order with no field at all. */}
+                {locationType === "field" && fieldsBusy && (
+                  <div className="fieldset-note ml-2">{t("Loading…")}</div>
+                )}
+
+                {locationType === "field" && !fieldsBusy && (
+                  <div className="ml-2 flex flex-col gap-2">
+                    {(customerFields || []).map((f) => (
+                      <button
+                        key={f.fieldId}
+                        className={`choice-card ${
+                          chosenField?.fieldId === f.fieldId ? "selected" : ""
+                        }`}
+                        onClick={() =>
+                          setChosenField(
+                            chosenField?.fieldId === f.fieldId ? null : f
+                          )
+                        }
+                      >
+                        <FieldThumb boundary={f.boundary} size={34} />
+                        <div className="txt">
+                          <b>{f.name}</b>
+                          <span>
+                            {f.areaM2 != null
+                              ? `${areaOut(f.areaM2, areaUnitM2)} ${areaUnit}`
+                              : "—"}
+                            {f.crop ? ` · ${f.crop}` : ""}
+                          </span>
+                        </div>
+                      </button>
+                    ))}
+
+                    {/* A real answer, not the old blanket claim: a field joins
+                        this list when it is registered to this customer —
+                        through their own app, or the first report a machine
+                        produces on it. */}
+                    {(!chosen || customerFields?.length === 0) && (
+                      <div className="fieldset-note">
+                        {t("No field is registered to this customer yet.")}
+                      </div>
+                    )}
                   </div>
                 )}
 

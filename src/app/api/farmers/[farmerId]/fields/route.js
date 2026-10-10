@@ -26,6 +26,69 @@ import { agroFetch } from "@/lib/agroapi";
 // only here — a smart farmer naming their own field through the farmer app's
 // self-service Add Field flow (/api/my/fields/create) picks their own name,
 // unaffected.
+// One customer's registered fields, for the contractor booking a job against
+// one of them ("Existing field" on Add Work Order).
+//
+// The farmer's own /api/my/fields answers the same question for the person who
+// owns the land; this answers it for the contractor working it, scoped to the
+// one customer they just picked. It is deliberately NOT that route with a
+// different guard: the farmer's screen needs the whole crop cycle (planting
+// date, DAP, harvested, archived, season end) to sort fields into Active and
+// No Active Crop, and it deletes the mapping row on a confirmed 404. Booking a
+// job needs none of that — a field is bookable whether or not anything is
+// growing in it — so this asks for the shape, the size and the crop label and
+// nothing else, and leaves the farmer route's record-keeping alone.
+export async function GET(request, { params }) {
+  const { farmerId } = await params;
+  const { user, response } = await requireAccess();
+  if (response) return response;
+  if (user.role !== "contractor") {
+    return Response.json({ error: "Contractors only" }, { status: 403 });
+  }
+
+  const { data: rows, error } = await supabaseAdmin
+    .from("fields")
+    .select("agro_field_id, agro_cropzone_id, name")
+    .eq("farmer_id", farmerId)
+    .eq("organization_id", user.organization_id)
+    .order("name");
+
+  if (error) {
+    console.error(error);
+    return Response.json({ error: "Could not load this customer's fields" }, { status: 500 });
+  }
+
+  // A field with no cropzone is a registered plot with nothing planted — a
+  // normal state, and still perfectly bookable. Ask the field itself then.
+  const fields = await Promise.all(
+    rows.map(async (row) => {
+      const { ok, body } = row.agro_cropzone_id
+        ? await agroFetch(`/cropzones/${row.agro_cropzone_id}`)
+        : await agroFetch(`/fields/${row.agro_field_id}`);
+
+      const base = {
+        fieldId: row.agro_field_id,
+        cropzoneId: row.agro_cropzone_id,
+        name: row.name,
+      };
+      // AgroAPI unreachable for this one row: show the field by name rather
+      // than hide it. A contractor who knows the plot can still book it, and
+      // a missing outline is obvious on screen in a way a missing row is not.
+      if (!ok) return { ...base, areaM2: null, crop: null, boundary: null };
+
+      return {
+        ...base,
+        name: body.field?.name || body.name || row.name,
+        areaM2: body.area ?? null,
+        crop: body.crop?.name_i18n?.en || body.crop?.name || null,
+        boundary: body.location?.boundary?.coordinates || null,
+      };
+    })
+  );
+
+  return Response.json(fields);
+}
+
 export async function POST(request, { params }) {
   const { farmerId } = await params;
   const { user, response } = await requireAccess();
