@@ -244,10 +244,15 @@ export default function MachineDetailPage({ params }) {
           </div>
 
           {range === "custom" && (
-            <div className="mb-3 flex items-center gap-1">
+            /* Two native date inputs, a separator and a button do not fit a
+               360 px phone on one row: the year truncated to "10/10/202"
+               (2026-10-10). The dates keep the row, the button takes its own —
+               which also gives it a full-width tap target. */
+            <div className="mb-3 flex flex-col gap-2">
+              <div className="flex items-center gap-2">
               <input
                 type="date"
-                className="field min-w-0 flex-1 pr-1.5"
+                className="field min-w-0 flex-1"
                 value={customSince}
                 max={todayISO()}
                 onChange={(e) => {
@@ -257,20 +262,19 @@ export default function MachineDetailPage({ params }) {
                   }
                 }}
               />
-              <span className="shrink-0 text-[11px] text-[var(--text-tert)]">to</span>
+              <span className="shrink-0 text-[11px] text-[var(--text-tert)]">{t("to")}</span>
               <input
                 type="date"
-                className="field min-w-0 flex-1 pr-1.5"
+                className="field min-w-0 flex-1"
                 value={customUntil}
                 min={customSince}
                 max={maxUntil(customSince)}
                 onChange={(e) => setCustomUntil(e.target.value)}
               />
-              <button
-                onClick={load}
-                className="btn btn-primary shrink-0 text-[11px]"
-                style={{ padding: "6px 9px" }}
-              >{t("Check")}</button>
+              </div>
+              <button onClick={load} className="btn btn-primary w-full">
+                {t("Check")}
+              </button>
             </div>
           )}
 

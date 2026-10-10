@@ -526,9 +526,16 @@ export default function SelectArea({ machine, points, day, since, until, initial
                   }
                 >
                   <div className="icon">📋</div>
+                  {/* The field leads, for the same reason the job cards were
+                      changed on 23 Sep: this farmer may have eleven fields and
+                      their name is already in the line above, so the field is
+                      the only thing separating two of these orders. An order
+                      written down before its field was known still has none —
+                      then the work type stands alone, as it did before. */}
                   <div className="txt">
-                    <b>{o.activity_type_name || t("Job")}</b>
+                    <b>{o.field_name || o.activity_type_name || t("Job")}</b>
                     <span>
+                      {o.field_name ? `${o.activity_type_name || t("Job")} · ` : ""}
                       {o.scheduled_date
                         ? fmtDayMonth(o.scheduled_date)
                         : t("No date")}
