@@ -374,13 +374,22 @@ export default function AddOrderForm({ services, onClose, onCreated }) {
 
                 {locationType === "pin" && (
                   <div>
-                    {/* `center` only lands the map on mount; once a pin
-                        exists the map fits to it instead, so this is purely
-                        "where do I start looking". */}
+                    {/* The yard, drawn with Today's Work's own house marker,
+                        so the contractor can see where they are starting from
+                        rather than guessing which village the map opened on.
+                        `center` lands the map before anything is drawn; the
+                        marker then frames it.
+
+                        It is shown only until the pin exists, because markers
+                        drive the fit: keeping it afterwards would make the map
+                        zoom out far enough to hold both, and a field 20 km
+                        from the yard would become a dot you cannot re-tap.
+                        Once the field is marked, the field is the subject. */}
                     <Map
                       pin={pin}
                       onPick={setPin}
                       height={200}
+                      markers={!pin && homeBase ? [{ lat: homeBase[0], lng: homeBase[1], home: true }] : []}
                       {...(homeBase ? { center: homeBase } : {})}
                     />
                     <div className="mt-1 flex items-center justify-between gap-2">
