@@ -27,7 +27,6 @@ export default function OrderDetail({ order, services, onClose, onChanged }) {
   const [cropSize, setCropSize] = useState(
     order.crop_size_m2 != null ? String(areaOut(order.crop_size_m2, areaUnitM2)) : ""
   );
-  const [note, setNote] = useState(order.note || "");
 
   const late = daysLate(order);
   const isPending = order.status === "pending";
@@ -38,7 +37,6 @@ export default function OrderDetail({ order, services, onClose, onChanged }) {
       scheduledDate: date || null,
       workType: workType ? { id: null, name: workType } : null,
       cropSizeM2: cropSize === "" ? null : areaIn(cropSize, areaUnitM2),
-      note: note.trim() || null,
     });
     setBusy(false);
     onChanged();
@@ -154,20 +152,6 @@ export default function OrderDetail({ order, services, onClose, onChanged }) {
                 placeholder="unknown"
               />
             </div>
-            <div>
-              <div className="field-label">{t("Note")}</div>
-              {/* No placeholder. "Anything the driver should know" named one
-                  use and, by naming it, ruled out the others: a work order is
-                  a request to come and work, not an instruction tied to one
-                  plot, and what gets written here during planning is whatever
-                  the contractor needs to remember. An empty box asks nothing
-                  and accepts all of it (2026-10-10). */}
-              <input
-                className="field"
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-              />
-            </div>
           </>
         ) : (
           <div className="detail-card">
@@ -191,12 +175,6 @@ export default function OrderDetail({ order, services, onClose, onChanged }) {
               <div className="detail-row">
                 <div className="lbl">{t("Field")}</div>
                 <div className="val">{order.field_name}</div>
-              </div>
-            )}
-            {order.note && (
-              <div className="detail-row">
-                <div className="lbl">{t("Note")}</div>
-                <div className="val">{order.note}</div>
               </div>
             )}
             <div className="detail-row">

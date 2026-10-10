@@ -27,7 +27,6 @@ export default function AddOrderForm({ services, onClose, onCreated }) {
   const [newPhone, setNewPhone] = useState("");
 
   const [cropSize, setCropSize] = useState("");
-  const [note, setNote] = useState("");
   const [workType, setWorkType] = useState("");
   const [scheduled, setScheduled] = useState(() =>
     new Date().toLocaleDateString("en-CA")
@@ -109,7 +108,6 @@ export default function AddOrderForm({ services, onClose, onCreated }) {
         // than nothing, and it is what the job card will show.
         cropSizeM2:
           cropSize === "" ? field?.areaM2 ?? null : areaIn(cropSize, areaUnitM2),
-        note: note.trim() || null,
         lat: locationType === "pin" && pin ? pin.lat : null,
         lng: locationType === "pin" && pin ? pin.lng : null,
         // The whole point of picking an existing field: the order now says
@@ -274,25 +272,6 @@ export default function AddOrderForm({ services, onClose, onCreated }) {
                   ))}
                 </select>
               </div>
-            </div>
-
-            {/* Free text — the one thing a form cannot anticipate. What a paper
-                notebook carries and no structured column does: "call before
-                coming", "gate locked, use the north track", "moved because the
-                field was too wet". Optional by design. */}
-            <div>
-              <div className="field-label">{t("Note (optional)")}</div>
-              {/* No placeholder. "Anything the driver should know" named one
-                  use and, by naming it, ruled out the others: a work order is
-                  a request to come and work, not an instruction tied to one
-                  plot, and what gets written here during planning is whatever
-                  the contractor needs to remember. An empty box asks nothing
-                  and accepts all of it (2026-10-10). */}
-              <input
-                className="field"
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-              />
             </div>
 
             <div>

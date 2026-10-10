@@ -64,7 +64,6 @@ export async function PATCH(request, { params }) {
       updates.activity_type_name = body.workType?.name ?? null;
     }
     if (body.cropSizeM2 !== undefined) updates.crop_size_m2 = body.cropSizeM2;
-    if (body.note !== undefined) updates.note = body.note;
     if (body.lat !== undefined) updates.location_lat = body.lat;
     if (body.lng !== undefined) updates.location_lng = body.lng;
   }

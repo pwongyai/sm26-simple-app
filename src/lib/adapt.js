@@ -77,7 +77,6 @@ export function buildWorkOrder(order, { service } = {}) {
   return {
     id: id(order.id),
     name: name || `Work order ${order.id}`,
-    ...(order.note ? { note: [{ description: order.note }] } : {}),
     fieldId: id(order.field_id),
     cropZoneId: id(order.cropzone_id),
     timeScopes: [timeScope(order.scheduled_date, null, "PROPOSED")].filter(Boolean),

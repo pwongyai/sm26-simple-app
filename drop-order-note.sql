@@ -1,0 +1,17 @@
+-- Remove work_orders.note.
+--
+-- Added 18 Aug 2026 by `624ebd4` as a contractor-typed free-text box
+-- ("Anything the driver should know"), and shown to the farmer from 23 Aug
+-- by `082c9ff`. Neither step was in the v3 design, which contains exactly one
+-- mention of notes: a READ-ONLY row on the contractor's order detail labelled
+-- "Farmer notes" — farmer writes, contractor reads. The build reversed that
+-- direction, and nobody agreed to it.
+--
+-- 51 work orders existed when this was written and NOT ONE had a note, so no
+-- real data is lost. A work order is a request to come and work; what was
+-- actually worked is settled by the reports, not by a free-text box on the
+-- request.
+--
+-- Decided 2026-10-10: no note at all. It comes back only if real use asks
+-- for it.
+alter table work_orders drop column if exists note;
