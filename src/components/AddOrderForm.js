@@ -282,9 +282,14 @@ export default function AddOrderForm({ services, onClose, onCreated }) {
                 field was too wet". Optional by design. */}
             <div>
               <div className="field-label">{t("Note (optional)")}</div>
+              {/* No placeholder. "Anything the driver should know" named one
+                  use and, by naming it, ruled out the others: a work order is
+                  a request to come and work, not an instruction tied to one
+                  plot, and what gets written here during planning is whatever
+                  the contractor needs to remember. An empty box asks nothing
+                  and accepts all of it (2026-10-10). */}
               <input
                 className="field"
-                placeholder={t("Anything the driver should know")}
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
               />
