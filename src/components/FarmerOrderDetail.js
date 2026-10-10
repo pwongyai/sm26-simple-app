@@ -212,15 +212,6 @@ export default function FarmerOrderDetail({ order, onClose, onChanged }) {
               {fmtDate(order.booking_date)}
             </div>
           </div>
-          {/* Shown to the farmer too: the note is usually about their field
-              ("gate locked", "moved, too wet"), so hiding it would keep them
-              guessing about their own job. */}
-          {order.note && (
-            <div className="detail-row">
-              <div className="lbl">{t("Note")}</div>
-              <div className="val">{order.note}</div>
-            </div>
-          )}
         </div>
 
         {order.status === "declined" && (

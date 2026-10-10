@@ -60,7 +60,20 @@ export async function GET() {
     reportedIds = new Set((reports || []).map((r) => r.work_order_id));
   }
 
-  return Response.json(data.map((o) => ({ ...o, has_report: reportedIds.has(o.id) })));
+  // The note is the contractor's own planning space — "do the top half, the
+  // rest is flooded", "the son's plot too, ask first". It used to be shown to
+  // the farmer as well, from when it meant "gate locked, too wet". It no
+  // longer does, so it is withheld at the source rather than only hidden on
+  // the farmer's screen: a field left out of the response cannot be read out
+  // of it either (2026-10-10).
+  const forFarmer = user.role !== "contractor";
+  return Response.json(
+    data.map(({ note, ...o }) => ({
+      ...o,
+      ...(forFarmer ? {} : { note }),
+      has_report: reportedIds.has(o.id),
+    }))
+  );
 }
 
 export async function POST(request) {
