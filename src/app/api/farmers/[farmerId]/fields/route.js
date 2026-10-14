@@ -143,8 +143,21 @@ export async function POST(request, { params }) {
     if (!field.ok) {
       return Response.json({ error: "That field is not in AgroAPI" }, { status: 404 });
     }
+    // Same rule the report path uses (api/reports/preview): the index action
+    // returns an ARRAY that can hold an archived cropzone from a previous
+    // renewal alongside the live one, so the live one has to be picked
+    // deliberately. Taking [0] here recorded an archived cropzone — or, for a
+    // field with none yet, null — while the report that followed resolved a
+    // different, real one. The row this writes is what the B.1 field picker
+    // and every later booking read, so the two must agree (2026-10-14).
+    //
+    // A field with no cropzone at all stays null rather than having one
+    // created as a side effect of naming its owner; the report path creates
+    // it properly, with AgroAPI's "unspecified" crop, when work is reported.
     const cropzones = await agroFetch(`/fields/${body.fieldId}/cropzones`);
-    const cropzoneId = Array.isArray(cropzones.body) ? cropzones.body[0]?.id ?? null : null;
+    const list = cropzones.ok && Array.isArray(cropzones.body) ? cropzones.body : [];
+    const live = list.find((cz) => !cz.archived_at) || list[0] || null;
+    const cropzoneId = live?.id ?? null;
 
     const row = {
       farmer_id: farmerId,
