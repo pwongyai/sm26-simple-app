@@ -150,7 +150,13 @@ export async function GET(request) {
       const owner = ownerByField.get(f.id);
       f.farmerId = owner ? owner.farmerId : unassignedId;
       f.farmerName = owner ? owner.farmerName : "Unassigned";
-      f.unassigned = !owner;
+      // Unclaimed means "no real customer", which is NOT the same as "no row".
+      // Reports filed before 2026-10-14 wrote a `fields` row naming the
+      // Unassigned placeholder as owner, so those plots had a row and would
+      // have gone on skipping the question this flag exists to force. Four RK
+      // plots were in exactly that state. The placeholder is found by name
+      // here for the same reason `unassignedFarmerId` creates it by name.
+      f.unassigned = !owner || owner.farmerName === "Unassigned";
     }
   }
 
