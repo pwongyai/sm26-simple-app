@@ -121,8 +121,26 @@ function FitBounds({ shapes, initialView, onViewChange }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, key]);
 
+  // The container's last measured size. A ResizeObserver delivers one
+  // observation the moment you call observe(), before anything has actually
+  // resized — and this effect re-registers on every `key` change, which means
+  // on every point placed while drawing. So each tap re-attached the observer,
+  // took that free observation, and slammed the view back to `initialView`,
+  // undoing whatever the contractor had just zoomed to in order to follow the
+  // next edge. The guard on the effect above never applied here.
+  //
+  // Comparing against the last size tells a real resize from that spurious
+  // first callback, so a genuine layout change still re-fits and a tap does
+  // nothing (2026-10-14).
+  const lastSize = useRef(null);
+
   useEffect(() => {
     function onResize() {
+      const el = map.getContainer();
+      const size = `${el.clientWidth}x${el.clientHeight}`;
+      if (lastSize.current === size) return;
+      lastSize.current = size;
+
       map.invalidateSize();
       if (initialView) {
         map.setView(initialView.center, initialView.zoom);
