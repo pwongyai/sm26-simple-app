@@ -15,7 +15,7 @@ import { useT } from "@/lib/i18n";
 // it, adjust the date if the call turned up a different one, then decide.
 export default function IncomingRequestCard({ order, onChanged }) {
   const t = useT();
-  const { areaUnit, areaUnitM2 } = useUnits();
+  const { areaUnitLabel, areaUnitM2 } = useUnits();
   const [date, setDate] = useState(order.scheduled_date || "");
   const [busy, setBusy] = useState(false);
 
@@ -36,12 +36,12 @@ export default function IncomingRequestCard({ order, onChanged }) {
   return (
     <div className="card p-3 text-sm">
       <div className="mb-1 flex items-center justify-between gap-2">
-        <p className="truncate text-sm font-medium">{fieldAndOwner(order.field_name, order.farmer?.name)}</p>
+        <p className="truncate text-sm font-medium">{fieldAndOwner(order.field_name, t(order.farmer?.name))}</p>
         <span className="shrink-0 rounded bg-green-light px-1.5 py-0.5 text-[11px] text-green-dark">{t("Smart Farmer")}</span>
       </div>
       <p className="text-[var(--text-sec)]">
-        {order.activity_type_name || t("No work type")}
-        {order.crop_size_m2 != null && ` · ${areaOut(order.crop_size_m2, areaUnitM2)} ${areaUnit}`}
+        {t(order.activity_type_name) || t("No work type")}
+        {order.crop_size_m2 != null && ` · ${areaOut(order.crop_size_m2, areaUnitM2)} ${areaUnitLabel}`}
       </p>
       <p className="text-xs text-[var(--text-tert)]">
         Requested:{" "}

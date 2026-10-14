@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { daysLate } from "@/components/OrderCard";
-import { fmtMonthYear } from "@/lib/date";
+import { fmtMonthYear, weekdayInitials } from "@/lib/date";
 
 // Month grid showing where the workload sits. Version 3: each day carries a
 // small pill badge with its job count — colored red if anything that day is
@@ -59,7 +59,7 @@ export default function OrderCalendar({ orders, selected, onSelect }) {
       </div>
 
       <div className="grid grid-cols-7 gap-1 text-center text-[10px] text-[var(--text-tert)]">
-        {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
+        {weekdayInitials().map((d, i) => (
           <div key={i}>{d}</div>
         ))}
       </div>

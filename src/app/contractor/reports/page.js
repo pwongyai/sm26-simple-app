@@ -8,16 +8,10 @@ import Map from "@/components/Map";
 import FrozenHeaderScroll from "@/components/FrozenHeaderScroll";
 import { fieldAndOwner } from "@/lib/labels";
 import { useT } from "@/lib/i18n";
-
-function fmtTime(iso) {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-}
-
-function fmtDate(iso) {
-  if (!iso) return "";
-  return new Date(iso).toLocaleDateString([], { day: "numeric", month: "short", year: "numeric" });
-}
+// The shared formatters. This file had private copies of fmtDate/fmtTime
+// calling toLocaleDateString([]) — the browser's locale, not the app's — so
+// every report date stayed English on a Thai screen (2026-10-15).
+import { fmtDate, fmtTime } from "@/lib/date";
 
 // v3's ledger filters: This Month/Week/Today are rolling windows ending
 // today (not calendar boundaries) — matches `reportDateInRange` in
@@ -213,7 +207,7 @@ function ReportsTabInner() {
           onClick={() => router.push("/contractor/machines")}
           className="add-btn"
         >
-          + Create
+          {t("+ Create")}
         </button>
       </div>
 
@@ -259,7 +253,7 @@ function ReportsTabInner() {
         {filtered.length === 0 && (
           <p className="empty-msg">
             {reports.length === 0
-              ? "No reports yet. Tap + Create, pick a machine, then tap a field on its map."
+              ? t("No reports yet. Tap + Create, pick a machine, then tap a field on its map.")
               : t("No work reports match these filters.")}
           </p>
         )}
@@ -269,12 +263,12 @@ function ReportsTabInner() {
             <button key={r.id} className="report-card" onClick={() => openReport(r)}>
               <ReportThumb boundary={r.boundary} />
               <div className="txt">
-                <div className="name">{fieldAndOwner(r.field_name, r.farmer?.name || t("Unassigned"))}</div>
+                <div className="name">{fieldAndOwner(r.field_name, t(r.farmer?.name) || t("Unassigned"))}</div>
                 <div className="sub">
-                  {r.service_name || r.work_type_name || "—"} · {fmtDate(r.started_at)}
+                  {t(r.service_name) || t(r.work_type_name) || "—"} · {fmtDate(r.started_at)}
                 </div>
                 <div className="sub">
-                  {Number(r.field_area_units ?? 0).toFixed(2)} {r.unit_label} · {r.percent_worked ?? 0}% work area
+                  {Number(r.field_area_units ?? 0).toFixed(2)} {t(r.unit_label)} · {r.percent_worked ?? 0}% {t("work area")}
                   {r.machine_name ? ` · ${r.machine_name}` : ""}
                 </div>
               </div>
@@ -325,7 +319,7 @@ function ViewReport({ report: r, onClose, onTogglePaid }) {
 
   const overviewFields = [
     [t("Farmer Name"), r.farmer?.name || t("Unassigned")],
-    [t("Work Type"), r.service_name || r.work_type_name || "—"],
+    [t("Work Type"), t(r.service_name) || t(r.work_type_name) || "—"],
     [t("Total Hours"), r.hours != null ? `${r.hours} hr` : "—"],
     // No machine, no clock. The start time came out as 07:00 on a report
     // nobody timed — midnight UTC read in Hanoi — which looks like a
@@ -579,8 +573,8 @@ function CreateReport({ onClose, onCreated, onViewExisting }) {
     [t("Total Hours"), chosen.work?.hours != null ? `${chosen.work.hours} hr` : "—"],
     [t("Start Time"), fmtTime(chosen.startedAt)],
     [t("Stop Time"), fmtTime(chosen.endedAt)],
-    [t("Crop Area"), `${chosen.fieldAreaUnits ?? "—"} ${unit}`],
-    [t("Work Area"), `${chosen.workAreaUnits ?? "—"} ${unit}`],
+    [t("Crop Area"), `${chosen.fieldAreaUnits ?? "—"} ${t(unit)}`],
+    [t("Work Area"), `${chosen.workAreaUnits ?? "—"} ${t(unit)}`],
     ["% Work Area", `${chosen.work?.percentWorked ?? "—"}%`],
   ];
 
@@ -680,7 +674,7 @@ function CreateReport({ onClose, onCreated, onViewExisting }) {
                 </div>
               </div>
               <p className="mt-1 text-[11px] text-[var(--text-tert)]">
-                {chosen.workAreaUnits ?? "—"} {unit} × {fmtMoney(service?.price ?? 0, currency)}
+                {chosen.workAreaUnits ?? "—"} {t(unit)} × {fmtMoney(service?.price ?? 0, currency)}
                 {chargeOverride != null && chargeOverride !== calculatedCharge && (
                   <>
                     {" "}

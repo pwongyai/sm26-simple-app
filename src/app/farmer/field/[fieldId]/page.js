@@ -8,7 +8,7 @@ import Map from "@/components/Map";
 import { cropLabel } from "@/lib/crop";
 import ManageField from "@/components/ManageField";
 import RequestService from "@/components/RequestService";
-import { fmtDate, fmtDateTime } from "@/lib/date";
+import { fmtDate, fmtDateTime, fmtWeekdayDay } from "@/lib/date";
 import { useT } from "@/lib/i18n";
 
 // Field Detail — version 3 §11.17: Map / Weather / Activities as three tabs,
@@ -45,7 +45,7 @@ const TABS = [
 
 export default function FieldDetailPage({ params }) {
   const t = useT();
-  const { areaUnit: unitLabel, areaUnitM2 } = useUnits();
+  const { areaUnitLabel: unitLabel, areaUnitM2 } = useUnits();
   const { fieldId: cropzoneId } = use(params);
   const router = useRouter();
 
@@ -271,8 +271,8 @@ export default function FieldDetailPage({ params }) {
                     />
                   </div>
                   <div className="flex justify-between text-[10px] text-[var(--text-tert)]">
-                    <span>0.0 bare</span>
-                    <span>1.0 dense</span>
+                    <span>0.0 {t("bare")}</span>
+                    <span>1.0 {t("dense")}</span>
                   </div>
                   {/* Nine strings used to sit here, seven of them sentences
                       with a number wedged inside — the kind that cannot be
@@ -328,7 +328,7 @@ export default function FieldDetailPage({ params }) {
               <div className="mt-3 flex justify-center gap-6 text-xs">
                 <span>
                   💧 <b>{forecast.current.rainPast24h ?? 0}</b> mm
-                  <span className="block text-[var(--text-tert)]">past 24h</span>
+                  <span className="block text-[var(--text-tert)]">{t("past 24h")}</span>
                 </span>
                 <span>
                   💦 <b>{forecast.current.humidity}%</b>
@@ -353,11 +353,7 @@ export default function FieldDetailPage({ params }) {
                 {forecast.daily.map((d) => (
                   <div key={d.date} className="min-w-[92px] flex-1 text-center">
                     <p className="text-xs font-bold">
-                      {new Date(`${d.date}T00:00:00`).toLocaleDateString([], {
-                        weekday: "short",
-                        day: "numeric",
-                        month: "short",
-                      })}
+                      {fmtWeekdayDay(d.date)}
                     </p>
                     <p className="my-1 text-2xl">
                       {WEATHER_ICON[d.canonical] || "🌤️"}

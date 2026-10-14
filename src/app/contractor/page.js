@@ -155,7 +155,7 @@ export default function BookingTab() {
             />
           </div>
           <button className="add-btn" onClick={() => setAdding(true)}>
-            + Add
+            {t("+ Add")}
           </button>
         </div>
       )}
@@ -168,7 +168,7 @@ export default function BookingTab() {
               {day && fmtDate(day)}
             </p>
             <button className="add-btn py-1.5" onClick={() => setAdding(true)}>
-              + Add
+              {t("+ Add")}
             </button>
           </div>
         </>

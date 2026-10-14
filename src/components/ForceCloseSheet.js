@@ -24,7 +24,7 @@ import { useT } from "@/lib/i18n";
 // not by anything on this screen.
 export default function ForceCloseSheet({ order, services, onCancel, onDone }) {
   const t = useT();
-  const { areaUnit, areaUnitM2, currency } = useUnits();
+  const { areaUnitLabel, areaUnitM2, currency } = useUnits();
 
   // The service behind this job, for the rate. Matched on the work type the
   // order already carries, so the usual case needs no choosing.
@@ -143,7 +143,7 @@ export default function ForceCloseSheet({ order, services, onCancel, onDone }) {
       )}
 
       <div>
-        <div className="field-label">Area worked ({areaUnit})</div>
+        <div className="field-label">{t("Area worked")} ({areaUnitLabel})</div>
         <input
           className="field"
           type="number"
@@ -167,8 +167,8 @@ export default function ForceCloseSheet({ order, services, onCancel, onDone }) {
         />
         {rate != null && (
           <p className="mt-1 text-[11px] text-[var(--text-tert)]">
-            {fmtMoney(rate, currency)} per {areaUnit}
-            {suggested != null && ` · ${fmtMoney(suggested, currency)} for ${area} ${areaUnit}`}
+            {fmtMoney(rate, currency)} {t("per")} {areaUnitLabel}
+            {suggested != null && ` · ${fmtMoney(suggested, currency)} ${t("for")} ${area} ${areaUnitLabel}`}
           </p>
         )}
       </div>

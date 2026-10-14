@@ -19,7 +19,7 @@ import { useT } from "@/lib/i18n";
 // future real model, not something drawing a fake box would improve on.
 export default function SelectArea({ machine, points, day, since, until, initialView, onClose }) {
   const t = useT();
-  const { areaUnit: unitLabel, areaUnitM2 } = useUnits();
+  const { areaUnitLabel: unitLabel, areaUnitM2 } = useUnits();
   const router = useRouter();
   const [fields, setFields] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -602,9 +602,9 @@ export default function SelectArea({ machine, points, day, since, until, initial
                       written down before its field was known still has none —
                       then the work type stands alone, as it did before. */}
                   <div className="txt">
-                    <b>{o.field_name || o.activity_type_name || t("Job")}</b>
+                    <b>{o.field_name || t(o.activity_type_name) || t("Job")}</b>
                     <span>
-                      {o.field_name ? `${o.activity_type_name || t("Job")} · ` : ""}
+                      {o.field_name ? `${t(o.activity_type_name) || t("Job")} · ` : ""}
                       {o.scheduled_date
                         ? fmtDayMonth(o.scheduled_date)
                         : t("No date")}

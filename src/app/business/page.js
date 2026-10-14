@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useT } from "@/lib/i18n";
 import { useRouter } from "next/navigation";
 
 // One account per contractor business. กินรี logs in as กินรี — her machines,
 // her price list, her customers, her bills. Without this step every contractor
 // account in a community would share one identity.
 export default function BusinessPage() {
+  const t = useT();
   const router = useRouter();
   const [options, setOptions] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -38,7 +40,7 @@ export default function BusinessPage() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-6 py-10">
-      <h1 className="mb-1 text-xl font-semibold">Which business are you?</h1>
+      <h1 className="mb-1 text-xl font-semibold">{t("Which business are you?")}</h1>
       <p className="mb-6 text-sm text-[var(--text-sec)]">
         Your machines, prices and jobs belong to this business.
       </p>

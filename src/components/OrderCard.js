@@ -62,7 +62,7 @@ function Badge({ order }) {
 
 export default function OrderCard({ order, onClick, index }) {
   const t = useT();
-  const { areaUnit, areaUnitM2 } = useUnits();
+  const { areaUnitLabel, areaUnitM2 } = useUnits();
   const late = daysLate(order);
 
   return (
@@ -77,10 +77,10 @@ export default function OrderCard({ order, onClick, index }) {
           {index != null && (
             <span className="mr-1.5 text-[var(--text-tert)]">{index}.</span>
           )}
-          {fieldAndOwner(order.field_name, order.farmer?.name)}
+          {fieldAndOwner(order.field_name, t(order.farmer?.name))}
         </p>
         <p className="truncate text-xs leading-tight text-[var(--text-sec)]">
-          {order.activity_type_name || t("No work type")}
+          {t(order.activity_type_name) || t("No work type")}
         </p>
         <p className="text-xs leading-tight text-[var(--text-tert)]">
           {order.scheduled_date
@@ -94,7 +94,7 @@ export default function OrderCard({ order, onClick, index }) {
         {order.crop_size_m2 != null && (
           <p className="whitespace-nowrap text-2xl font-bold leading-none">
             {areaOut(order.crop_size_m2, areaUnitM2)}
-            <span className="ml-1 text-xs font-normal text-[var(--text-sec)]">{areaUnit}</span>
+            <span className="ml-1 text-xs font-normal text-[var(--text-sec)]">{areaUnitLabel}</span>
           </p>
         )}
       </div>

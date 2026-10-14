@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { areaDigits } from "@/lib/units";
+import { translate, useT } from "@/lib/i18n";
 
 // The community's currency and area unit, for any client component that
 // displays a price or an area.
@@ -80,7 +81,17 @@ export function useUnits() {
     };
   }, []);
 
-  return units;
+  // `areaUnit` stays the CANONICAL unit — "rai", "sào", "ha" — because it is
+  // not only displayed: a work report freezes it into `unit_label`, and a
+  // report written by a Thai contractor must not be stored as "ไร่" and then
+  // read back by someone in English.
+  //
+  // `areaUnitLabel` is the same unit spelled in the reader's language, for
+  // display only. The unit itself never changes with the reader — a Ruang Kaeo
+  // field is measured in rai for everyone — only how the word is written
+  // (2026-10-15).
+  const t = useT();
+  return { ...units, areaUnitLabel: t(units.areaUnit) };
 }
 
 // Square metres expressed in the community's unit. Returns a string, because

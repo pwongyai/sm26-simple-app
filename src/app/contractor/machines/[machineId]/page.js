@@ -600,7 +600,7 @@ function FuelSection({ machineId }) {
         ) : (
           availableServices.length > 0 && (
             <button className="text-left text-xs font-bold" onClick={() => setAdding(true)}>
-              + Add Job Override
+              {t("+ Add Job Override")}
             </button>
           )
         )}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useT } from "@/lib/i18n";
 import { useRouter } from "next/navigation";
 
 // Join your organization — the same gate v3 designed (§11.2), minus the
@@ -10,6 +11,7 @@ import { useRouter } from "next/navigation";
 //
 // One organization per user, and everything they create afterwards lands in it.
 export default function JoinPage() {
+  const t = useT();
   const router = useRouter();
   const [orgs, setOrgs] = useState([]);
   const [code, setCode] = useState("");
@@ -48,7 +50,7 @@ export default function JoinPage() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-6">
-      <h1 className="mb-1 text-xl font-semibold">Join your organization</h1>
+      <h1 className="mb-1 text-xl font-semibold">{t("Join your organization")}</h1>
       <p className="mb-8 text-sm text-[var(--text-sec)]">
         Enter the code from your contractor, or scan their QR code.
       </p>
@@ -74,7 +76,7 @@ export default function JoinPage() {
 
       {orgs.length > 0 && (
         <div className="mt-8 border-t border-[var(--rule)] pt-4">
-          <p className="mb-2 text-xs text-[var(--text-tert)]">Available now</p>
+          <p className="mb-2 text-xs text-[var(--text-tert)]">{t("Available now")}</p>
           {orgs.map((o) => (
             <button
               key={o.id}

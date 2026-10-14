@@ -243,7 +243,7 @@ function ContractorProfile({ profile, organization, onChanged }) {
       <h2 className="mb-2 text-sm font-semibold">{t("Contractor Profile")}</h2>
       <div className="flex flex-col gap-2">
         <div>
-          <div className="field-label">Contractor / Business Name</div>
+          <div className="field-label">{t("Contractor / Business Name")}</div>
           <div className="detail-row">
             <div className="val">{profile.businessName || "—"}</div>
           </div>
@@ -728,12 +728,12 @@ function ServiceList({ services, unit, currency, settings, onChanged }) {
                     disabled={!active}
                     className="flex-1 rounded border border-[var(--rule)] px-2 py-1 text-xs"
                   >
-                    <option value="">Kind of work…</option>
+                    <option value="">{t("Kind of work…")}</option>
                     {groups.map((g) => (
-                      <optgroup key={g.group} label={g.group}>
+                      <optgroup key={g.group} label={t(g.group)}>
                         {g.items.map((w) => (
                           <option key={w.code} value={w.code}>
-                            {w.label}
+                            {t(w.label)}
                           </option>
                         ))}
                       </optgroup>
@@ -741,7 +741,7 @@ function ServiceList({ services, unit, currency, settings, onChanged }) {
                   </select>
                 ) : (
                   <span className="text-xs text-[var(--text-tert)]">
-                    {workType(s.adapt_code)?.label || t("Kind of work not set")}
+                    {t(workType(s.adapt_code)?.label) || t("Kind of work not set")}
                   </span>
                 )}
               </div>
@@ -784,12 +784,12 @@ function ServiceList({ services, unit, currency, settings, onChanged }) {
                   onChange={(e) => setNewDraft(r.clientId, { adaptCode: e.target.value })}
                   className="w-full rounded border border-[var(--rule)] px-2 py-1 text-xs"
                 >
-                  <option value="">Kind of work… (required)</option>
+                  <option value="">{t("Kind of work… (required)")}</option>
                   {groups.map((g) => (
-                    <optgroup key={g.group} label={g.group}>
+                    <optgroup key={g.group} label={t(g.group)}>
                       {g.items.map((w) => (
                         <option key={w.code} value={w.code}>
-                          {w.label}
+                          {t(w.label)}
                         </option>
                       ))}
                     </optgroup>
@@ -805,7 +805,7 @@ function ServiceList({ services, unit, currency, settings, onChanged }) {
           onClick={addDraftRow}
           className="mt-2 text-xs text-[var(--text-sec)] underline"
         >
-          + Add a service
+          {t("+ Add a service")}
         </button>
       )}
 

@@ -5,7 +5,7 @@ import { useOrders } from "@/lib/useOrders";
 import { markSeen } from "@/lib/store";
 import StatusBadge from "@/components/StatusBadge";
 import FarmerOrderDetail from "@/components/FarmerOrderDetail";
-import { fmtDate } from "@/lib/date";
+import { fmtDate, fmtDateTime } from "@/lib/date";
 import { useT } from "@/lib/i18n";
 
 export default function FarmerOrdersTab() {
@@ -47,7 +47,7 @@ export default function FarmerOrdersTab() {
               <span className="text-xs text-[var(--text-tert)]">{fmtDate(o.scheduled_date)}</span>
             </div>
             <p className="font-medium">{o.field_name}</p>
-            <p className="text-[var(--text-sec)]">{o.activity_type_name}</p>
+            <p className="text-[var(--text-sec)]">{t(o.activity_type_name)}</p>
             {o.status === "declined" && (
               <p className="mt-1 text-xs text-[var(--text-sec)]">
                 The contractor couldn&apos;t take this one.
@@ -55,7 +55,7 @@ export default function FarmerOrdersTab() {
             )}
             {o.status === "completed" && o.completed_at && (
               <p className="mt-1 text-xs text-green-700">
-                Completed {new Date(o.completed_at).toLocaleString()}
+                {t("Completed")} {fmtDateTime(o.completed_at)}
               </p>
             )}
           </li>

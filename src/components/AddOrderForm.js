@@ -18,7 +18,7 @@ import { useT } from "@/lib/i18n";
 // form only then unfolds. Location is three options and never blocks saving.
 export default function AddOrderForm({ services, onClose, onCreated }) {
   const t = useT();
-  const { areaUnit, areaUnitM2 } = useUnits();
+  const { areaUnitLabel, areaUnitM2 } = useUnits();
   // 'search' → 'selected' | 'new'
   const [step, setStep] = useState("search");
   const [query, setQuery] = useState("");
@@ -261,7 +261,7 @@ export default function AddOrderForm({ services, onClose, onCreated }) {
           <>
             <div className="flex gap-2.5">
               <div className="flex-1">
-                <div className="field-label">Crop size ({areaUnit})</div>
+                <div className="field-label">{t("Crop size")} ({areaUnitLabel})</div>
                 <input
                   className="field"
                   type="number"

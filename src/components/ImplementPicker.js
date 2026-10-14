@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useT } from "@/lib/i18n";
 
 // Version 3's Implement Picker + Add/Edit Implement, combined into one
 // overlay. Local-only catalog — AgroAPI has no concept of a swappable
 // implement, but its width directly drives the area calculation, so the
 // contractor needs to be able to add/edit these without a dev involved.
 export default function ImplementPicker({ machineId, currentImplementId, onClose, onAssigned }) {
+  const t = useT();
   const [mode, setMode] = useState("list"); // list | edit
   const [catalog, setCatalog] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -127,7 +129,7 @@ export default function ImplementPicker({ machineId, currentImplementId, onClose
           <>
             {loading && <p className="text-sm text-[var(--text-sec)]">Loading…</p>}
             {!loading && catalog.length === 0 && (
-              <p className="empty-msg">No implements yet — add your first one below.</p>
+              <p className="empty-msg">{t("No implements yet — add your first one below.")}</p>
             )}
             <div className="flex flex-col gap-2">
               {catalog.map((impl) => (
@@ -157,7 +159,7 @@ export default function ImplementPicker({ machineId, currentImplementId, onClose
               style={{ border: "1.5px dashed var(--rule)" }}
               onClick={openNew}
             >
-              + Add New Implement
+              {t("+ Add New Implement")}
             </button>
             {currentImplementId && (
               <button
@@ -174,17 +176,17 @@ export default function ImplementPicker({ machineId, currentImplementId, onClose
         {mode === "edit" && (
           <>
             <div>
-              <div className="field-label">Implement name</div>
+              <div className="field-label">{t("Implement name")}</div>
               <input
                 className="field"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. 6m Disc Harrow"
+                placeholder={t("e.g. 6m Disc Harrow")}
                 autoFocus
               />
             </div>
             <div>
-              <div className="field-label">Width (m)</div>
+              <div className="field-label">{t("Width (m)")}</div>
               <input
                 className="field"
                 type="number"

@@ -133,7 +133,7 @@ export default function MyFieldsTab() {
           plots, rather than competing with them at the top. */}
       {data && (
         <button className="btn btn-go mt-4 w-full" onClick={() => setAdding(true)}>
-          + Add Field
+          {t("+ Add Field")}
         </button>
       )}
 

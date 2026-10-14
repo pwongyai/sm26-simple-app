@@ -150,7 +150,7 @@ export default function ManageField({
             <button className="choice-card" onClick={() => setView("crop")}>
               <div className="icon">🌱</div>
               <div className="txt">
-                <b>Crop &amp; variety</b>
+                <b>{t("Crop & variety")}</b>
                 <span>{cropLabel(cropzone.crop)}</span>
               </div>
             </button>
@@ -248,7 +248,7 @@ export default function ManageField({
               className="field"
               value={cropSearch}
               onChange={(e) => setCropSearch(e.target.value)}
-              placeholder="Search crops — rice, maize, cassava…"
+              placeholder={t("Search crops — rice, maize, cassava…")}
             />
             {!crops && <p className="empty-msg">{t("Loading crops…")}</p>}
             {matches.map((c) => (

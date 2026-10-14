@@ -278,7 +278,7 @@ export default function RequestService({
                 needs no JavaScript on any platform. */}
             <div className={`choice-card ${isCustom ? "selected" : ""}`}>
               <div className="txt w-full">
-                <b>📅 Choose another date</b>
+                <b>{t("📅 Choose another date")}</b>
                 <input
                   type="date"
                   className="field mt-2"

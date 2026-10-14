@@ -22,7 +22,7 @@ export default function OrderDetail({ order, services, onClose, onChanged }) {
 
   const [date, setDate] = useState(order.scheduled_date || "");
   const [workType, setWorkType] = useState(order.activity_type_name || "");
-  const { areaUnit, areaUnitM2 } = useUnits();
+  const { areaUnit, areaUnitLabel, areaUnitM2 } = useUnits();
   // Typed and shown in the reader's unit; stored as m².
   const [cropSize, setCropSize] = useState(
     order.crop_size_m2 != null ? String(areaOut(order.crop_size_m2, areaUnitM2)) : ""
@@ -142,7 +142,7 @@ export default function OrderDetail({ order, services, onClose, onChanged }) {
               />
             </div>
             <div>
-              <div className="field-label">Crop size ({areaUnit})</div>
+              <div className="field-label">{t("Crop size")} ({areaUnitLabel})</div>
               <input
                 className="field"
                 type="number"
@@ -157,7 +157,7 @@ export default function OrderDetail({ order, services, onClose, onChanged }) {
           <div className="detail-card">
             <div className="detail-row">
               <div className="lbl">{t("Work type")}</div>
-              <div className="val">{order.activity_type_name || t("Not set")}</div>
+              <div className="val">{t(order.activity_type_name) || t("Not set")}</div>
             </div>
             <div className="detail-row">
               <div className="lbl">{t("Scheduled")}</div>

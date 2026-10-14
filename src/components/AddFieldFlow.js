@@ -161,12 +161,12 @@ export default function AddFieldFlow({ unit, unitM2, onClose, onCreated }) {
               </div>
             </div>
             <div>
-              <div className="field-label">Field name *</div>
+              <div className="field-label">{t("Field name *")}</div>
               <input
                 className="field"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. North Field"
+                placeholder={t("e.g. North Field")}
                 autoFocus
               />
             </div>
@@ -179,7 +179,7 @@ export default function AddFieldFlow({ unit, unitM2, onClose, onCreated }) {
               className="field"
               value={cropSearch}
               onChange={(e) => setCropSearch(e.target.value)}
-              placeholder="Search crops — rice, maize, cassava…"
+              placeholder={t("Search crops — rice, maize, cassava…")}
             />
             {!crops && <p className="empty-msg">{t("Loading crops…")}</p>}
             {matches.map((c) => (

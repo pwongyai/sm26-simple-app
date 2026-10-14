@@ -29,7 +29,7 @@ const MACHINE_TAB = "machine";
 // charge.
 export default function FarmerOrderDetail({ order, onClose, onChanged }) {
   const t = useT();
-  const { areaUnit, areaUnitM2 } = useUnits();
+  const { areaUnitLabel, areaUnitM2 } = useUnits();
   const [busy, setBusy] = useState(false);
   const [confirmingCancel, setConfirmingCancel] = useState(false);
   const [error, setError] = useState("");
@@ -192,13 +192,13 @@ export default function FarmerOrderDetail({ order, onClose, onChanged }) {
           </div>
           <div className="detail-row">
             <div className="lbl">{t("Work type")}</div>
-            <div className="val">{order.activity_type_name || t("Not set")}</div>
+            <div className="val">{t(order.activity_type_name) || t("Not set")}</div>
           </div>
           <div className="detail-row">
             <div className="lbl">{t("Crop size")}</div>
             <div className="val">
               {order.crop_size_m2 != null
-                ? `${areaOut(order.crop_size_m2, areaUnitM2)} ${areaUnit}`
+                ? `${areaOut(order.crop_size_m2, areaUnitM2)} ${areaUnitLabel}`
                 : t("Unknown")}
             </div>
           </div>
