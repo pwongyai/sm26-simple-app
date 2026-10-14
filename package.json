@@ -8,6 +8,12 @@
     "start": "next start",
     "lint": "eslint"
   },
+  "browserslist": [
+    "chrome 111",
+    "edge 111",
+    "firefox 111",
+    "safari 15.4"
+  ],
   "dependencies": {
     "@supabase/supabase-js": "^2.112.2",
     "@turf/turf": "^7.4.0",
