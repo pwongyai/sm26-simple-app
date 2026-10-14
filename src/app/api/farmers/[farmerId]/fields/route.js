@@ -105,7 +105,74 @@ export async function POST(request, { params }) {
     .maybeSingle();
   if (!farmer) return Response.json({ error: "Not found" }, { status: 404 });
 
-  const { boundary } = await request.json();
+  const body = await request.json();
+
+  // Claim an AgroAPI field that already exists, rather than drawing a new one.
+  //
+  // Most of this org's plots pre-date the app, so they have no `fields` row and
+  // read as the "Unassigned" placeholder. Before this, tapping one on the
+  // machine map filed the report against that placeholder without ever asking
+  // who the customer was — and since the placeholder never has open orders, the
+  // Match Work Order step was skipped too, so a real booked job stayed open
+  // while its work was reported against nobody (2026-10-14).
+  //
+  // Naming the customer now records it for good: the next tap on the same plot
+  // goes straight to matching that customer's orders. A plot already claimed by
+  // someone else is refused rather than silently reassigned — that is a real
+  // disagreement about who farms it, and it belongs to a person, not a tap.
+  if (body.fieldId && !body.boundary) {
+    const { data: existing } = await supabaseAdmin
+      .from("fields")
+      .select("farmer_id, name, farmers(name)")
+      .eq("agro_field_id", body.fieldId)
+      .maybeSingle();
+
+    if (existing && existing.farmer_id !== farmerId) {
+      const holder = existing.farmers?.name;
+      if (holder && holder !== "Unassigned") {
+        return Response.json(
+          { error: `${existing.name || "That field"} is already recorded as ${holder}'s.` },
+          { status: 409 }
+        );
+      }
+    }
+
+    // Read the field back from AgroAPI rather than trusting the caller for
+    // its name and cropzone — this row is what every later lookup reads.
+    const field = await agroFetch(`/fields/${body.fieldId}`);
+    if (!field.ok) {
+      return Response.json({ error: "That field is not in AgroAPI" }, { status: 404 });
+    }
+    const cropzones = await agroFetch(`/fields/${body.fieldId}/cropzones`);
+    const cropzoneId = Array.isArray(cropzones.body) ? cropzones.body[0]?.id ?? null : null;
+
+    const row = {
+      farmer_id: farmerId,
+      organization_id: user.organization_id,
+      agro_field_id: body.fieldId,
+      agro_cropzone_id: cropzoneId,
+      name: field.body.name || existing?.name || null,
+    };
+
+    const { error: writeError } = existing
+      ? await supabaseAdmin.from("fields").update(row).eq("agro_field_id", body.fieldId)
+      : await supabaseAdmin.from("fields").insert(row);
+
+    if (writeError) {
+      console.error(writeError);
+      return Response.json({ error: "Could not record who farms this field" }, { status: 500 });
+    }
+
+    return Response.json({
+      fieldId: body.fieldId,
+      cropzoneId,
+      name: row.name,
+      areaM2: field.body.area ?? null,
+      claimed: true,
+    });
+  }
+
+  const { boundary } = body;
   const ring = boundary?.[0];
   if (!Array.isArray(ring) || ring.length < 4) {
     return Response.json(

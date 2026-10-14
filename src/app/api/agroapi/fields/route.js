@@ -112,37 +112,47 @@ export async function GET(request) {
       });
     }
 
-    // Fields under this community's one shared Farm (every locally-drawn
-    // field, smart or manual) all carry that Farm's generic name from
-    // AgroAPI — the real owner is an app-layer concept, tracked here. A real
-    // pre-existing AgroAPI field with no farmer_fields row at all (most of
-    // this org's fields predate the app) is still never truly ownerless —
-    // it reads as "Unassigned" from the moment it's seen here, the same
-    // placeholder /api/reports falls back to when a report against one is
-    // actually saved, so Select Area doesn't show a blank owner only to have
-    // one appear retroactively after the report is approved.
-    if (fields.length) {
-      const { data: owned } = await supabaseAdmin
-        .from("fields")
-        .select("agro_field_id, farmer_id, farmers(name)")
-        .in("agro_field_id", fields.map((f) => f.id));
-      const ownerByField = new Map(
-        (owned || []).map((row) => [row.agro_field_id, { farmerId: row.farmer_id, farmerName: row.farmers?.name }])
-      );
-      const unclaimed = fields.some((f) => !ownerByField.has(f.id));
-      const unassignedId = unclaimed ? await unassignedFarmerId(user) : null;
-      for (const f of fields) {
-        const owner = ownerByField.get(f.id);
-        f.farmerId = owner ? owner.farmerId : unassignedId;
-        f.farmerName = owner ? owner.farmerName : "Unassigned";
-      }
-    }
-
     return { ok: true, status: 200, body: fields };
-  });
+  }, { force: searchParams.get("refresh") === "1" });
 
   if (!ok) {
     return Response.json({ error: "Could not load fields" }, { status });
   }
-  return Response.json(body);
+
+  // Ownership is annotated AFTER the cache, never inside it.
+  //
+  // It used to be computed within the cached block, so the owner was frozen
+  // alongside the geometry for the whole TTL. The moment a contractor named
+  // the farmer for an unclaimed plot, the map went on calling it Unassigned
+  // until the entry expired — and so asked the same question again on the
+  // next tap. The shapes are AgroAPI's and worth caching; who farms them is
+  // one local query and must always be read fresh (2026-10-14).
+  //
+  // A plot with no `fields` row is not truly ownerless: it reads as the
+  // "Unassigned" placeholder, the same one /api/reports falls back to, so
+  // Select Area never shows a blank owner that fills in retroactively. But
+  // "Unassigned" is itself a real farmers row, so callers cannot tell a
+  // genuinely unclaimed plot from a customer with that name — `unassigned`
+  // says which, and Select Area uses it to ask who the plot belongs to
+  // instead of filing a report against the placeholder.
+  const fields = body;
+  if (fields.length) {
+    const { data: owned } = await supabaseAdmin
+      .from("fields")
+      .select("agro_field_id, farmer_id, farmers(name)")
+      .in("agro_field_id", fields.map((f) => f.id));
+    const ownerByField = new Map(
+      (owned || []).map((row) => [row.agro_field_id, { farmerId: row.farmer_id, farmerName: row.farmers?.name }])
+    );
+    const unclaimed = fields.some((f) => !ownerByField.has(f.id));
+    const unassignedId = unclaimed ? await unassignedFarmerId(user) : null;
+    for (const f of fields) {
+      const owner = ownerByField.get(f.id);
+      f.farmerId = owner ? owner.farmerId : unassignedId;
+      f.farmerName = owner ? owner.farmerName : "Unassigned";
+      f.unassigned = !owner;
+    }
+  }
+
+  return Response.json(fields);
 }

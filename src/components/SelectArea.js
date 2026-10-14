@@ -43,6 +43,9 @@ export default function SelectArea({ machine, points, day, since, until, initial
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [created, setCreated] = useState(null);
+  // The existing polygon whose owner we are about to record. Null means the
+  // farmer step was reached the other way — from a boundary just drawn.
+  const [claimTarget, setClaimTarget] = useState(null);
 
   // Center of the map — the fields fetch is scoped to real distance from
   // this point (AgroAPI's own farms#index sort_by=distance, verified live)
@@ -148,8 +151,66 @@ export default function SelectArea({ machine, points, day, since, until, initial
   // `farmer_fields` existed — and falls through to "Unassigned" (a real,
   // deliberate placeholder, /api/reports' own fallback) same as before.
   async function checkMatch(field) {
+    // A plot with no recorded owner reads back as the "Unassigned" placeholder,
+    // which is a real farmers row — so the old code treated it as an answer,
+    // found it had no open orders, skipped Match Work Order and filed the
+    // report against nobody. Meanwhile the customer's actual booked job stayed
+    // open. Most of this org's plots pre-date the app and are in exactly that
+    // state, so this was the common path, not the edge case (2026-10-14).
+    //
+    // Ask the same question drawing a new boundary asks, and for the same
+    // reason: a report has to belong to a real customer before it can be
+    // matched to their order.
+    if (field.unassigned) {
+      setClaimTarget(field);
+      setFarmerStep("search");
+      setChosenFarmer(null);
+      setMode("farmer");
+      return;
+    }
     const owner = field.farmerId ? { id: field.farmerId, name: field.farmerName } : null;
     await checkMatchForOwner(field, owner);
+  }
+
+  // Record who farms an existing plot, then carry straight on to Match Work
+  // Order — the step the missing owner was skipping.
+  async function claimField() {
+    setBusy(true);
+    setError("");
+    try {
+      let farmerId = chosenFarmer?.id;
+      let farmerName = chosenFarmer?.name;
+      if (!farmerId) {
+        const res = await fetch("/api/farmers", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: newName, phone: newPhone }),
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body.error || t("Could not save this customer."));
+        }
+        const data = await res.json();
+        farmerId = data.id;
+        farmerName = data.name;
+      }
+
+      const res = await fetch(`/api/farmers/${farmerId}/fields`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fieldId: claimTarget.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || t("Could not record who farms this field."));
+
+      const field = { ...claimTarget, farmerId, farmerName, unassigned: false };
+      setClaimTarget(null);
+      await checkMatchForOwner(field, { id: farmerId, name: farmerName });
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy(false);
+    }
   }
 
   // Shared by "tap a known field" (owner resolved above, from farmer_fields)
@@ -299,7 +360,14 @@ export default function SelectArea({ machine, points, day, since, until, initial
             if (mode === "pick") onClose();
             else if (mode === "notfound") setMode("pick");
             else if (mode === "draw") setMode("pick");
-            else if (mode === "farmer") setMode("draw");
+            else if (mode === "farmer") {
+              // Claiming started from a tap on the map; drawing started from
+              // the draw step. Going "back" has to mean the one it came from.
+              if (claimTarget) {
+                setClaimTarget(null);
+                setMode("pick");
+              } else setMode("draw");
+            }
             else if (mode === "match") setMode("pick");
             else onClose();
           }}
@@ -310,7 +378,8 @@ export default function SelectArea({ machine, points, day, since, until, initial
           {mode === "pick" && t("Select Area to Create Report")}
           {mode === "notfound" && t("Create Work Report")}
           {mode === "draw" && t("Draw Field Boundary")}
-          {mode === "farmer" && "Farmer's Name"}
+          {mode === "farmer" &&
+            (claimTarget ? `${claimTarget.name} — whose field?` : "Farmer's Name")}
           {mode === "match" && t("Match Work Order")}
           {mode === "done" && t("Field Created")}
         </span>
@@ -593,8 +662,16 @@ export default function SelectArea({ machine, points, day, since, until, initial
           </button>
         )}
         {mode === "farmer" && farmerStep !== "search" && (
-          <button className="btn btn-go w-full" disabled={busy} onClick={createField}>
-            {busy ? t("Creating…") : t("Create Field")}
+          <button
+            className="btn btn-go w-full"
+            disabled={busy}
+            onClick={claimTarget ? claimField : createField}
+          >
+            {busy
+              ? t("Saving…")
+              : claimTarget
+                ? t("Confirm Customer")
+                : t("Create Field")}
           </button>
         )}
         {mode === "match" && (
