@@ -23,6 +23,12 @@ const EN = "en";
 
 const DICT = {
   th: {
+    "declined": "ปฏิเสธแล้ว",
+    "completed": "เสร็จแล้ว",
+    "pending": "รอตอบรับ",
+    "booked": "จองแล้ว",
+    "has one open order — is this that job?": "มีใบสั่งงานที่ยังไม่ปิด 1 ใบ — ใช่งานนั้นไหม",
+    "has open orders — is this job one of them?": "มีใบสั่งงานที่ยังไม่ปิด — งานนี้ใช่หนึ่งในนั้นไหม",
     "No reports yet. Tap + Create, pick a machine, then tap a field on its map.": "ยังไม่มีรายงาน แตะ + สร้าง เลือกเครื่องจักร แล้วแตะแปลงบนแผนที่",
     "+ Create": "+ สร้าง",
     "work area": "พื้นที่ทำงาน",
@@ -422,6 +428,12 @@ const DICT = {
     "Really cancel?": "ยืนยันการยกเลิก?",
   },
   vn: {
+    "declined": "đã từ chối",
+    "completed": "đã xong",
+    "pending": "chờ duyệt",
+    "booked": "đã đặt",
+    "has one open order — is this that job?": "có một đơn đang mở — có phải việc đó không?",
+    "has open orders — is this job one of them?": "có các đơn đang mở — việc này là một trong số đó?",
     "No reports yet. Tap + Create, pick a machine, then tap a field on its map.": "Chưa có báo cáo. Nhấn + Tạo, chọn máy, rồi chạm vào thửa trên bản đồ.",
     "+ Create": "+ Tạo",
     "work area": "diện tích đã làm",

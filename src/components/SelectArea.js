@@ -117,6 +117,13 @@ export default function SelectArea({ machine, points, day, since, until, initial
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode]);
 
+  // Clearing on every change of screen, now that the message is shown on all
+  // of them: an error raised while matching must not still be sitting there
+  // after going back to the map.
+  useEffect(() => {
+    setError("");
+  }, [mode]);
+
   useEffect(() => {
     if (mode !== "farmer") return;
     fetch("/api/farmers")
@@ -570,6 +577,15 @@ export default function SelectArea({ machine, points, day, since, until, initial
         {/* Picking an order runs the whole report computation — the same
             several seconds the map screen already shows a spinner for. Without
             this the tap looked like it had done nothing at all. */}
+        {/* Every mode needs this. `error` was rendered only under "pick" and
+            "farmer", so a failure in goToReport — which happens HERE, on the
+            heaviest call in the app — set the message and showed it nowhere:
+            the spinner vanished, nothing navigated, and the tap read as a
+            dead button. Reported from testing, 2026-10-15. */}
+        {error && mode !== "pick" && mode !== "farmer" && (
+          <p className="text-sm text-[var(--danger)]">{error}</p>
+        )}
+
         {mode === "match" && busy && (
           <div className="flex flex-col items-center justify-center gap-3 py-14 text-sm text-[var(--text-sec)]">
             <span className="spinner" />{t("Generating report…")}</div>
@@ -577,9 +593,14 @@ export default function SelectArea({ machine, points, day, since, until, initial
 
         {mode === "match" && !busy && (
           <>
+            {/* Written as two whole sentences rather than assembled from
+                "has" + a number + "open order" + "s" — a sentence built from
+                fragments cannot be translated, which is why this line stayed
+                English through the whole translation pass (2026-10-15). */}
             <div className="fieldset-note">
-              {matchOwner?.name} has {matchCandidates.length} open order
-              {matchCandidates.length > 1 ? "s" : ""} — is this job one of them?
+              {matchCandidates.length > 1
+                ? `${matchOwner?.name} ${t("has open orders — is this job one of them?")}`
+                : `${matchOwner?.name} ${t("has one open order — is this that job?")}`}
             </div>
             <div className="flex flex-col gap-2">
               {matchCandidates.map((o) => (
@@ -610,7 +631,7 @@ export default function SelectArea({ machine, points, day, since, until, initial
                         : t("No date")}
                       {" · "}
                       {o.crop_size_m2 != null ? areaOut(o.crop_size_m2, areaUnitM2) : "?"}{" "}
-                      {unitLabel} · {o.status}
+                      {unitLabel} · {t(o.status)}
                     </span>
                   </div>
                 </button>
