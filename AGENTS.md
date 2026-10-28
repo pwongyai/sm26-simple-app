@@ -1,3 +1,10 @@
+# Start here
+
+Read `PROGRESS.md` in full before touching code — it holds current state, open
+items, decisions not to re-litigate, and the session-end handoff checklist.
+This repository is public: never commit credentials, passwords, IDs, customer
+names or billing details (see the warning at the top of `PROGRESS.md`).
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 # This is NOT the Next.js you know
